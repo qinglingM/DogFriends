@@ -7,7 +7,12 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "需要使用您的位置来记录遛狗轨迹",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "需要使用您的位置来记录遛狗轨迹",
+        "io.expo.AMapAPIKey": "c958a4dca2f7602f3024ca0c139984d3"
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -15,6 +20,9 @@
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "config": {
+        "amapApiKey": "c958a4dca2f7602f3024ca0c139984d3"
       }
     },
     "web": {

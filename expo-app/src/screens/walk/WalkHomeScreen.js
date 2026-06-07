@@ -58,9 +58,11 @@ export default function WalkHomeScreen({ navigation }) {
           </View>
         </View>
 
-        <TouchableOpacity style={styles.recenterBtn}>
-          <Ionicons name="locate" size={24} color={colors.secondary} />
-        </TouchableOpacity>
+        <View style={styles.mapBottomRight}>
+          <TouchableOpacity style={styles.recenterBtn} activeOpacity={0.7}>
+            <Ionicons name="locate" size={22} color={colors.secondary} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={[styles.floatBottom, { paddingBottom: 16 + insets.bottom }]}>
@@ -73,6 +75,7 @@ export default function WalkHomeScreen({ navigation }) {
             <TouchableOpacity
               key={dog.id}
               onPress={() => toggleDog(dog.id)}
+              activeOpacity={0.7}
               style={[styles.dogChip, dog.selected && styles.dogChipSelected]}
             >
               <DogAvatar size={32} />
@@ -85,6 +88,7 @@ export default function WalkHomeScreen({ navigation }) {
           <TouchableOpacity
             style={styles.addDogChip}
             onPress={() => navigation.navigate('Profile', { screen: 'DogEdit' })}
+            activeOpacity={0.7}
           >
             <Ionicons name="add" size={14} color={colors.textLight} />
           </TouchableOpacity>
@@ -168,11 +172,13 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.textLight,
   },
-  recenterBtn: {
+  mapBottomRight: {
     position: 'absolute',
     right: 16,
-    top: '50%',
-    marginTop: -24,
+    bottom: 140,
+    zIndex: 5,
+  },
+  recenterBtn: {
     width: 48,
     height: 48,
     backgroundColor: colors.white,
@@ -181,20 +187,29 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     shadowColor: colors.secondary,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 16,
-    elevation: 4,
-    zIndex: 5,
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 6,
   },
   floatBottom: {
     position: 'absolute',
-    bottom: 72,
+    bottom: 0,
     left: 0,
     right: 0,
     paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 16,
     alignItems: 'center',
     gap: 12,
-    zIndex: 5,
+    zIndex: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    shadowColor: colors.secondary,
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 8,
   },
   dogSelectRow: {
     flexDirection: 'row',
@@ -212,9 +227,9 @@ const styles = StyleSheet.create({
     paddingRight: 14,
     shadowColor: colors.secondary,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    elevation: 2,
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 4,
     borderWidth: 2,
     borderColor: 'transparent',
   },

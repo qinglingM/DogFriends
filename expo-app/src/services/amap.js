@@ -1,9 +1,10 @@
-// 高德地图配置占位
-// 后续集成 react-native-amap3d 时替换
+// 高德地图配置
+// 集成 react-native-amap3d 实现真实地图
 //
 // 安装: npx expo install react-native-amap3d
-// 配置: 在 app.json 中添加 Android/iOS 的 Amap API Key
+// 配置: 已在 app.json 中添加 Amap API Key (Android: android.config.amapApiKey, iOS: infoPlist.io.expo.AMapAPIKey)
 //
+// 使用示例:
 // import { MapView, Marker, Polyline } from 'react-native-amap3d';
 //
 // <MapView
@@ -19,6 +20,6 @@
 // </MapView>
 
 export const AMAP_CONFIG = {
-  androidKey: process.env.EXPO_PUBLIC_AMAP_ANDROID_KEY || '',
-  iosKey: process.env.EXPO_PUBLIC_AMAP_IOS_KEY || '',
+  androidKey: 'c958a4dca2f7602f3024ca0c139984d3',
+  iosKey: 'c958a4dca2f7602f3024ca0c139984d3',
 };
