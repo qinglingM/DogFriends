@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>提交记录 - 狗友</title>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link rel="stylesheet" href="./style.css" />
+    <style>
+      .tabs-nav {
+        display: flex; background-color: var(--white); padding: 0 16px; gap: 24px;
+        border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 10;
+      }
+      .tab-link { padding: 16px 0; font-weight: 700; color: var(--text-light); position: relative; }
+      .tab-link.active { color: var(--secondary-color); }
+      .tab-link.active::after {
+        content: ''; position: absolute; bottom: -1px; left: 0; right: 0;
+        height: 4px; background-color: var(--primary-color); border-radius: 4px 4px 0 0;
+      }
+
+      .list-container { padding: 16px; }
+      
+      .history-card { background-color: var(--white); border-radius: 16px; padding: 16px; margin-bottom: 16px; }
+      .history-header {
+        display: flex; justify-content: space-between; align-items: center;
+        margin-bottom: 16px; font-size: 14px; color: var(--text-light);
+      }
+      .status-tag { padding: 6px 12px; border-radius: 8px; font-weight: 800; font-size: 12px; }
+      .status-pending { background-color: #FFF3CD; color: #856404; }
+      .status-passed { background-color: rgba(185, 207, 50, 0.2); color: var(--secondary-color); }
+      .status-rejected { background-color: #F8D7DA; color: #721C24; }
+
+      .history-content { display: flex; gap: 16px; }
+      .history-img {
+        width: 72px; height: 72px; border-radius: 8px; background-color: #eee; flex-shrink: 0;
+        display: flex; align-items: center; justify-content: center; color: var(--text-light);
+      }
+      .history-info h3 { font-size: 16px; margin-bottom: 8px; }
+      .history-info p { font-size: 14px; color: var(--text-light); }
+      
+      .reject-reason {
+        margin-top: 16px; padding: 16px; background-color: #F8D7DA; border-radius: 8px;
+        font-size: 14px; color: #721C24; line-height: 1.5;
+      }
+
+      .action-row {
+        display: flex; justify-content: flex-end; gap: 16px; margin-top: 16px;
+        border-top: 1px solid var(--border-color); padding-top: 16px;
+      }
+      .btn-small {
+        padding: 8px 24px; border-radius: 999px; font-size: 14px; font-weight: 700;
+        border: 2px solid var(--border-color); background: white; color: var(--text-main);
+      }
+      .btn-small.primary {
+        background-color: var(--primary-color); border-color: var(--primary-color); color: var(--secondary-color);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app-container">
+      <div class="nav-bar">
+        <div class="nav-actions left">
+          <a href="/index.html" style="display:flex;"><i class="ph-bold ph-arrow-left"></i></a>
+        </div>
+        <div class="nav-title">提交记录</div>
+      </div>
+
+      <div class="tabs-nav">
+        <div class="tab-link active">全部</div>
+        <div class="tab-link">审核中</div>
+        <div class="tab-link">已通过</div>
+        <div class="tab-link">未通过</div>
+      </div>
+
+      <div class="list-container">
+        
+        <!-- Pending -->
+        <div class="history-card">
+          <div class="history-header">
+            <span>2026-06-07 提交</span>
+            <span class="status-tag status-pending">审核中</span>
+          </div>
+          <div class="history-content">
+            <div class="history-img"><i class="ph-fill ph-image" style="font-size: 32px;"></i></div>
+            <div class="history-info">
+              <h3>爪爪公园</h3>
+              <p>公园 · 浦东新区</p>
+            </div>
+          </div>
+          <div class="action-row">
+            <button class="btn-small">撤回</button>
+          </div>
+        </div>
+
+        <!-- Passed -->
+        <div class="history-card">
+          <div class="history-header">
+            <span>2026-06-01 提交</span>
+            <span class="status-tag status-passed">已通过</span>
+          </div>
+          <div class="history-content">
+            <div class="history-img"><i class="ph-fill ph-coffee" style="font-size: 32px;"></i></div>
+            <div class="history-info">
+              <h3>BLOOM Coffee</h3>
+              <p>咖啡店 · 徐汇区</p>
+            </div>
+          </div>
+          <div class="action-row">
+            <a href="/detail.html" class="btn-small primary" style="text-decoration: none;">查看地点</a>
+          </div>
+        </div>
+
+        <!-- Rejected -->
+        <div class="history-card">
+          <div class="history-header">
+            <span>2026-05-28 提交</span>
+            <span class="status-tag status-rejected">未通过</span>
+          </div>
+          <div class="history-content">
+            <div class="history-img"><i class="ph-fill ph-fork-knife" style="font-size: 32px;"></i></div>
+            <div class="history-info">
+              <h3>某某花园餐厅</h3>
+              <p>餐厅 · 静安区</p>
+            </div>
+          </div>
+          <div class="reject-reason">
+            照片不够清晰，请补充门店入口或明确的宠物友好标识照片。
+          </div>
+          <div class="action-row">
+            <button class="btn-small primary">重新提交</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </body>
+</html>

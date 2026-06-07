@@ -1,0 +1,224 @@
+:root {
+  /* Brand Colors */
+  --primary-color: #B9CF32;
+  --secondary-color: #347048;
+  --accent-color: #926699;
+  --bg-color: #EBE1D8;
+  --white: #FFFFFF;
+  
+  /* Text Colors */
+  --text-main: #2C3E2D; /* Dark green for text */
+  --text-light: #6A806C;
+  --border-color: #D3DDC9;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background-color: #f0f0f0; /* Outer background for desktop preview */
+  color: var(--text-main);
+  line-height: 1.5;
+}
+
+/* App Container for Mobile Preview */
+.app-container {
+  max-width: 480px;
+  margin: 0 auto;
+  background-color: var(--bg-color);
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Typography */
+h1, h2, h3, h4 {
+  color: var(--secondary-color);
+  font-weight: 800;
+  line-height: 1.3;
+}
+
+h1 { font-size: 24px; }
+h2 { font-size: 20px; }
+h3 { font-size: 16px; }
+
+p {
+  font-size: 14px;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+/* UI Components */
+
+/* Buttons: Standard touch target is min 48px height. padding 12px 24px + line-height ~24 = 48px */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 24px; 
+  border-radius: 999px; /* Pill shape */
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  transition: opacity 0.2s;
+  text-align: center;
+  width: 100%;
+}
+
+.btn:active {
+  opacity: 0.8;
+}
+
+.btn-primary {
+  background-color: var(--primary-color);
+  color: var(--secondary-color);
+  border-bottom: 3px solid var(--secondary-color);
+}
+
+.btn-secondary {
+  background-color: var(--white);
+  color: var(--secondary-color);
+  border: 2px solid var(--secondary-color);
+}
+
+/* Standard Navigation Bar */
+.nav-bar {
+  box-sizing: content-box;
+  height: 44px; /* Standard iOS Navigation Bar Height */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  padding-top: max(24px, env(safe-area-inset-top)); /* Simulate status bar */
+  border-bottom: 1px solid var(--border-color);
+  background-color: var(--white);
+  z-index: 10;
+  position: sticky;
+  top: 0;
+}
+
+.nav-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.nav-actions {
+  position: absolute;
+  bottom: 0;
+  height: 44px;
+  display: flex;
+  align-items: center;
+}
+
+.nav-actions.left {
+  left: 16px;
+}
+
+.nav-actions.right {
+  right: 16px;
+}
+
+.nav-actions i {
+  font-size: 24px;
+  color: var(--secondary-color);
+}
+
+
+/* Bottom Tab Bar */
+.bottom-tab {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 8px 0 24px 0; /* 8pt grid */
+  background-color: var(--white);
+  border-top: 1px solid var(--border-color);
+  position: sticky;
+  bottom: 0;
+  margin-top: auto;
+  z-index: 10;
+}
+
+.tab-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: var(--text-light);
+  gap: 4px; /* 8pt standard: 4px for micro-gap */
+  padding: 8px; /* Increase tap area */
+}
+
+.tab-item.active {
+  color: var(--secondary-color);
+  font-weight: 800;
+}
+
+.tab-item i {
+  font-size: 24px;
+}
+
+.tab-item span {
+  font-size: 12px;
+}
+
+/* Cards */
+.card {
+  background-color: var(--white);
+  border-radius: 16px; /* 8pt standard: 16px */
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+/* Chips / Tags */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px; /* For tags, standard is usually 32px height */
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.chip-verified {
+  background-color: var(--primary-color);
+  color: var(--secondary-color);
+}
+
+.chip-default {
+  background-color: rgba(52, 112, 72, 0.05);
+  color: var(--text-main);
+}
+
+.chip-active {
+  background-color: var(--primary-color);
+  color: var(--secondary-color);
+}
+
+/* Utilities */
+.spacer {
+  flex-grow: 1;
+}
+
+.placeholder-img {
+  background-color: #E2E8DF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-light);
+  font-weight: 700;
+  border-radius: 8px;
+  width: 100%;
+  height: 100%;
+}

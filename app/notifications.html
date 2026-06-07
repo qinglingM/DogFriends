@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>通知 - 狗友</title>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link rel="stylesheet" href="./style.css" />
+    <style>
+      .tabs-nav {
+        display: flex; background-color: var(--white); padding: 0 16px; gap: 24px;
+        border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 10;
+      }
+      .tab-link { padding: 16px 0; font-weight: 700; color: var(--text-light); position: relative; }
+      .tab-link.active { color: var(--secondary-color); }
+      .tab-link.active::after {
+        content: ''; position: absolute; bottom: -1px; left: 0; right: 0;
+        height: 4px; background-color: var(--primary-color); border-radius: 4px 4px 0 0;
+      }
+
+      .list-container { padding: 16px; }
+      
+      .notification-card {
+        background-color: var(--white); border-radius: 16px; padding: 16px;
+        margin-bottom: 16px; display: flex; gap: 16px; align-items: flex-start;
+      }
+      
+      .icon-box {
+        width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center;
+        justify-content: center; font-size: 24px; flex-shrink: 0;
+      }
+      .icon-success { background-color: rgba(185, 207, 50, 0.2); color: var(--secondary-color); }
+      .icon-fail { background-color: #F8D7DA; color: #721C24; }
+      .icon-system { background-color: #E2E8DF; color: var(--secondary-color); }
+
+      .noti-content { flex: 1; }
+      .noti-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+      .noti-title { font-weight: 800; font-size: 16px; }
+      .noti-time { font-size: 12px; color: var(--text-light); }
+      .noti-text { font-size: 14px; color: var(--text-main); margin-bottom: 16px; line-height: 1.5; }
+      
+      .noti-link { font-size: 14px; color: var(--secondary-color); font-weight: 700; text-decoration: underline; display: inline-block; }
+    </style>
+  </head>
+  <body>
+    <div class="app-container">
+      <div class="nav-bar">
+        <div class="nav-actions left">
+          <a href="/index.html" style="display:flex;"><i class="ph-bold ph-arrow-left"></i></a>
+        </div>
+        <div class="nav-title">消息</div>
+      </div>
+
+      <div class="tabs-nav">
+        <div class="tab-link active">全部</div>
+        <div class="tab-link">系统</div>
+        <div class="tab-link">互动</div>
+      </div>
+
+      <div class="list-container">
+        
+        <div class="notification-card">
+          <div class="icon-box icon-success"><i class="ph-bold ph-check"></i></div>
+          <div class="noti-content">
+            <div class="noti-header">
+              <span class="noti-title">审核通过通知</span>
+              <span class="noti-time">刚刚</span>
+            </div>
+            <div class="noti-text">你提交的「BLOOM Coffee」已通过审核。</div>
+            <a href="/detail.html" class="noti-link">查看地点</a>
+          </div>
+        </div>
+
+        <div class="notification-card">
+          <div class="icon-box icon-fail"><i class="ph-bold ph-x"></i></div>
+          <div class="noti-content">
+            <div class="noti-header">
+              <span class="noti-title">审核未通过通知</span>
+              <span class="noti-time">昨天</span>
+            </div>
+            <div class="noti-text">你提交的「某某花园餐厅」未通过审核，请补充更清晰的照片或地址信息。</div>
+            <a href="/history.html" class="noti-link">前往修改</a>
+          </div>
+        </div>
+
+        <div class="notification-card">
+          <div class="icon-box icon-system"><i class="ph-bold ph-speaker-high"></i></div>
+          <div class="noti-content">
+            <div class="noti-header">
+              <span class="noti-title">欢迎来到狗友！</span>
+              <span class="noti-time">3天前</span>
+            </div>
+            <div class="noti-text">一起探索城市里对狗狗友好的小天地吧！</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </body>
+</html>
