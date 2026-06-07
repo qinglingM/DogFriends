@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>我的 - 狗友</title>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link rel="stylesheet" href="./style.css" />
+    <style>
+      .profile-page {
+        padding: 0 0 24px;
+      }
+
+      .user-header {
+        padding: 24px 16px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+
+      .user-avatar {
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        background-color: var(--white);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 32px;
+        color: var(--secondary-color);
+        border: 3px solid var(--primary-color);
+        flex-shrink: 0;
+      }
+
+      .user-info {
+        flex: 1;
+      }
+
+      .user-name {
+        font-size: 20px;
+        font-weight: 800;
+        color: var(--secondary-color);
+        margin-bottom: 4px;
+      }
+
+      .user-id {
+        font-size: 12px;
+        color: var(--text-light);
+      }
+
+      .user-edit-btn {
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        color: var(--text-light);
+      }
+
+      .dogs-section {
+        padding: 0 16px;
+        margin-bottom: 24px;
+      }
+
+      .dogs-scroll {
+        display: flex;
+        gap: 16px;
+        overflow-x: auto;
+        scrollbar-width: none;
+        padding: 4px 0;
+      }
+
+      .dogs-scroll::-webkit-scrollbar {
+        display: none;
+      }
+
+      .dog-profile-card {
+        flex-shrink: 0;
+        width: 200px;
+        background-color: var(--white);
+        border-radius: 16px;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        text-decoration: none;
+        color: inherit;
+        border: 2px solid transparent;
+        transition: border-color 0.2s;
+      }
+
+      .dog-profile-card.active {
+        border-color: var(--primary-color);
+      }
+
+      .dog-profile-card:active {
+        border-color: var(--primary-color);
+      }
+
+      .dog-profile-card .dog-avatar {
+        width: 64px;
+        height: 64px;
+        font-size: 32px;
+      }
+
+      .dog-profile-card .card-name {
+        font-size: 16px;
+        font-weight: 800;
+        color: var(--secondary-color);
+      }
+
+      .dog-profile-card .card-breed {
+        font-size: 12px;
+        color: var(--text-light);
+      }
+
+      .dog-profile-card .card-stats {
+        display: flex;
+        gap: 16px;
+        margin-top: 8px;
+        font-size: 12px;
+        color: var(--text-light);
+      }
+
+      .dog-profile-card .card-stats span {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+
+      .dog-profile-card .card-stats i {
+        font-size: 14px;
+        color: var(--primary-color);
+      }
+
+      .add-dog-card {
+        flex-shrink: 0;
+        width: 120px;
+        background-color: var(--white);
+        border-radius: 16px;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        text-decoration: none;
+        color: inherit;
+        border: 2px dashed var(--border-color);
+        min-height: 168px;
+      }
+
+      .add-dog-card i {
+        font-size: 32px;
+        color: var(--border-color);
+      }
+
+      .add-dog-card span {
+        font-size: 12px;
+        color: var(--text-light);
+        font-weight: 700;
+      }
+
+      .walk-stats-section {
+        padding: 0 16px;
+        margin-bottom: 24px;
+      }
+
+      .walk-stats-card {
+        background-color: var(--white);
+        border-radius: 16px;
+        padding: 24px;
+        display: flex;
+        justify-content: space-around;
+      }
+
+      .walk-stat {
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+      }
+
+      .walk-stat i {
+        font-size: 24px;
+        color: var(--primary-color);
+        margin-bottom: 8px;
+      }
+
+      .walk-stat .ws-value {
+        font-size: 24px;
+        font-weight: 800;
+        color: var(--secondary-color);
+      }
+
+      .walk-stat .ws-unit {
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--secondary-color);
+      }
+
+      .walk-stat .ws-label {
+        font-size: 12px;
+        color: var(--text-light);
+      }
+
+      .menu-section {
+        padding: 0 16px;
+        margin-bottom: 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app-container">
+
+      <div class="nav-bar" style="background-color: var(--bg-color);">
+        <div class="nav-title">我的</div>
+        <div class="nav-actions right">
+          <a href="/settings.html" style="display:flex;"><i class="ph-bold ph-gear"></i></a>
+        </div>
+      </div>
+
+      <div class="profile-page">
+
+        <div class="user-header">
+          <div class="user-avatar">
+            <i class="ph-fill ph-user"></i>
+          </div>
+          <div class="user-info">
+            <div class="user-name">小明</div>
+            <div class="user-id">ID: 10086 · 上海</div>
+          </div>
+          <div class="user-edit-btn">
+            <i class="ph-bold ph-pencil-simple"></i>
+          </div>
+        </div>
+
+        <div class="dogs-section">
+          <div class="section-header" style="padding: 0; margin-bottom: 16px;">
+            <h3>我的狗狗</h3>
+            <a href="/dog_switch.html" class="section-link">
+              管理 <i class="ph-bold ph-caret-right"></i>
+            </a>
+          </div>
+          <div class="dogs-scroll">
+            <a href="/dog_profile.html" class="dog-profile-card active">
+              <div class="dog-avatar">
+                <i class="ph-fill ph-dog"></i>
+              </div>
+              <span class="card-name">旺财</span>
+              <span class="card-breed">金毛寻回犬</span>
+              <div class="card-stats">
+                <span><i class="ph-bold ph-paw-print"></i> 128次</span>
+                <span><i class="ph-bold ph-path"></i> 320km</span>
+              </div>
+            </a>
+            <a href="/dog_profile.html" class="dog-profile-card">
+              <div class="dog-avatar">
+                <i class="ph-fill ph-dog"></i>
+              </div>
+              <span class="card-name">小白</span>
+              <span class="card-breed">萨摩耶</span>
+              <div class="card-stats">
+                <span><i class="ph-bold ph-paw-print"></i> 86次</span>
+                <span><i class="ph-bold ph-path"></i> 210km</span>
+              </div>
+            </a>
+            <a href="/dog_edit.html" class="add-dog-card">
+              <i class="ph-bold ph-plus-circle"></i>
+              <span>添加狗狗</span>
+            </a>
+          </div>
+        </div>
+
+        <div class="walk-stats-section">
+          <div class="section-header" style="padding: 0; margin-bottom: 16px;">
+            <h3>遛狗统计</h3>
+            <a href="/walk_history.html" class="section-link">
+              查看全部 <i class="ph-bold ph-caret-right"></i>
+            </a>
+          </div>
+          <div class="walk-stats-card">
+            <div class="walk-stat">
+              <i class="ph-bold ph-paw-print"></i>
+              <div>
+                <span class="ws-value">214</span>
+                <span class="ws-unit"> 次</span>
+              </div>
+              <span class="ws-label">累计遛狗</span>
+            </div>
+            <div class="walk-stat">
+              <i class="ph-bold ph-path"></i>
+              <div>
+                <span class="ws-value">530</span>
+                <span class="ws-unit"> km</span>
+              </div>
+              <span class="ws-label">累计距离</span>
+            </div>
+            <div class="walk-stat">
+              <i class="ph-bold ph-trophy"></i>
+              <div>
+                <span class="ws-value">8.6</span>
+                <span class="ws-unit"> km</span>
+              </div>
+              <span class="ws-label">最远一次</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="menu-section">
+          <div class="menu-list">
+            <a href="/history.html" class="menu-item">
+              <div class="menu-icon green">
+                <i class="ph-bold ph-clipboard-text"></i>
+              </div>
+              <span class="menu-text">我的提交</span>
+              <i class="ph-bold ph-caret-right menu-arrow"></i>
+            </a>
+            <a href="#" class="menu-item">
+              <div class="menu-icon green">
+                <i class="ph-bold ph-bookmark-simple"></i>
+              </div>
+              <span class="menu-text">我的收藏</span>
+              <i class="ph-bold ph-caret-right menu-arrow"></i>
+            </a>
+            <a href="/walk_history.html" class="menu-item">
+              <div class="menu-icon purple">
+                <i class="ph-bold ph-clock-counter-clockwise"></i>
+              </div>
+              <span class="menu-text">遛狗历史</span>
+              <i class="ph-bold ph-caret-right menu-arrow"></i>
+            </a>
+            <a href="/notifications.html" class="menu-item">
+              <div class="menu-icon purple">
+                <i class="ph-bold ph-bell"></i>
+              </div>
+              <span class="menu-text">消息通知</span>
+              <i class="ph-bold ph-caret-right menu-arrow"></i>
+            </a>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="bottom-tab">
+        <a href="/walk.html" class="tab-item">
+          <i class="ph-bold ph-map-pin-line"></i>
+          <span>遛狗</span>
+        </a>
+        <a href="/square.html" class="tab-item">
+          <i class="ph-bold ph-compass-tool"></i>
+          <span>广场</span>
+        </a>
+        <a href="/index.html" class="tab-item">
+          <i class="ph-bold ph-paw-print"></i>
+          <span>去玩</span>
+        </a>
+        <a href="/profile.html" class="tab-item active">
+          <i class="ph-fill ph-user"></i>
+          <span>我的</span>
+        </a>
+      </div>
+
+    </div>
+  </body>
+</html>

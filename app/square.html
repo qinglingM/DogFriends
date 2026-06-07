@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>广场 - 狗友</title>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link rel="stylesheet" href="./style.css" />
+    <style>
+      .square-page {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .square-empty {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 48px 32px;
+        text-align: center;
+        gap: 16px;
+      }
+
+      .square-empty .empty-illustration {
+        width: 160px;
+        height: 160px;
+        background-color: var(--primary-color);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        margin-bottom: 8px;
+      }
+
+      .square-empty .empty-illustration i {
+        font-size: 72px;
+        color: var(--secondary-color);
+      }
+
+      .square-empty .sparkle-1 {
+        position: absolute;
+        top: 8px;
+        right: 16px;
+        font-size: 24px;
+        color: var(--accent-color);
+      }
+
+      .square-empty .sparkle-2 {
+        position: absolute;
+        bottom: 16px;
+        left: 8px;
+        font-size: 20px;
+        color: var(--white);
+      }
+
+      .square-empty h2 {
+        font-size: 20px;
+        color: var(--secondary-color);
+      }
+
+      .square-empty p {
+        font-size: 14px;
+        color: var(--text-light);
+        line-height: 1.6;
+      }
+
+      .coming-soon-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background-color: rgba(146, 102, 153, 0.1);
+        border-radius: 999px;
+        padding: 8px 24px;
+        font-size: 14px;
+        font-weight: 800;
+        color: var(--accent-color);
+        margin-top: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app-container">
+
+      <div class="nav-bar" style="background-color: var(--bg-color);">
+        <div class="nav-title">广场</div>
+      </div>
+
+      <div class="square-page">
+        <div class="square-empty">
+          <div class="empty-illustration">
+            <i class="ph-fill ph-users-three"></i>
+            <i class="ph-fill ph-sparkle sparkle-1"></i>
+            <i class="ph-fill ph-sparkle sparkle-2"></i>
+          </div>
+          <h2>社区广场</h2>
+          <p>这里将会是狗友们分享遛狗日常、<br>交流养狗经验的社区空间。</p>
+          <div class="coming-soon-chip">
+            <i class="ph-bold ph-rocket-launch"></i>
+            即将上线
+          </div>
+        </div>
+      </div>
+
+      <div class="bottom-tab">
+        <a href="/walk.html" class="tab-item">
+          <i class="ph-bold ph-map-pin-line"></i>
+          <span>遛狗</span>
+        </a>
+        <a href="/square.html" class="tab-item active">
+          <i class="ph-fill ph-compass-tool"></i>
+          <span>广场</span>
+        </a>
+        <a href="/index.html" class="tab-item">
+          <i class="ph-bold ph-paw-print"></i>
+          <span>去玩</span>
+        </a>
+        <a href="/profile.html" class="tab-item">
+          <i class="ph-bold ph-user"></i>
+          <span>我的</span>
+        </a>
+      </div>
+
+    </div>
+  </body>
+</html>

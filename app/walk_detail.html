@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>遛狗详情 - 狗友</title>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link rel="stylesheet" href="./style.css" />
+    <style>
+      .detail-page {
+        padding-bottom: 48px;
+      }
+
+      .detail-map {
+        height: 240px;
+        position: relative;
+      }
+
+      .detail-map .map-placeholder {
+        border-radius: 0;
+      }
+
+      .detail-content {
+        padding: 24px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+      }
+
+      .detail-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+      }
+
+      .detail-date {
+        font-size: 20px;
+        font-weight: 800;
+        color: var(--secondary-color);
+        margin-bottom: 4px;
+      }
+
+      .detail-time {
+        font-size: 14px;
+        color: var(--text-light);
+      }
+
+      .detail-dogs {
+        display: flex;
+        gap: 8px;
+      }
+
+      .detail-dog-chip {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background-color: var(--white);
+        border-radius: 999px;
+        padding: 8px 16px 8px 8px;
+      }
+
+      .detail-dog-chip .dog-avatar {
+        width: 32px;
+        height: 32px;
+        font-size: 16px;
+      }
+
+      .detail-dog-chip span {
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--secondary-color);
+      }
+
+      .detail-stats {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 8px;
+      }
+
+      .detail-stat-item {
+        background-color: var(--white);
+        border-radius: 16px;
+        padding: 16px 8px;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+      }
+
+      .detail-stat-item i {
+        font-size: 24px;
+        color: var(--primary-color);
+        margin-bottom: 4px;
+      }
+
+      .detail-stat-item .ds-value {
+        font-size: 24px;
+        font-weight: 800;
+        color: var(--secondary-color);
+      }
+
+      .detail-stat-item .ds-unit {
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--secondary-color);
+      }
+
+      .detail-stat-item .ds-label {
+        font-size: 12px;
+        color: var(--text-light);
+      }
+
+      .checkin-summary {
+        background-color: var(--white);
+        border-radius: 16px;
+        padding: 16px;
+      }
+
+      .checkin-summary-title {
+        font-size: 16px;
+        font-weight: 800;
+        color: var(--secondary-color);
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .checkin-summary-title i {
+        color: var(--primary-color);
+      }
+
+      .checkin-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        border-bottom: 1px solid var(--border-color);
+      }
+
+      .checkin-row:last-child {
+        border-bottom: none;
+      }
+
+      .checkin-row .cr-label {
+        font-size: 14px;
+        color: var(--text-light);
+      }
+
+      .checkin-row .cr-value {
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--secondary-color);
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+
+      .photo-grid {
+        display: flex;
+        gap: 8px;
+        overflow-x: auto;
+        scrollbar-width: none;
+      }
+
+      .photo-grid::-webkit-scrollbar {
+        display: none;
+      }
+
+      .photo-grid-item {
+        width: 96px;
+        height: 96px;
+        border-radius: 16px;
+        background-color: #D3E0C8;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+      }
+
+      .photo-grid-item i {
+        font-size: 32px;
+        color: var(--secondary-color);
+        opacity: 0.5;
+      }
+
+      .photo-grid-item .pg-time {
+        position: absolute;
+        bottom: 8px;
+        left: 8px;
+        font-size: 10px;
+        color: var(--white);
+        background-color: rgba(0,0,0,0.4);
+        padding: 2px 6px;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app-container">
+
+      <div class="nav-bar" style="background-color: var(--bg-color); border-bottom: none;">
+        <div class="nav-actions left">
+          <a href="/walk_history.html" style="display:flex;"><i class="ph-bold ph-arrow-left"></i></a>
+        </div>
+        <div class="nav-title">遛狗详情</div>
+      </div>
+
+      <div class="detail-page">
+
+        <div class="detail-map">
+          <div class="map-placeholder" style="border-radius: 0;">
+            <i class="ph-bold ph-map-trifold" style="font-size: 48px;"></i>
+            <span style="font-weight: 700; font-size: 14px;">路线回放地图</span>
+          </div>
+        </div>
+
+        <div class="detail-content">
+
+          <div class="detail-header">
+            <div>
+              <div class="detail-date">6月7日 周六</div>
+              <div class="detail-time">08:30 - 09:15 · 45 分钟</div>
+            </div>
+            <span class="chip chip-verified">已完成</span>
+          </div>
+
+          <div class="detail-dogs">
+            <div class="detail-dog-chip">
+              <div class="dog-avatar">
+                <i class="ph-fill ph-dog"></i>
+              </div>
+              <span>旺财</span>
+            </div>
+          </div>
+
+          <div class="detail-stats">
+            <div class="detail-stat-item">
+              <i class="ph-bold ph-path"></i>
+              <div>
+                <span class="ds-value">3.2</span>
+                <span class="ds-unit"> km</span>
+              </div>
+              <span class="ds-label">总距离</span>
+            </div>
+            <div class="detail-stat-item">
+              <i class="ph-bold ph-timer"></i>
+              <div>
+                <span class="ds-value">45</span>
+                <span class="ds-unit"> min</span>
+              </div>
+              <span class="ds-label">总时长</span>
+            </div>
+            <div class="detail-stat-item">
+              <i class="ph-bold ph-gauge"></i>
+              <div>
+                <span class="ds-value">4.3</span>
+                <span class="ds-unit"> km/h</span>
+              </div>
+              <span class="ds-label">平均配速</span>
+            </div>
+          </div>
+
+          <div class="checkin-summary">
+            <div class="checkin-summary-title">
+              <i class="ph-fill ph-clipboard-text"></i>
+              健康打卡记录
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border-color);">
+              <div class="dog-avatar" style="width: 32px; height: 32px; font-size: 16px;">
+                <i class="ph-fill ph-dog"></i>
+              </div>
+              <span style="font-size: 14px; font-weight: 800; color: var(--secondary-color);">旺财</span>
+            </div>
+            <div class="checkin-row">
+              <span class="cr-label">排尿</span>
+              <span class="cr-value">2 次</span>
+            </div>
+            <div class="checkin-row">
+              <span class="cr-label">排便</span>
+              <span class="cr-value">1 次</span>
+            </div>
+            <div class="checkin-row">
+              <span class="cr-label">便便状态</span>
+              <span class="cr-value">B4 理想便便 😄</span>
+            </div>
+            <div class="checkin-row">
+              <span class="cr-label">精神状态</span>
+              <span class="cr-value">😄 活力满满</span>
+            </div>
+            <div class="checkin-row">
+              <span class="cr-label">异常行为</span>
+              <span class="cr-value">不愿走</span>
+            </div>
+            <div class="checkin-row">
+              <span class="cr-label">备注</span>
+              <span class="cr-value" style="font-weight: 400; color: var(--text-light);">走到一半不太想动，休息了几分钟才继续</span>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 8px; padding: 12px 0 8px; border-bottom: 1px solid var(--border-color); margin-top: 8px;">
+              <div class="dog-avatar" style="width: 32px; height: 32px; font-size: 16px;">
+                <i class="ph-fill ph-dog"></i>
+              </div>
+              <span style="font-size: 14px; font-weight: 800; color: var(--secondary-color);">小白</span>
+            </div>
+            <div class="checkin-row">
+              <span class="cr-label">排尿</span>
+              <span class="cr-value">1 次</span>
+            </div>
+            <div class="checkin-row">
+              <span class="cr-label">排便</span>
+              <span class="cr-value">0 次</span>
+            </div>
+            <div class="checkin-row">
+              <span class="cr-label">精神状态</span>
+              <span class="cr-value">🙂 心情不错</span>
+            </div>
+            <div class="checkin-row">
+              <span class="cr-label">异常行为</span>
+              <span class="cr-value">无</span>
+            </div>
+          </div>
+
+          <div>
+            <div class="section-header" style="padding: 0; margin-bottom: 16px;">
+              <h3>打卡照片</h3>
+              <span class="section-link">3 张</span>
+            </div>
+            <div class="photo-grid">
+              <div class="photo-grid-item">
+                <i class="ph-bold ph-image"></i>
+                <span class="pg-time">08:42</span>
+              </div>
+              <div class="photo-grid-item">
+                <i class="ph-bold ph-image"></i>
+                <span class="pg-time">09:01</span>
+              </div>
+              <div class="photo-grid-item">
+                <i class="ph-bold ph-image"></i>
+                <span class="pg-time">09:12</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+  </body>
+</html>
