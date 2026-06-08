@@ -21,6 +21,9 @@ function splitColumns(posts) {
 export default function SquareScreen({ navigation }) {
   const { posts, toggleLike, toggleFavorite } = useSquare();
   const [activeTag, setActiveTag] = useState('all');
+  const openAuthorProfile = (post) => {
+    navigation.navigate('UserProfile', { userName: post.authorName });
+  };
   const filteredPosts = useMemo(() => {
     return posts.filter(post => {
       if (post.visibility !== 'public') return false;
@@ -43,12 +46,19 @@ export default function SquareScreen({ navigation }) {
       </View>
 
       <View style={styles.cardBody}>
-        <View style={styles.authorRow}>
+        <TouchableOpacity
+          style={styles.authorRow}
+          activeOpacity={0.75}
+          onPress={(event) => {
+            event.stopPropagation();
+            openAuthorProfile(post);
+          }}
+        >
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>{post.authorAvatar}</Text>
           </View>
           <Text style={styles.authorName} numberOfLines={1}>{post.authorName}</Text>
-        </View>
+        </TouchableOpacity>
 
         {!!post.tag && (
           <View style={styles.tag}>

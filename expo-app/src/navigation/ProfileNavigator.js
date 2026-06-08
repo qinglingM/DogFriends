@@ -10,6 +10,7 @@ import FavoriteLocationsScreen from '../screens/profile/FavoriteLocationsScreen'
 import ContributionHistoryScreen from '../screens/profile/ContributionHistoryScreen';
 import BadgeWallScreen from '../screens/profile/BadgeWallScreen';
 import BadgeDetailScreen from '../screens/profile/BadgeDetailScreen';
+import EarnedBadgesScreen from '../screens/profile/EarnedBadgesScreen';
 import WalkHistoryScreen from '../screens/walk/WalkHistoryScreen';
 import WalkDetailScreen from '../screens/walk/WalkDetailScreen';
 import LocationDetailScreen from '../screens/explore/LocationDetailScreen';
@@ -30,6 +31,7 @@ export default function ProfileNavigator() {
       <Stack.Screen name="FavoriteLocations" component={FavoriteLocationsScreen} />
       <Stack.Screen name="ContributionHistory" component={ContributionHistoryScreen} />
       <Stack.Screen name="BadgeWall" component={BadgeWallScreen} />
+      <Stack.Screen name="EarnedBadges" component={EarnedBadgesScreen} />
       <Stack.Screen name="LocationDetail" component={LocationDetailScreen} />
       <Stack.Screen name="UpdateInfo" component={UpdateInfoScreen} />
       <Stack.Screen name="BadgeDetail" component={BadgeDetailScreen} />

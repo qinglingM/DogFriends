@@ -27,13 +27,16 @@ export default function PostDetailScreen({ route, navigation }) {
     addComment(post.id, text);
     setCommentText('');
   };
+  const openAuthorProfile = () => {
+    navigation.navigate('UserProfile', { userName: post.authorName });
+  };
 
   return (
     <View style={styles.screen}>
       <NavBar title="帖子详情" onBack={() => navigation.goBack()} />
 
       <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.authorRow}>
+        <TouchableOpacity style={styles.authorRow} activeOpacity={0.75} onPress={openAuthorProfile}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>{post.authorAvatar}</Text>
           </View>
@@ -45,7 +48,7 @@ export default function PostDetailScreen({ route, navigation }) {
               </View>
             )}
           </View>
-        </View>
+        </TouchableOpacity>
 
         <Text style={styles.postText}>{post.text}</Text>
 
