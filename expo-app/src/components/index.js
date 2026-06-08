@@ -9,3 +9,6 @@ export { default as EmojiSelector } from './EmojiSelector';
 export { default as TipCard } from './TipCard';
 export { default as MapPlaceholder } from './MapPlaceholder';
 export { default as NavBar } from './NavBar';
+export { default as StatusBadge } from './StatusBadge';
+export { default as ValidationCard } from './ValidationCard';
+export { default as InaccuracySheet } from './InaccuracySheet';

@@ -4,14 +4,40 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { typography } from '../../theme/typography';
-import { NavBar, Card, DogAvatar, Button } from '../../components';
+import { NavBar, Card, DogAvatar } from '../../components';
 
 const MOCK_DOGS = [
   { id: '1', name: '旺财', breed: '金毛寻回犬', walks: 128, distance: 320 },
   { id: '2', name: '小白', breed: '萨摩耶', walks: 86, distance: 210 },
 ];
 
+const PROFILE_ENTRIES = [
+  {
+    label: '我的收藏',
+    icon: 'bookmark-outline',
+    bg: 'rgba(185, 207, 50, 0.2)',
+    color: colors.secondary,
+    route: 'FavoriteLocations',
+  },
+  {
+    label: '我分享过',
+    icon: 'clipboard-outline',
+    bg: 'rgba(185, 207, 50, 0.2)',
+    color: colors.secondary,
+    route: 'ContributionHistory',
+  },
+  {
+    label: '我的徽章',
+    icon: 'ribbon-outline',
+    bg: 'rgba(146, 102, 153, 0.15)',
+    color: colors.accent,
+    route: 'BadgeWall',
+  },
+];
+
 export default function ProfileScreen({ navigation }) {
+  const openPersonalProfile = () => navigation.navigate('PersonalProfile');
+
   return (
     <View style={styles.screen}>
       <NavBar
@@ -21,7 +47,11 @@ export default function ProfileScreen({ navigation }) {
       />
 
       <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.userHeader}>
+        <TouchableOpacity
+          style={styles.userHeader}
+          activeOpacity={0.78}
+          onPress={openPersonalProfile}
+        >
           <View style={styles.userAvatar}>
             <Ionicons name="person" size={32} color={colors.secondary} />
           </View>
@@ -29,10 +59,12 @@ export default function ProfileScreen({ navigation }) {
             <Text style={styles.userName}>小明</Text>
             <Text style={styles.userId}>ID: 10086 · 上海</Text>
           </View>
-          <TouchableOpacity style={styles.editBtn}>
+          <View
+            style={styles.editBtn}
+          >
             <Ionicons name="create-outline" size={20} color={colors.textLight} />
-          </TouchableOpacity>
-        </View>
+          </View>
+        </TouchableOpacity>
 
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>我的狗狗</Text>
@@ -100,27 +132,20 @@ export default function ProfileScreen({ navigation }) {
         </Card>
 
         <Card noPadding>
-          <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('WalkHistory')}>
-            <View style={[styles.menuIcon, { backgroundColor: 'rgba(185, 207, 50, 0.2)' }]}>
-              <Ionicons name="clipboard-outline" size={20} color={colors.secondary} />
-            </View>
-            <Text style={styles.menuText}>我的提交</Text>
-            <Ionicons name="chevron-forward" size={16} color={colors.textLight} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.menuItem}>
-            <View style={[styles.menuIcon, { backgroundColor: 'rgba(185, 207, 50, 0.2)' }]}>
-              <Ionicons name="bookmark-outline" size={20} color={colors.secondary} />
-            </View>
-            <Text style={styles.menuText}>我的收藏</Text>
-            <Ionicons name="chevron-forward" size={16} color={colors.textLight} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('WalkHistory')}>
-            <View style={[styles.menuIcon, { backgroundColor: 'rgba(146, 102, 153, 0.15)' }]}>
-              <Ionicons name="time-outline" size={20} color={colors.accent} />
-            </View>
-            <Text style={styles.menuText}>遛狗历史</Text>
-            <Ionicons name="chevron-forward" size={16} color={colors.textLight} />
-          </TouchableOpacity>
+          {PROFILE_ENTRIES.map((entry, index) => (
+            <TouchableOpacity
+              key={entry.route}
+              style={[styles.menuItem, index === PROFILE_ENTRIES.length - 1 && styles.menuItemLast]}
+              onPress={() => navigation.navigate(entry.route)}
+              activeOpacity={0.75}
+            >
+              <View style={[styles.menuIcon, { backgroundColor: entry.bg }]}>
+                <Ionicons name={entry.icon} size={20} color={entry.color} />
+              </View>
+              <Text style={styles.menuText}>{entry.label}</Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.textLight} />
+            </TouchableOpacity>
+          ))}
         </Card>
       </ScrollView>
     </View>
@@ -200,7 +225,10 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
-    minHeight: 56,
+    minHeight: 72,
+  },
+  menuItemLast: {
+    borderBottomWidth: 0,
   },
   menuIcon: {
     width: 40,
