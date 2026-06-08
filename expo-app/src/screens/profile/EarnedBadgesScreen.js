@@ -20,15 +20,13 @@ export default function EarnedBadgesScreen({ navigation, route }) {
     <View style={styles.screen}>
       <NavBar title="已获得徽章" onBack={() => navigation.goBack()} />
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.summary}>已获得 {badges.length} 枚徽章</Text>
         <View style={styles.grid}>
           {badges.map(badge => (
             <View key={badge.id} style={styles.badgeCard}>
               <View style={[styles.badgeIcon, { backgroundColor: badge.color }]}>
-                <Ionicons name={badge.icon} size={34} color={colors.white} />
+                <Ionicons name={badge.icon} size={24} color={colors.white} />
               </View>
               <Text style={styles.badgeName} numberOfLines={1}>{badge.name}</Text>
-              <Text style={styles.badgeDescription} numberOfLines={2}>{badge.description}</Text>
             </View>
           ))}
         </View>
@@ -39,43 +37,35 @@ export default function EarnedBadgesScreen({ navigation, route }) {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: spacing.screenMargin, paddingBottom: spacing.xxl },
-  summary: { ...typography.bodyBold, color: colors.secondary, marginBottom: spacing.md },
+  content: { padding: spacing.screenMargin, paddingBottom: 48 },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.md,
+    gap: 10,
+    backgroundColor: colors.white,
+    borderRadius: spacing.radiusMd,
+    padding: spacing.md,
   },
   badgeCard: {
+    width: '30.5%',
+    minHeight: 108,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.sm,
-    width: '30.7%',
-    minHeight: 168,
-    padding: spacing.sm,
-    borderRadius: spacing.radiusMd,
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.border,
+    gap: 8,
   },
   badgeIcon: {
-    width: 72,
-    height: 72,
-    borderRadius: spacing.radiusLg,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: colors.secondary,
+    borderColor: colors.primary,
   },
   badgeName: {
     ...typography.captionBold,
-    color: colors.textMain,
+    color: colors.secondary,
     textAlign: 'center',
     maxWidth: '100%',
-  },
-  badgeDescription: {
-    ...typography.caption,
-    color: colors.textLight,
-    textAlign: 'center',
   },
 });

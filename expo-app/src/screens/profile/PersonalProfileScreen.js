@@ -301,58 +301,43 @@ export default function PersonalProfileScreen({ navigation, route }) {
               <Ionicons name="chevron-down" size={16} color={colors.secondary} />
             </TouchableOpacity>
           </View>
-        </View>
 
-        <SectionHeader title={isSelf ? '我的狗狗' : 'TA 的狗狗'} suffix={`${dogs.length}只`} />
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.dogRow}
-        >
-          {dogs.map(dog => (
-            <TouchableOpacity
-              key={dog.id}
-              style={styles.dogCard}
-              activeOpacity={0.8}
-              onPress={() => navigation.navigate('DogProfile', { dogId: dog.id })}
-            >
-              <Image source={{ uri: dog.image }} style={styles.dogImage} />
-              <View style={styles.dogBody}>
-                <Text style={styles.dogName}>{dog.name}</Text>
-                <Text style={styles.dogMeta}>{dog.breed} · {dog.age} · {dog.gender}</Text>
-                <View style={styles.traitRow}>
-                  {dog.traits.map(trait => (
-                    <View key={trait} style={styles.traitChip}>
-                      <Text style={styles.traitText}>{trait}</Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-
-        <SectionHeader
-          title="徽章"
-          action="查看全部"
-          onPress={() => navigation.navigate('EarnedBadges', { badges })}
-        />
-        <View style={styles.badgeStrip}>
-          {badges.map(badge => (
-            <TouchableOpacity key={badge.id} style={styles.badgeItem} activeOpacity={0.78}>
-              <View style={[styles.badgeIcon, { backgroundColor: badge.color }]}>
-                <Ionicons name={badge.icon} size={18} color={colors.white} />
-              </View>
-            </TouchableOpacity>
-          ))}
           <TouchableOpacity
-            style={styles.moreBadge}
+            style={styles.profileBadgeStrip}
             activeOpacity={0.75}
             onPress={() => navigation.navigate('EarnedBadges', { badges })}
           >
-            <Text style={styles.moreBadgeText}>+8</Text>
+            {badges.slice(0, 5).map(badge => (
+              <View key={badge.id} style={styles.badgeItem}>
+                <View style={[styles.badgeIcon, { backgroundColor: badge.color }]}>
+                  <Ionicons name={badge.icon} size={18} color={colors.white} />
+                </View>
+              </View>
+            ))}
+            {badges.length > 5 && (
+              <View style={styles.moreBadge}>
+                <Text style={styles.moreBadgeText}>+{badges.length - 5}</Text>
+              </View>
+            )}
           </TouchableOpacity>
         </View>
+
+        <SectionHeader title={isSelf ? '我的狗狗' : 'TA 的狗狗'} suffix={`${dogs.length}只`} />
+        {dogs.length === 1 ? (
+          <View style={styles.singleDogRow}>
+            <DogCard dog={dogs[0]} navigation={navigation} fullWidth />
+          </View>
+        ) : (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.dogRow}
+          >
+            {dogs.map(dog => (
+              <DogCard key={dog.id} dog={dog} navigation={navigation} />
+            ))}
+          </ScrollView>
+        )}
 
         <SectionHeader title={isSelf ? '我的动态' : 'TA 的动态'} />
         <View style={styles.feedList}>
@@ -362,12 +347,7 @@ export default function PersonalProfileScreen({ navigation, route }) {
               item={item}
               profile={profile}
               onPress={() => {
-                if (item.sourcePostId) {
-                  navigation.getParent()?.navigate('Square', {
-                    screen: 'PostDetail',
-                    params: { id: item.sourcePostId },
-                  });
-                }
+                navigation.navigate('ProfileFeedDetail', { item, profile });
               }}
             />
           ))}
@@ -407,6 +387,29 @@ function SectionHeader({ title, suffix, action, onPress }) {
         </TouchableOpacity>
       )}
     </View>
+  );
+}
+
+function DogCard({ dog, navigation, fullWidth }) {
+  return (
+    <TouchableOpacity
+      style={[styles.dogCard, fullWidth && styles.singleDogCard]}
+      activeOpacity={0.8}
+      onPress={() => navigation.navigate('DogProfile', { dogId: dog.id })}
+    >
+      <Image source={{ uri: dog.image }} style={styles.dogImage} />
+      <View style={styles.dogBody}>
+        <Text style={styles.dogName}>{dog.name}</Text>
+        <Text style={styles.dogMeta}>{dog.breed} · {dog.age} · {dog.gender}</Text>
+        <View style={styles.traitRow}>
+          {dog.traits.map(trait => (
+            <View key={trait} style={styles.traitChip}>
+              <Text style={styles.traitText}>{trait}</Text>
+            </View>
+          ))}
+        </View>
+      </View>
+    </TouchableOpacity>
   );
 }
 
@@ -614,6 +617,11 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.md,
     backgroundColor: colors.white,
   },
+  singleDogRow: {
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.md,
+    backgroundColor: colors.white,
+  },
   dogCard: {
     width: 220,
     borderRadius: spacing.radiusMd,
@@ -621,6 +629,9 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: colors.border,
     overflow: 'hidden',
+  },
+  singleDogCard: {
+    width: '100%',
   },
   dogImage: {
     width: '100%',
@@ -638,15 +649,15 @@ const styles = StyleSheet.create({
     backgroundColor: colors.chipDefault,
   },
   traitText: { ...typography.captionBold, color: colors.secondary },
-  badgeStrip: {
+  profileBadgeStrip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    paddingHorizontal: spacing.md,
-    paddingBottom: spacing.md,
-    backgroundColor: colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    alignSelf: 'flex-start',
+    marginTop: spacing.md,
+    padding: spacing.sm,
+    borderRadius: spacing.radiusMd,
+    backgroundColor: colors.chipDefault,
   },
   badgeItem: {
     width: 40,

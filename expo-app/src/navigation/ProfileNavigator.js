@@ -2,6 +2,7 @@ import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import ProfileScreen from '../screens/profile/ProfileScreen';
 import PersonalProfileScreen from '../screens/profile/PersonalProfileScreen';
+import ProfileFeedDetailScreen from '../screens/profile/ProfileFeedDetailScreen';
 import DogProfileScreen from '../screens/profile/DogProfileScreen';
 import DogEditScreen from '../screens/profile/DogEditScreen';
 import DogSwitchScreen from '../screens/profile/DogSwitchScreen';
@@ -24,6 +25,7 @@ export default function ProfileNavigator() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="ProfileHome" component={ProfileScreen} />
       <Stack.Screen name="PersonalProfile" component={PersonalProfileScreen} />
+      <Stack.Screen name="ProfileFeedDetail" component={ProfileFeedDetailScreen} />
       <Stack.Screen name="DogProfile" component={DogProfileScreen} />
       <Stack.Screen name="DogEdit" component={DogEditScreen} />
       <Stack.Screen name="DogSwitch" component={DogSwitchScreen} options={{ presentation: 'modal' }} />

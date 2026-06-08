@@ -59,11 +59,6 @@ export default function ProfileScreen({ navigation }) {
             <Text style={styles.userName}>小明</Text>
             <Text style={styles.userId}>ID: 10086 · 上海</Text>
           </View>
-          <View
-            style={styles.editBtn}
-          >
-            <Ionicons name="create-outline" size={20} color={colors.textLight} />
-          </View>
         </TouchableOpacity>
 
         <View style={styles.sectionHeader}>
@@ -174,7 +169,6 @@ const styles = StyleSheet.create({
   userInfo: { flex: 1 },
   userName: { ...typography.h2, color: colors.secondary, marginBottom: 4 },
   userId: { ...typography.caption, color: colors.textLight },
-  editBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
