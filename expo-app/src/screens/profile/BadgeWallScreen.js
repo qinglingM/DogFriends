@@ -3,6 +3,7 @@ import { View, ScrollView, TouchableOpacity, StyleSheet, useWindowDimensions } f
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
+import { typography } from '../../theme/typography';
 import { NavBar } from '../../components';
 import { PROFILE_BADGES, getBadgeProgress, getBadgeProgressLabel } from '../../data/profileData';
 
