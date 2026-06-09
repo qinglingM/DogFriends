@@ -6,7 +6,7 @@ import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 
 import WalkNavigator from './WalkNavigator';
-import SquareScreen from '../screens/square/SquareScreen';
+import SquareNavigator from './SquareNavigator';
 import ExploreNavigator from './ExploreNavigator';
 import ProfileNavigator from './ProfileNavigator';
 
@@ -44,7 +44,7 @@ export default function BottomTabNavigator() {
       })}
     >
       <Tab.Screen name="Walk" component={WalkNavigator} />
-      <Tab.Screen name="Square" component={SquareScreen} />
+      <Tab.Screen name="Square" component={SquareNavigator} />
       <Tab.Screen name="Explore" component={ExploreNavigator} />
       <Tab.Screen name="Profile" component={ProfileNavigator} />
     </Tab.Navigator>
