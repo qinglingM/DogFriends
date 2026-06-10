@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform, StyleSheet, Keyboard, Modal } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,13 +16,13 @@ const PEE_OPTIONS = [
 ];
 
 const BRISTOL = [
-  { level: 'B1', emoji: '🫘', desc: '干硬颗粒' },
-  { level: 'B2', emoji: '🌰', desc: '干硬成块' },
-  { level: 'B3', emoji: '🥖', desc: '正常偏硬' },
-  { level: 'B4', emoji: '🍫', desc: '理想便便' },
-  { level: 'B5', emoji: '🍦', desc: '偏软成型' },
-  { level: 'B6', emoji: '💧', desc: '软糊不成形' },
-  { level: 'B7', emoji: '🌊', desc: '水样拉稀' },
+  { level: 'B1', emoji: '🫘', desc: '硬粒' },
+  { level: 'B2', emoji: '🌰', desc: '硬条' },
+  { level: 'B3', emoji: '🥖', desc: '偏硬' },
+  { level: 'B4', emoji: '🍫', desc: '正常' },
+  { level: 'B5', emoji: '🍦', desc: '偏软' },
+  { level: 'B6', emoji: '💧', desc: '糊便' },
+  { level: 'B7', emoji: '🌊', desc: '水便' },
 ];
 
 const BEHAVIOR_OPTIONS = [
@@ -67,6 +67,7 @@ function CompactBristol({ value, onChange, disabled }) {
           >
             <Text style={[styles.bristolEmoji, disabled && styles.bristolTextDisabled]}>{b.emoji}</Text>
             <Text style={[styles.bristolLevel, isActive && styles.bristolLevelActive, disabled && styles.bristolTextDisabled]}>{b.level}</Text>
+            <Text style={[styles.bristolDesc, disabled && styles.bristolTextDisabled]}>{b.desc}</Text>
           </TouchableOpacity>
         );
       })}
@@ -74,7 +75,7 @@ function CompactBristol({ value, onChange, disabled }) {
   );
 }
 
-function DogCheckinCard({ dog, data, onChange, walkPhotos, onPhotoPreview }) {
+function DogCheckinCard({ dog, data, onChange, walkPhotos, onPhotoPreview, scrollViewRef }) {
   const [showBehavior, setShowBehavior] = useState(false);
   const update = (field, value) => onChange({ ...data, [field]: value });
   const poopDisabled = !data.poop || data.poop === 'none';
@@ -124,7 +125,7 @@ function DogCheckinCard({ dog, data, onChange, walkPhotos, onPhotoPreview }) {
         style={styles.collapseToggle}
         onPress={() => setShowBehavior(!showBehavior)}
       >
-        <Text style={styles.fieldLabel}>异常行为（选填）</Text>
+        <Text style={styles.fieldLabel}>异常行为</Text>
         <View style={styles.collapseRight}>
           {behaviorCount > 0 && (
             <View style={styles.countBadge}>
@@ -147,7 +148,7 @@ function DogCheckinCard({ dog, data, onChange, walkPhotos, onPhotoPreview }) {
 
       <View style={styles.divider} />
 
-      <Text style={styles.fieldLabel}>备注（选填）</Text>
+      <Text style={styles.fieldLabel}>备注</Text>
       <TextInput
         style={styles.noteInput}
         placeholder="添加备注"
@@ -160,6 +161,9 @@ function DogCheckinCard({ dog, data, onChange, walkPhotos, onPhotoPreview }) {
         returnKeyType="done"
         blurOnSubmit
         onSubmitEditing={() => Keyboard.dismiss()}
+        onFocus={() => {
+          setTimeout(() => scrollViewRef?.current?.scrollToEnd({ animated: true }), 300);
+        }}
       />
     </View>
   );
@@ -167,8 +171,8 @@ function DogCheckinCard({ dog, data, onChange, walkPhotos, onPhotoPreview }) {
 
 export default function WalkCheckinScreen({ navigation }) {
   const insets = useSafeAreaInsets();
-  const { saveCheckin, finishWalk, dogs: currentDogs, currentWalk } = useWalk();
-  const dogs = currentDogs?.length ? currentDogs : [{ id: '1', name: '旺财' }];
+  const { saveCheckin, finishWalk, currentWalk } = useWalk();
+  const dogs = currentWalk?.dogs?.length ? currentWalk.dogs : [{ id: '1', name: '旺财' }];
   const walkPhotos = currentWalk?.photos || [];
 
   const [records, setRecords] = useState(() => {
@@ -179,6 +183,7 @@ export default function WalkCheckinScreen({ navigation }) {
     return init;
   });
   const [photoPreviewVisible, setPhotoPreviewVisible] = useState(false);
+  const scrollViewRef = useRef(null);
 
   const updateDog = (dogId, data) => {
     setRecords(prev => ({ ...prev, [dogId]: data }));
@@ -209,10 +214,11 @@ export default function WalkCheckinScreen({ navigation }) {
 
       <KeyboardAvoidingView
         style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={0}
+        behavior="padding"
+        keyboardVerticalOffset={44}
       >
         <ScrollView
+          ref={scrollViewRef}
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
           onScrollBeginDrag={() => Keyboard.dismiss()}
@@ -225,6 +231,7 @@ export default function WalkCheckinScreen({ navigation }) {
               onChange={(data) => updateDog(dog.id, data)}
               walkPhotos={walkPhotos}
               onPhotoPreview={() => setPhotoPreviewVisible(true)}
+              scrollViewRef={scrollViewRef}
             />
           ))}
 
@@ -325,6 +332,7 @@ const styles = StyleSheet.create({
   bristolEmoji: { fontSize: 16 },
   bristolLevel: { ...typography.caption, fontSize: 9, fontWeight: '700', color: colors.textLight, marginTop: 2 },
   bristolLevelActive: { color: colors.secondary },
+  bristolDesc: { ...typography.caption, fontSize: 8, color: colors.textLight, marginTop: 1 },
   bristolTextDisabled: { opacity: 0.4 },
   collapseToggle: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',

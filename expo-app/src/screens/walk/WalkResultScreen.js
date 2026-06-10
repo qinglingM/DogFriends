@@ -115,7 +115,6 @@ export default function WalkResultScreen({ navigation }) {
 
       <View style={styles.tipsSection}>
         <TipCard icon="bulb-outline" title="小贴士" description="连续遛狗超过30分钟，狗狗更容易保持好心情" tone="blue" />
-        <TipCard icon="water-outline" title="小贴士" description="记得给狗狗补充水分，尤其是天气热的时候" tone="blue" />
       </View>
 
       <TouchableOpacity

@@ -5,11 +5,11 @@ import { spacing } from '../theme/spacing';
 import { typography } from '../theme/typography';
 
 const MOODS = [
-  { value: 'energetic', emoji: '😄', label: '活力满满' },
-  { value: 'happy', emoji: '🙂', label: '心情不错' },
-  { value: 'calm', emoji: '😐', label: '比较平静' },
-  { value: 'tired', emoji: '😴', label: '有点疲惫' },
-  { value: 'unwell', emoji: '🤒', label: '不太舒服' },
+  { value: '活力满满', emoji: '😄', label: '活力满满' },
+  { value: '心情不错', emoji: '🙂', label: '心情不错' },
+  { value: '比较平静', emoji: '😐', label: '比较平静' },
+  { value: '有点疲惫', emoji: '😴', label: '有点疲惫' },
+  { value: '不太舒服', emoji: '🤒', label: '不太舒服' },
 ];
 
 export default function EmojiSelector({ value, onChange }) {
