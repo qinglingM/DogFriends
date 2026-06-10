@@ -117,23 +117,21 @@ export default function WalkTrackingScreen({ navigation }) {
             </View>
 
             <View style={styles.controlGroup}>
-              <TouchableOpacity style={styles.controlBtn} onPress={handleCamera}>
-                <Ionicons name="camera" size={24} color={colors.secondary} />
-              </TouchableOpacity>
+              <View style={styles.cameraWrap}>
+                <TouchableOpacity style={styles.controlBtn} onPress={handleCamera}>
+                  <Ionicons name="camera" size={24} color={colors.secondary} />
+                </TouchableOpacity>
+                {photos.length > 0 && (
+                  <View style={styles.galleryBadge}>
+                    <Text style={styles.galleryBadgeText}>{photos.length}</Text>
+                  </View>
+                )}
+              </View>
               <Text style={styles.controlLabel}>拍照</Text>
             </View>
           </View>
 
-          {photos.length > 0 && (
-            <TouchableOpacity style={styles.galleryThumb} activeOpacity={0.7}>
-              <View style={styles.galleryInner}>
-                <Ionicons name="images-outline" size={18} color={colors.secondary} />
-              </View>
-              <View style={styles.galleryBadge}>
-                <Text style={styles.galleryBadgeText}>{photos.length}</Text>
-              </View>
-            </TouchableOpacity>
-          )}
+
         </View>
       </View>
     </View>
@@ -197,6 +195,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'flex-start', gap: 24,
   },
   controlGroup: { alignItems: 'center', gap: 6 },
+  cameraWrap: { position: 'relative' },
   controlBtn: {
     width: 64, height: 64, borderRadius: 32,
     backgroundColor: colors.white, alignItems: 'center', justifyContent: 'center',
@@ -214,15 +213,8 @@ const styles = StyleSheet.create({
     borderRadius: spacing.radiusPill,
     overflow: 'hidden',
   },
-  galleryThumb: {
-    position: 'absolute', top: -68, right: 0,
-    width: 48, height: 48, borderRadius: 10,
-    backgroundColor: colors.white, borderWidth: 2, borderColor: colors.border,
-    overflow: 'hidden',
-  },
-  galleryInner: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#D3E0C8' },
   galleryBadge: {
-    position: 'absolute', top: -3, right: -3,
+    position: 'absolute', top: -4, right: -4,
     width: 18, height: 18, borderRadius: 9,
     backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center',
     borderWidth: 2, borderColor: colors.white,

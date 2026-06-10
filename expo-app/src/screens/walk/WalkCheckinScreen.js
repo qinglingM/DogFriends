@@ -9,7 +9,7 @@ import { NavBar, Button, Chip, DogAvatar, EmojiSelector } from '../../components
 import { useWalk } from '../../contexts/WalkContext';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
-const CARD_HORIZONTAL_PADDING = 16;
+const CARD_GAP = 16;
 
 const PEE_OPTIONS = [
   { value: 'none', label: '无' },
@@ -128,15 +128,15 @@ function DogCheckinCard({ dog, data, onChange, walkPhotos, onPhotoPreview }) {
         style={styles.collapseToggle}
         onPress={() => setShowBehavior(!showBehavior)}
       >
-        <Text style={styles.fieldLabel}>异常行为</Text>
-        <View style={styles.collapseRight}>
+        <View style={styles.collapseLeft}>
+          <Text style={styles.fieldLabel}>异常行为</Text>
           {behaviorCount > 0 && (
-            <View style={styles.countBadge}>
-              <Text style={styles.countBadgeText}>{behaviorCount}</Text>
-            </View>
+            <Text style={styles.behaviorNames} numberOfLines={1} ellipsizeMode="tail">
+              {data.behaviors.join(', ')}
+            </Text>
           )}
-          <Ionicons name={showBehavior ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textLight} />
         </View>
+        <Ionicons name={showBehavior ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textLight} />
       </TouchableOpacity>
 
       {showBehavior && (
@@ -184,6 +184,7 @@ export default function WalkCheckinScreen({ navigation }) {
   });
   const [currentIndex, setCurrentIndex] = useState(0);
   const [photoPreviewVisible, setPhotoPreviewVisible] = useState(false);
+  const [photoIndex, setPhotoIndex] = useState(0);
   const scrollRef = useRef(null);
 
   const updateDog = (dogId, data) => {
@@ -211,7 +212,7 @@ export default function WalkCheckinScreen({ navigation }) {
 
   const onScroll = (e) => {
     const x = e.nativeEvent.contentOffset.x;
-    const index = Math.round(x / (SCREEN_WIDTH - CARD_HORIZONTAL_PADDING * 2));
+    const index = Math.round(x / SCREEN_WIDTH);
     setCurrentIndex(index);
   };
 
@@ -277,7 +278,21 @@ export default function WalkCheckinScreen({ navigation }) {
           onPress={() => setPhotoPreviewVisible(false)}
         >
           <View style={styles.modalContent}>
-            <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false}>
+            {walkPhotos.length > 1 && (
+              <Text style={styles.modalCounter}>{photoIndex + 1}/{walkPhotos.length}</Text>
+            )}
+            <ScrollView
+              horizontal
+              pagingEnabled
+              snapToInterval={SCREEN_WIDTH}
+              decelerationRate="fast"
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.modalScrollContent}
+              onMomentumScrollEnd={(e) => {
+                const idx = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+                setPhotoIndex(idx);
+              }}
+            >
               {walkPhotos.map((p, i) => (
                 <View key={p.id || i} style={styles.modalPhoto}>
                   <Ionicons name="image-outline" size={48} color={colors.textLight} />
@@ -296,17 +311,19 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   flex: { flex: 1 },
   horizontalScroll: {
-    paddingHorizontal: CARD_HORIZONTAL_PADDING,
     alignItems: 'stretch',
   },
   cardPage: {
-    width: SCREEN_WIDTH - CARD_HORIZONTAL_PADDING * 2,
+    width: SCREEN_WIDTH,
+    paddingHorizontal: CARD_GAP / 2,
     justifyContent: 'center',
   },
   card: {
     backgroundColor: colors.white,
     borderRadius: spacing.radiusLg,
     padding: spacing.md,
+    borderWidth: 2,
+    borderColor: colors.border,
     shadowColor: colors.secondary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
@@ -359,14 +376,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingVertical: 2,
   },
-  collapseRight: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
+  collapseLeft: {
+    flex: 1, marginRight: spacing.sm,
   },
-  countBadge: {
-    width: 18, height: 18, borderRadius: 9,
-    backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center',
+  behaviorNames: {
+    ...typography.caption, fontSize: 12, color: colors.textLight, marginTop: 2,
   },
-  countBadgeText: { fontSize: 9, fontWeight: '800', color: colors.secondary },
   chipGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginTop: spacing.xs },
   noteInput: {
     width: '100%',
@@ -403,13 +418,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center', alignItems: 'center',
   },
   modalContent: { width: '100%', maxHeight: '70%' },
+  modalCounter: {
+    ...typography.caption, color: 'rgba(255,255,255,0.7)',
+    textAlign: 'center', marginBottom: spacing.sm,
+  },
+  modalScrollContent: { alignItems: 'center' },
   modalPhoto: {
-    width: 300, height: 400, marginHorizontal: spacing.sm,
-    borderRadius: spacing.radiusMd, backgroundColor: colors.white,
+    width: SCREEN_WIDTH, height: 400,
     alignItems: 'center', justifyContent: 'center',
   },
   modalPhotoTime: {
     position: 'absolute', bottom: spacing.md,
-    ...typography.caption, color: colors.textLight,
+    ...typography.caption, color: 'rgba(255,255,255,0.7)',
   },
 });

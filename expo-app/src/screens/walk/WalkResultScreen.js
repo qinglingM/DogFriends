@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { typography } from '../../theme/typography';
-import { Card, MapPlaceholder, DogAvatar, TipCard } from '../../components';
+import { MapPlaceholder, TipCard } from '../../components';
 import { useWalk } from '../../contexts/WalkContext';
 
 export default function WalkResultScreen({ navigation }) {
@@ -89,30 +89,6 @@ export default function WalkResultScreen({ navigation }) {
         </View>
       )}
 
-      {last?.checkins && Object.keys(last.checkins).length > 0 && (
-        <Card style={styles.checkinCard}>
-          {Object.entries(last.checkins).map(([dogId, ci]) => {
-            const dog = last.dogs?.find(d => d.id === dogId);
-            return (
-              <View key={dogId} style={styles.checkinDogBlock}>
-                <View style={styles.dogRow}>
-                  <DogAvatar size={36} />
-                  <Text style={styles.dogName}>{dog?.name || '狗狗'}</Text>
-                </View>
-                <View style={styles.checkinItems}>
-                  {ci.pee && <Text style={styles.checkinItem}>排尿: {ci.pee === 'none' ? '没有' : ci.pee === 'normal' ? '正常' : '偏多'}</Text>}
-                  {ci.poop && <Text style={styles.checkinItem}>排便: {ci.poop === 'none' ? '没有' : ci.poop === 'normal' ? '正常' : '偏多'}</Text>}
-                  {ci.bristol && <Text style={styles.checkinItem}>粪便: {ci.bristol}</Text>}
-                  {ci.mood && <Text style={styles.checkinItem}>精神: {ci.mood}</Text>}
-                  {ci.behaviors?.length > 0 && <Text style={styles.checkinItem}>异常: {ci.behaviors.join(', ')}</Text>}
-                  {ci.notes ? <Text style={styles.checkinItem}>备注: {ci.notes}</Text> : null}
-                </View>
-              </View>
-            );
-          })}
-        </Card>
-      )}
-
       <View style={styles.tipsSection}>
         <TipCard icon="bulb-outline" title="小贴士" description="连续遛狗超过30分钟，狗狗更容易保持好心情" tone="blue" />
       </View>
@@ -149,12 +125,6 @@ const styles = StyleSheet.create({
     width: 100, height: 100, borderRadius: spacing.radiusMd,
     backgroundColor: colors.surfaceLight, alignItems: 'center', justifyContent: 'center',
   },
-  checkinCard: { marginHorizontal: spacing.lg, marginTop: spacing.lg },
-  checkinDogBlock: { marginBottom: spacing.md },
-  dogRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs },
-  dogName: { ...typography.bodyBold, color: colors.secondary },
-  checkinItems: { gap: 4 },
-  checkinItem: { ...typography.caption, color: colors.textLight },
   tipsSection: { gap: spacing.sm, paddingHorizontal: spacing.lg, marginTop: spacing.lg },
   finishBtn: {
     marginHorizontal: spacing.xl, marginTop: spacing.xl,
