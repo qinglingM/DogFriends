@@ -5,8 +5,22 @@ import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { typography } from '../../theme/typography';
 import { Button, MapPlaceholder } from '../../components';
+import { useWalk } from '../../contexts/WalkContext';
 
 export default function WalkResultScreen({ navigation }) {
+  const { records } = useWalk();
+  const lastRecord = records[0] || {};
+  const duration = lastRecord.duration || 0;
+  const distance = lastRecord.distance || 0;
+  const pace = lastRecord.pace || 0;
+  const photos = lastRecord.photos || [];
+
+  const formatDuration = (sec) => {
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return m > 0 ? `${m} min ${s}s` : `${s}s`;
+  };
+
   const handleComplete = () => {
     navigation.getParent()?.reset({ index: 0, routes: [{ name: 'WalkHome' }] });
   };
@@ -29,7 +43,7 @@ export default function WalkResultScreen({ navigation }) {
           <View style={styles.statItem}>
             <Ionicons name="trending-up" size={20} color={colors.primary} />
             <View style={styles.statValueRow}>
-              <Text style={styles.statValue}>3.2</Text>
+              <Text style={styles.statValue}>{distance.toFixed(1)}</Text>
               <Text style={styles.statUnit}> km</Text>
             </View>
             <Text style={styles.statLabel}>总距离</Text>
@@ -37,15 +51,14 @@ export default function WalkResultScreen({ navigation }) {
           <View style={styles.statItem}>
             <Ionicons name="timer-outline" size={20} color={colors.primary} />
             <View style={styles.statValueRow}>
-              <Text style={styles.statValue}>45</Text>
-              <Text style={styles.statUnit}> min</Text>
+              <Text style={styles.statValue}>{formatDuration(duration)}</Text>
             </View>
             <Text style={styles.statLabel}>总时长</Text>
           </View>
           <View style={styles.statItem}>
             <Ionicons name="speedometer-outline" size={20} color={colors.primary} />
             <View style={styles.statValueRow}>
-              <Text style={styles.statValue}>4.3</Text>
+              <Text style={styles.statValue}>{pace}</Text>
               <Text style={styles.statUnit}> km/h</Text>
             </View>
             <Text style={styles.statLabel}>平均配速</Text>

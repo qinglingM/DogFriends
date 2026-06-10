@@ -6,6 +6,7 @@ import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { typography } from '../../theme/typography';
 import { MapPlaceholder, DogAvatar } from '../../components';
+import { useWalk } from '../../contexts/WalkContext';
 
 export default function WalkTrackingScreen({ navigation }) {
   const insets = useSafeAreaInsets();
@@ -13,6 +14,7 @@ export default function WalkTrackingScreen({ navigation }) {
   const [isPaused, setIsPaused] = useState(false);
   const [photos, setPhotos] = useState([]);
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const { updateWalk, addPhoto, currentWalk } = useWalk();
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -38,7 +40,14 @@ export default function WalkTrackingScreen({ navigation }) {
   };
 
   const handleCamera = () => {
-    setPhotos(prev => [...prev, { id: Date.now(), time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }) }]);
+    const newPhoto = { id: Date.now(), time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }) };
+    setPhotos(prev => [...prev, newPhoto]);
+    addPhoto(newPhoto);
+  };
+
+  const handleStop = () => {
+    updateWalk({ duration: seconds, distance: 1.8, pace: seconds > 0 ? (1.8 / (seconds / 3600)).toFixed(1) : 0 });
+    navigation.navigate('WalkCheckin');
   };
 
   return (
@@ -103,7 +112,7 @@ export default function WalkTrackingScreen({ navigation }) {
             <View style={styles.controlGroup}>
               <TouchableOpacity
                 style={styles.controlBtn}
-                onPress={() => navigation.navigate('WalkCheckin')}
+                onPress={handleStop}
               >
                 <View style={styles.stopCircle}>
                   <Ionicons name="stop" size={26} color={colors.white} />

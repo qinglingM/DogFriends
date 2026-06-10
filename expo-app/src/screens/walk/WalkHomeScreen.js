@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { typography } from '../../theme/typography';
 import { MapPlaceholder, DogAvatar } from '../../components';
+import { useWalk } from '../../contexts/WalkContext';
 
 const MOCK_DOGS = [
   { id: '1', name: '旺财', selected: true },
@@ -16,6 +17,8 @@ const MOCK_DOGS = [
 export default function WalkHomeScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const [dogs, setDogs] = useState(MOCK_DOGS);
+  const { getWeekStats, startWalk } = useWalk();
+  const weekStats = getWeekStats();
 
   const toggleDog = (id) => {
     setDogs(prev => {
@@ -26,6 +29,13 @@ export default function WalkHomeScreen({ navigation }) {
       }
       return prev.map(d => d.id === id ? { ...d, selected: !d.selected } : d);
     });
+  };
+
+  const selectedDogs = dogs.filter(d => d.selected);
+
+  const handleStart = () => {
+    startWalk(selectedDogs.map(d => ({ id: d.id, name: d.name })));
+    navigation.navigate('WalkTracking');
   };
 
   return (
@@ -44,17 +54,17 @@ export default function WalkHomeScreen({ navigation }) {
           <View style={styles.weekBar}>
             <View style={styles.weekItem}>
               <Ionicons name="paw" size={14} color={colors.primary} />
-              <Text style={styles.weekVal}>5</Text>
+              <Text style={styles.weekVal}>{weekStats.count}</Text>
               <Text style={styles.weekUnit}>次</Text>
             </View>
             <View style={[styles.weekItem, styles.weekDivider]}>
               <Ionicons name="trending-up" size={14} color={colors.primary} />
-              <Text style={styles.weekVal}>12.6</Text>
+              <Text style={styles.weekVal}>{weekStats.distance.toFixed(1)}</Text>
               <Text style={styles.weekUnit}>km</Text>
             </View>
             <View style={[styles.weekItem, styles.weekDivider]}>
               <Ionicons name="time-outline" size={14} color={colors.primary} />
-              <Text style={styles.weekVal}>3.5</Text>
+              <Text style={styles.weekVal}>{(weekStats.duration / 60).toFixed(1)}</Text>
               <Text style={styles.weekUnit}>h</Text>
             </View>
           </View>
@@ -89,7 +99,7 @@ export default function WalkHomeScreen({ navigation }) {
         <TouchableOpacity
           style={styles.goButton}
           activeOpacity={0.8}
-          onPress={() => navigation.navigate('WalkTracking')}
+          onPress={handleStart}
         >
           <Text style={styles.goText}>GO</Text>
         </TouchableOpacity>

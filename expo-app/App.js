@@ -5,6 +5,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import RootNavigator from './src/navigation/RootNavigator';
 import { ExploreProvider } from './src/contexts/ExploreContext';
 import { SquareProvider } from './src/contexts/SquareContext';
+import { WalkProvider } from './src/contexts/WalkContext';
 
 export default function App() {
   return (
@@ -12,8 +13,10 @@ export default function App() {
       <SafeAreaProvider>
         <ExploreProvider>
           <SquareProvider>
-            <StatusBar style="dark" />
-            <RootNavigator />
+            <WalkProvider>
+              <StatusBar style="dark" />
+              <RootNavigator />
+            </WalkProvider>
           </SquareProvider>
         </ExploreProvider>
       </SafeAreaProvider>

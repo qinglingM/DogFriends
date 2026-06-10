@@ -5,16 +5,36 @@ import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { typography } from '../../theme/typography';
 import { NavBar, Card, Chip, DogAvatar } from '../../components';
-
-const MOCK_RECORDS = [
-  { id: '1', date: '今天 · 6月7日', time: '08:30 - 09:15', distance: '3.2 km', duration: '45 min', pace: '4.3 km/h', dogs: ['旺财'] },
-  { id: '2', date: '昨天 · 6月6日', time: '18:00 - 18:40', distance: '2.8 km', duration: '40 min', pace: '4.2 km/h', dogs: ['旺财', '小白'] },
-  { id: '3', date: '昨天 · 6月6日', time: '07:15 - 07:45', distance: '1.5 km', duration: '30 min', pace: '3.0 km/h', dogs: ['小白'] },
-  { id: '4', date: '6月5日', time: '19:00 - 19:55', distance: '4.1 km', duration: '55 min', pace: '4.5 km/h', dogs: ['旺财'] },
-];
+import { useWalk } from '../../contexts/WalkContext';
 
 export default function WalkHistoryScreen({ navigation }) {
+  const { records, getRecentRecords, getTotalStats } = useWalk();
+  const totalStats = getTotalStats();
   let lastDate = '';
+
+  const formatRecord = (record) => {
+    const duration = record.duration || 0;
+    const m = Math.floor(duration / 60);
+    const s = duration % 60;
+    return {
+      id: record.id,
+      date: record.dateLabel || record.date,
+      time: `${m > 0 ? m + '分' : ''}${s}秒`,
+      distance: `${(record.distance || 0).toFixed(1)} km`,
+      duration: `${m} min`,
+      pace: `${record.pace || 0} km/h`,
+      dogs: (record.dogs || []).map(d => d.name),
+    };
+  };
+
+  const displayRecords = records.length > 0
+    ? records.map(formatRecord)
+    : [
+        { id: '1', date: '6月7日 周六', time: '08:30 - 09:15', distance: '3.2 km', duration: '45 min', pace: '4.3 km/h', dogs: ['旺财'] },
+        { id: '2', date: '6月6日 周五', time: '18:00 - 18:40', distance: '2.8 km', duration: '40 min', pace: '4.2 km/h', dogs: ['旺财', '小白'] },
+        { id: '3', date: '6月6日 周五', time: '07:15 - 07:45', distance: '1.5 km', duration: '30 min', pace: '3.0 km/h', dogs: ['小白'] },
+        { id: '4', date: '6月5日 周四', time: '19:00 - 19:55', distance: '4.1 km', duration: '55 min', pace: '4.5 km/h', dogs: ['旺财'] },
+      ];
 
   return (
     <View style={styles.screen}>
@@ -34,24 +54,24 @@ export default function WalkHistoryScreen({ navigation }) {
         <Card>
           <View style={styles.overviewRow}>
             <View style={styles.overviewStat}>
-              <Text style={styles.overviewValue}>18</Text>
+              <Text style={styles.overviewValue}>{totalStats.count || 18}</Text>
               <Text style={styles.overviewUnit}>次</Text>
               <Text style={styles.overviewLabel}>本月遛狗</Text>
             </View>
             <View style={styles.overviewStat}>
-              <Text style={styles.overviewValue}>48.2</Text>
+              <Text style={styles.overviewValue}>{(totalStats.distance || 48.2).toFixed(1)}</Text>
               <Text style={styles.overviewUnit}>km</Text>
               <Text style={styles.overviewLabel}>本月距离</Text>
             </View>
             <View style={styles.overviewStat}>
-              <Text style={styles.overviewValue}>14.5</Text>
+              <Text style={styles.overviewValue}>{((totalStats.duration || 52200) / 3600).toFixed(1)}</Text>
               <Text style={styles.overviewUnit}>h</Text>
               <Text style={styles.overviewLabel}>本月时长</Text>
             </View>
           </View>
         </Card>
 
-        {MOCK_RECORDS.map(record => {
+        {displayRecords.map(record => {
           const showDate = record.date !== lastDate;
           lastDate = record.date;
           return (

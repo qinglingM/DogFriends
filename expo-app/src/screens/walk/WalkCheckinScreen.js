@@ -5,6 +5,7 @@ import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { typography } from '../../theme/typography';
 import { Button, DogAvatar } from '../../components';
+import { useWalk } from '../../contexts/WalkContext';
 
 const ABNORMAL_OPTIONS = [
   '跛行', '过度喘气', '不愿走', '异常嗅探', '频繁挠痒', '呕吐迹象',
@@ -12,21 +13,21 @@ const ABNORMAL_OPTIONS = [
 ];
 
 const BRISTOL_LEVELS = [
-  { level: 'B1', desc: '干硬颗粒', emoji: '😐', tone: 'warn' },
-  { level: 'B2', desc: '干硬成块', emoji: '🙂', tone: 'warn' },
-  { level: 'B3', desc: '正常偏硬', emoji: '😊', tone: 'normal' },
-  { level: 'B4', desc: '理想便便', emoji: '😄', tone: 'normal' },
-  { level: 'B5', desc: '偏软成型', emoji: '😐', tone: 'normal' },
-  { level: 'B6', desc: '软糊不成形', emoji: '😟', tone: 'danger' },
-  { level: 'B7', desc: '水样拉稀', emoji: '😣', tone: 'danger' },
+  { level: 'B1', desc: '干硬', emoji: '😐', tone: 'warn' },
+  { level: 'B2', desc: '成块', emoji: '🙂', tone: 'warn' },
+  { level: 'B3', desc: '偏硬', emoji: '😊', tone: 'normal' },
+  { level: 'B4', desc: '理想', emoji: '😄', tone: 'normal' },
+  { level: 'B5', desc: '偏软', emoji: '😐', tone: 'normal' },
+  { level: 'B6', desc: '软糊', emoji: '😟', tone: 'danger' },
+  { level: 'B7', desc: '水样', emoji: '😣', tone: 'danger' },
 ];
 
 const MOODS = [
-  { value: 'energetic', emoji: '😄', label: '活力' },
-  { value: 'happy', emoji: '🙂', label: '不错' },
-  { value: 'calm', emoji: '😐', label: '平静' },
-  { value: 'tired', emoji: '😴', label: '疲惫' },
-  { value: 'unwell', emoji: '🤒', label: '不舒服' },
+  { value: 'energetic', emoji: '😄' },
+  { value: 'happy', emoji: '🙂' },
+  { value: 'calm', emoji: '😐' },
+  { value: 'tired', emoji: '😴' },
+  { value: 'unwell', emoji: '🤒' },
 ];
 
 const MOCK_DOGS = [
@@ -41,51 +42,48 @@ function DogCheckinCard({ dog, data, onChange }) {
   return (
     <View style={styles.card}>
       <View style={styles.cardHeader}>
-        <DogAvatar size={48} />
+        <DogAvatar size={40} />
         <Text style={styles.cardDogName}>{dog.name}</Text>
       </View>
 
-      <View style={styles.fieldSection}>
-        <Text style={styles.sectionLabel}>排尿</Text>
-        <View style={styles.optionRow}>
-          {['none', 'normal', 'more'].map(v => (
-            <TouchableOpacity
-              key={v}
-              style={[styles.optionBtn, data.pee === v && styles.optionBtnActive]}
-              onPress={() => update('pee', v)}
-            >
-              <Text style={[styles.optionText, data.pee === v && styles.optionTextActive]}>
-                {v === 'none' ? '没有' : v === 'normal' ? '正常' : '偏多'}
-              </Text>
-            </TouchableOpacity>
-          ))}
+      <View style={styles.inlineRow}>
+        <View style={styles.inlineField}>
+          <Text style={styles.inlineLabel}>💧 排尿</Text>
+          <View style={styles.optionRow}>
+            {['none', 'normal', 'more'].map(v => (
+              <TouchableOpacity
+                key={v}
+                style={[styles.optionBtn, data.pee === v && styles.optionBtnActive]}
+                onPress={() => update('pee', v)}
+              >
+                <Text style={[styles.optionText, data.pee === v && styles.optionTextActive]}>
+                  {v === 'none' ? '没有' : v === 'normal' ? '正常' : '偏多'}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
-      </View>
-
-      <View style={styles.fieldSection}>
-        <Text style={styles.sectionLabel}>排便</Text>
-        <View style={styles.optionRow}>
-          {['none', 'normal', 'more'].map(v => (
-            <TouchableOpacity
-              key={v}
-              style={[styles.optionBtn, data.poop === v && styles.optionBtnActive]}
-              onPress={() => update('poop', v)}
-            >
-              <Text style={[styles.optionText, data.poop === v && styles.optionTextActive]}>
-                {v === 'none' ? '没有' : v === 'normal' ? '正常' : '偏多'}
-              </Text>
-            </TouchableOpacity>
-          ))}
+        <View style={styles.inlineField}>
+          <Text style={styles.inlineLabel}>💩 排便</Text>
+          <View style={styles.optionRow}>
+            {['none', 'normal', 'more'].map(v => (
+              <TouchableOpacity
+                key={v}
+                style={[styles.optionBtn, data.poop === v && styles.optionBtnActive]}
+                onPress={() => update('poop', v)}
+              >
+                <Text style={[styles.optionText, data.poop === v && styles.optionTextActive]}>
+                  {v === 'none' ? '没有' : v === 'normal' ? '正常' : '偏多'}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
       </View>
 
       <View style={styles.fieldSection}>
         <Text style={styles.sectionLabel}>便便形态</Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.bristolRow}
-        >
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.bristolRow}>
           {BRISTOL_LEVELS.map(item => {
             const isActive = data.bristol === item.level;
             const isDisabled = !poopActive;
@@ -102,15 +100,9 @@ function DogCheckinCard({ dog, data, onChange }) {
                 onPress={() => !isDisabled && update('bristol', item.level)}
                 activeOpacity={isDisabled ? 1 : 0.7}
               >
-                <Text style={[styles.bristolEmoji, isDisabled && styles.bristolEmojiDisabled]}>
-                  {item.emoji}
-                </Text>
-                <Text style={[styles.bristolLevel, isDisabled && styles.bristolLevelDisabled]}>
-                  {item.level}
-                </Text>
-                <Text style={[styles.bristolDesc, isDisabled && styles.bristolDescDisabled]}>
-                  {item.desc}
-                </Text>
+                <Text style={[styles.bristolEmoji, isDisabled && { opacity: 0.4 }]}>{item.emoji}</Text>
+                <Text style={[styles.bristolLevel, isDisabled && { color: colors.textLight }]}>{item.level}</Text>
+                <Text style={[styles.bristolDesc, isDisabled && { opacity: 0.4 }]}>{item.desc}</Text>
               </TouchableOpacity>
             );
           })}
@@ -127,9 +119,6 @@ function DogCheckinCard({ dog, data, onChange }) {
               onPress={() => update('mood', m.value)}
             >
               <Text style={styles.moodEmoji}>{m.emoji}</Text>
-              <Text style={[styles.moodLabel, data.mood === m.value && styles.moodLabelActive]}>
-                {m.label}
-              </Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -141,11 +130,7 @@ function DogCheckinCard({ dog, data, onChange }) {
           onPress={() => update('showAbnormal', !data.showAbnormal)}
         >
           <Text style={styles.sectionLabel}>异常行为</Text>
-          <Ionicons
-            name={data.showAbnormal ? 'chevron-up' : 'chevron-down'}
-            size={16}
-            color={colors.textLight}
-          />
+          <Ionicons name={data.showAbnormal ? 'chevron-up' : 'chevron-down'} size={14} color={colors.textLight} />
         </TouchableOpacity>
         {data.showAbnormal && (
           <View style={styles.chipWrap}>
@@ -159,9 +144,7 @@ function DogCheckinCard({ dog, data, onChange }) {
                   update('abnormal', newList);
                 }}
               >
-                <Text style={[styles.chipText, data.abnormal?.includes(opt) && styles.chipTextActive]}>
-                  {opt}
-                </Text>
+                <Text style={[styles.chipText, data.abnormal?.includes(opt) && styles.chipTextActive]}>{opt}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -169,10 +152,10 @@ function DogCheckinCard({ dog, data, onChange }) {
         {data.showAbnormal && data.abnormal?.length > 0 && (
           <View style={styles.mediaRow}>
             <TouchableOpacity style={styles.mediaThumb}>
-              <Ionicons name="image-outline" size={16} color={colors.secondary} />
+              <Ionicons name="image-outline" size={14} color={colors.secondary} />
             </TouchableOpacity>
             <TouchableOpacity style={styles.mediaThumb}>
-              <Ionicons name="videocam-outline" size={16} color={colors.secondary} />
+              <Ionicons name="videocam-outline" size={14} color={colors.secondary} />
             </TouchableOpacity>
           </View>
         )}
@@ -200,30 +183,37 @@ function DogCheckinCard({ dog, data, onChange }) {
 
 export default function WalkCheckinScreen({ navigation }) {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const scrollX = useRef(new Animated.Value(0)).current;
   const scrollViewRef = useRef(null);
-  const [dogData, setDogData] = useState({
-    '1': { pee: null, poop: null, bristol: null, mood: null, abnormal: [], note: '', showAbnormal: false, showNote: false },
-    '2': { pee: null, poop: null, bristol: null, mood: null, abnormal: [], note: '', showAbnormal: false, showNote: false },
+  const { saveCheckin, finishWalk, currentWalk } = useWalk();
+  const dogs = currentWalk?.dogs || MOCK_DOGS;
+  const [dogData, setDogData] = useState(() => {
+    const initial = {};
+    dogs.forEach(d => {
+      initial[d.id] = { pee: null, poop: null, bristol: null, mood: null, abnormal: [], note: '', showAbnormal: false, showNote: false };
+    });
+    return initial;
   });
 
   const updateDog = (id, data) => setDogData(prev => ({ ...prev, [id]: data }));
-  const isLastDog = currentIndex === MOCK_DOGS.length - 1;
-  const isSingleDog = MOCK_DOGS.length === 1;
+  const isLastDog = currentIndex === dogs.length - 1;
+  const isSingleDog = dogs.length === 1;
 
   const handleNext = () => {
     if (!isLastDog) {
       const nextIndex = currentIndex + 1;
       setCurrentIndex(nextIndex);
-      scrollViewRef.current?.scrollTo({ x: nextIndex * spacing.screenMargin * 2 + 300, animated: true });
+      scrollViewRef.current?.scrollTo({ x: nextIndex * 280, animated: true });
     }
   };
 
   const handleSave = () => {
+    saveCheckin(dogData);
+    finishWalk();
     navigation.replace('WalkResult');
   };
 
   const handleSkip = () => {
+    finishWalk();
     navigation.replace('WalkResult');
   };
 
@@ -244,13 +234,8 @@ export default function WalkCheckinScreen({ navigation }) {
           pagingEnabled
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
-          onScroll={Animated.event(
-            [{ nativeEvent: { contentOffset: { x: scrollX } } }],
-            { useNativeDriver: false }
-          )}
-          scrollEventThrottle={16}
         >
-          {MOCK_DOGS.map((dog, index) => (
+          {dogs.map((dog) => (
             <View key={dog.id} style={styles.cardPage}>
               <DogCheckinCard
                 dog={dog}
@@ -261,13 +246,10 @@ export default function WalkCheckinScreen({ navigation }) {
           ))}
         </Animated.ScrollView>
 
-        {MOCK_DOGS.length > 1 && (
+        {dogs.length > 1 && (
           <View style={styles.pagination}>
-            {MOCK_DOGS.map((_, index) => (
-              <View
-                key={index}
-                style={[styles.dot, index === currentIndex && styles.dotActive]}
-              />
+            {dogs.map((_, index) => (
+              <View key={index} style={[styles.dot, index === currentIndex && styles.dotActive]} />
             ))}
           </View>
         )}
@@ -275,13 +257,9 @@ export default function WalkCheckinScreen({ navigation }) {
 
       <View style={styles.bottomBar}>
         {!isSingleDog && !isLastDog ? (
-          <Button fullWidth onPress={handleNext}>
-            下一只狗 →
-          </Button>
+          <Button fullWidth onPress={handleNext}>下一只狗 →</Button>
         ) : (
-          <Button fullWidth onPress={handleSave}>
-            保存并查看结果
-          </Button>
+          <Button fullWidth onPress={handleSave}>保存并查看结果</Button>
         )}
       </View>
     </View>
@@ -291,161 +269,78 @@ export default function WalkCheckinScreen({ navigation }) {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
-    paddingTop: 48,
-    paddingBottom: 12,
-    backgroundColor: colors.bg,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: spacing.md, paddingTop: 48, paddingBottom: 10,
+    backgroundColor: colors.bg, borderBottomWidth: 1, borderBottomColor: colors.border,
   },
   headerPlaceholder: { width: 60 },
   headerTitle: { ...typography.bodyBold, fontSize: 16, color: colors.secondary },
   skipText: { ...typography.bodyBold, fontSize: 14, color: colors.textLight },
-  cardArea: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  scrollContent: {
-    paddingHorizontal: spacing.screenMargin,
-  },
-  cardPage: {
-    width: 300,
-    marginRight: spacing.screenMargin,
-  },
+  cardArea: { flex: 1, justifyContent: 'flex-end' },
+  scrollContent: { paddingHorizontal: spacing.screenMargin },
+  cardPage: { width: 280, marginRight: spacing.screenMargin },
   card: {
-    backgroundColor: colors.white,
-    borderRadius: spacing.radiusMd,
-    padding: spacing.md,
-    gap: 16,
+    backgroundColor: colors.white, borderRadius: spacing.radiusMd,
+    padding: 12, gap: 10,
   },
   cardHeader: {
-    alignItems: 'center',
-    gap: 8,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: colors.border,
   },
-  cardDogName: { ...typography.h3, fontSize: 16, color: colors.secondary },
-  fieldSection: { gap: 8 },
-  sectionLabel: { ...typography.captionBold, color: colors.secondary },
-  optionRow: { flexDirection: 'row', gap: 8 },
+  cardDogName: { ...typography.bodyBold, fontSize: 15, color: colors.secondary },
+  inlineRow: { gap: 8 },
+  inlineField: { gap: 4 },
+  inlineLabel: { ...typography.caption, fontSize: 11, fontWeight: '700', color: colors.secondary },
+  optionRow: { flexDirection: 'row', gap: 4 },
   optionBtn: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: spacing.radiusSm,
-    backgroundColor: colors.bg,
-    alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: 'transparent',
+    flex: 1, paddingVertical: 6, borderRadius: 6,
+    backgroundColor: colors.bg, alignItems: 'center', borderWidth: 1.5, borderColor: 'transparent',
   },
-  optionBtnActive: {
-    backgroundColor: 'rgba(185, 207, 50, 0.15)',
-    borderColor: colors.primary,
-  },
-  optionText: { ...typography.captionBold, fontSize: 13, color: colors.textMain },
+  optionBtnActive: { backgroundColor: 'rgba(185, 207, 50, 0.15)', borderColor: colors.primary },
+  optionText: { ...typography.caption, fontSize: 11, fontWeight: '600', color: colors.textMain },
   optionTextActive: { color: colors.secondary },
-  bristolRow: { gap: 6, paddingVertical: 4 },
+  fieldSection: { gap: 4 },
+  sectionLabel: { ...typography.caption, fontSize: 11, fontWeight: '700', color: colors.secondary },
+  bristolRow: { gap: 4, paddingVertical: 2 },
   bristolCard: {
-    width: 80,
-    paddingVertical: 10,
-    paddingHorizontal: 6,
-    borderRadius: spacing.radiusSm,
-    backgroundColor: colors.bg,
-    alignItems: 'center',
-    gap: 4,
-    borderWidth: 1.5,
-    borderColor: 'transparent',
+    width: 52, paddingVertical: 6, paddingHorizontal: 4,
+    borderRadius: 6, backgroundColor: colors.bg, alignItems: 'center', gap: 2, borderWidth: 1.5, borderColor: 'transparent',
   },
-  bristolCardActive: {
-    borderColor: colors.primary,
-    backgroundColor: 'rgba(185, 207, 50, 0.1)',
-  },
-  bristolCardDisabled: {
-    opacity: 0.4,
-  },
-  bristolCardWarn: {
-    borderColor: 'rgba(146, 102, 153, 0.3)',
-  },
-  bristolCardDanger: {
-    borderColor: 'rgba(231, 76, 60, 0.3)',
-  },
-  bristolEmoji: { fontSize: 24 },
-  bristolEmojiDisabled: { opacity: 0.5 },
-  bristolLevel: { ...typography.captionBold, fontSize: 10, color: colors.secondary },
-  bristolLevelDisabled: { color: colors.textLight },
-  bristolDesc: { fontSize: 9, color: colors.textLight, textAlign: 'center' },
-  bristolDescDisabled: { opacity: 0.5 },
-  moodRow: { flexDirection: 'row', gap: 6 },
+  bristolCardActive: { borderColor: colors.primary, backgroundColor: 'rgba(185, 207, 50, 0.1)' },
+  bristolCardDisabled: { opacity: 0.4 },
+  bristolCardWarn: { borderColor: 'rgba(146, 102, 153, 0.3)' },
+  bristolCardDanger: { borderColor: 'rgba(231, 76, 60, 0.3)' },
+  bristolEmoji: { fontSize: 18 },
+  bristolLevel: { fontSize: 9, fontWeight: '700', color: colors.secondary },
+  bristolDesc: { fontSize: 8, color: colors.textLight, textAlign: 'center' },
+  moodRow: { flexDirection: 'row', gap: 4 },
   moodBtn: {
-    flex: 1,
-    paddingVertical: 8,
-    borderRadius: spacing.radiusSm,
-    alignItems: 'center',
+    flex: 1, paddingVertical: 6, borderRadius: 6, alignItems: 'center',
   },
   moodBtnActive: { backgroundColor: 'rgba(185, 207, 50, 0.15)' },
-  moodEmoji: { fontSize: 24 },
-  moodLabel: { fontSize: 10, fontWeight: '600', color: colors.textLight, marginTop: 2 },
-  moodLabelActive: { color: colors.secondary },
+  moodEmoji: { fontSize: 22 },
   abnormalToggle: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
   },
-  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
   chip: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: spacing.radiusPill,
-    backgroundColor: colors.chipDefault,
+    paddingHorizontal: 8, paddingVertical: 4, borderRadius: spacing.radiusPill, backgroundColor: colors.chipDefault,
   },
   chipActive: { backgroundColor: colors.primary },
-  chipText: { ...typography.caption, color: colors.textMain },
+  chipText: { fontSize: 11, color: colors.textMain },
   chipTextActive: { color: colors.secondary, fontWeight: '700' },
-  mediaRow: { flexDirection: 'row', gap: 8, marginTop: 8 },
+  mediaRow: { flexDirection: 'row', gap: 6, marginTop: 4 },
   mediaThumb: {
-    width: 44,
-    height: 44,
-    borderRadius: 8,
-    backgroundColor: colors.bg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    borderStyle: 'dashed',
+    width: 36, height: 36, borderRadius: 6, backgroundColor: colors.bg,
+    alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: colors.border, borderStyle: 'dashed',
   },
-  addNoteText: { ...typography.caption, color: colors.textLight },
+  addNoteText: { fontSize: 11, color: colors.textLight },
   noteInput: {
-    width: '100%',
-    backgroundColor: colors.bg,
-    borderRadius: spacing.radiusSm,
-    padding: 10,
-    fontSize: 13,
-    color: colors.textMain,
-    height: 60,
-    textAlignVertical: 'top',
+    width: '100%', backgroundColor: colors.bg, borderRadius: 6, padding: 8,
+    fontSize: 12, color: colors.textMain, height: 48, textAlignVertical: 'top',
   },
-  pagination: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 12,
-  },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: colors.border,
-  },
-  dotActive: {
-    width: 18,
-    backgroundColor: colors.primary,
-  },
-  bottomBar: {
-    paddingHorizontal: spacing.screenMargin,
-    paddingBottom: 32,
-    paddingTop: 8,
-  },
+  pagination: { flexDirection: 'row', justifyContent: 'center', gap: 6, paddingVertical: 8 },
+  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.border },
+  dotActive: { width: 18, backgroundColor: colors.primary },
+  bottomBar: { paddingHorizontal: spacing.screenMargin, paddingBottom: 32, paddingTop: 8 },
 });
