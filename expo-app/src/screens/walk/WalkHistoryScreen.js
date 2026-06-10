@@ -63,8 +63,8 @@ export default function WalkHistoryScreen({ navigation }) {
               >
                 <View style={styles.recordHeader}>
                   <Text style={styles.recordDate}>{record.time}</Text>
-                  <Chip variant="verified" style={{ paddingVertical: 4, paddingHorizontal: 8 }}>
-                    <Text style={{ fontSize: 10 }}>已完成</Text>
+                  <Chip variant="verified" style={{ paddingVertical: 4, paddingHorizontal: 8 }} textStyle={{ fontSize: 10 }}>
+                    已完成
                   </Chip>
                 </View>
                 <View style={styles.recordStats}>

@@ -1,13 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { typography } from '../../theme/typography';
-import { MapPlaceholder, Button, DogAvatar } from '../../components';
-
-const { width } = Dimensions.get('window');
+import { MapPlaceholder, DogAvatar } from '../../components';
 
 const MOCK_DOGS = [
   { id: '1', name: '旺财', selected: true },
@@ -20,8 +18,17 @@ export default function WalkHomeScreen({ navigation }) {
   const [dogs, setDogs] = useState(MOCK_DOGS);
 
   const toggleDog = (id) => {
-    setDogs(dogs.map(d => d.id === id ? { ...d, selected: !d.selected } : d));
+    setDogs(prev => {
+      const dog = prev.find(d => d.id === id);
+      if (dog && dog.selected) {
+        const selectedCount = prev.filter(d => d.selected).length;
+        if (selectedCount <= 1) return prev;
+      }
+      return prev.map(d => d.id === id ? { ...d, selected: !d.selected } : d);
+    });
   };
+
+  const selectedDogs = dogs.filter(d => d.selected);
 
   return (
     <View style={styles.container}>
@@ -33,10 +40,7 @@ export default function WalkHomeScreen({ navigation }) {
           style={{ borderRadius: 0 }}
         />
 
-        <View style={[styles.locationDot, {
-          top: '50%',
-          left: '50%',
-        }]} />
+        <View style={[styles.locationDot, { top: '50%', left: '50%' }]} />
 
         <View style={[styles.floatTop, { paddingTop: insets.top + 8 }]}>
           <View style={styles.weekBar}>
@@ -66,41 +70,53 @@ export default function WalkHomeScreen({ navigation }) {
       </View>
 
       <View style={[styles.floatBottom, { paddingBottom: 16 + insets.bottom }]}>
+        <TouchableOpacity
+          style={styles.startButton}
+          activeOpacity={0.8}
+          onPress={() => navigation.navigate('WalkTracking')}
+        >
+          <View style={styles.dogAvatarsRow}>
+            {selectedDogs.slice(0, 3).map((dog, i) => (
+              <TouchableOpacity
+                key={dog.id}
+                style={[styles.avatarWrapper, i > 0 && { marginLeft: -8 }]}
+                onPress={(e) => { e.stopPropagation?.(); toggleDog(dog.id); }}
+                activeOpacity={0.7}
+              >
+                <DogAvatar size={48} />
+                <View style={styles.checkBadge}>
+                  <Ionicons name="checkmark" size={10} color={colors.white} />
+                </View>
+              </TouchableOpacity>
+            ))}
+            {selectedDogs.length > 3 && (
+              <View style={[styles.avatarOverflow, { marginLeft: -8 }]}>
+                <Text style={styles.avatarOverflowText}>+{selectedDogs.length - 3}</Text>
+              </View>
+            )}
+          </View>
+          <Text style={styles.startLabel}>开始遛狗</Text>
+        </TouchableOpacity>
+
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.dogSelectRow}
+          contentContainerStyle={styles.dogToggleRow}
         >
           {dogs.map(dog => (
             <TouchableOpacity
               key={dog.id}
               onPress={() => toggleDog(dog.id)}
               activeOpacity={0.7}
-              style={[styles.dogChip, dog.selected && styles.dogChipSelected]}
+              style={[styles.dogToggle, dog.selected && styles.dogToggleActive]}
             >
-              <DogAvatar size={32} />
-              <Text style={styles.dogChipName}>{dog.name}</Text>
-              <View style={[styles.checkCircle, dog.selected && styles.checkCircleActive]}>
-                {dog.selected && <Ionicons name="checkmark" size={12} color={colors.white} />}
-              </View>
+              <DogAvatar size={20} />
+              <Text style={[styles.dogToggleName, dog.selected && styles.dogToggleNameActive]}>
+                {dog.name}
+              </Text>
             </TouchableOpacity>
           ))}
-          <TouchableOpacity
-            style={styles.addDogChip}
-            onPress={() => navigation.navigate('Profile', { screen: 'DogEdit' })}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="add" size={14} color={colors.textLight} />
-          </TouchableOpacity>
         </ScrollView>
-
-        <Button
-          onPress={() => navigation.navigate('WalkTracking')}
-          icon={<Ionicons name="play" size={20} color={colors.secondary} />}
-          style={styles.startBtn}
-        >
-          开始遛狗
-        </Button>
       </View>
     </View>
   );
@@ -200,65 +216,87 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 16,
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
     zIndex: 10,
   },
-  dogSelectRow: {
-    flexDirection: 'row',
+  startButton: {
+    width: '100%',
+    backgroundColor: colors.secondary,
+    borderRadius: spacing.radiusLg,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
     alignItems: 'center',
     gap: 8,
-  },
-  dogChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: colors.white,
-    borderRadius: spacing.radiusPill,
-    paddingVertical: 6,
-    paddingLeft: 6,
-    paddingRight: 14,
     shadowColor: colors.secondary,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
+    shadowOpacity: 0.3,
     shadowRadius: 12,
-    elevation: 4,
-    borderWidth: 2,
-    borderColor: 'transparent',
+    elevation: 6,
   },
-  dogChipSelected: {
-    borderColor: colors.primary,
-    backgroundColor: 'rgba(185, 207, 50, 0.12)',
+  dogAvatarsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  dogChipName: {
-    ...typography.bodyBold,
-    fontSize: 14,
-    color: colors.secondary,
+  avatarWrapper: {
+    position: 'relative',
   },
-  checkCircle: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: colors.border,
+  checkBadge: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  checkCircleActive: {
-    backgroundColor: colors.secondary,
+    borderWidth: 2,
     borderColor: colors.secondary,
   },
-  addDogChip: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    borderStyle: 'dashed',
+  avatarOverflow: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255,255,255,0.25)',
     alignItems: 'center',
     justifyContent: 'center',
-    opacity: 0.6,
   },
-  startBtn: {
-    paddingHorizontal: 48,
+  avatarOverflowText: {
+    ...typography.bodyBold,
+    fontSize: 14,
+    color: colors.white,
+  },
+  startLabel: {
+    ...typography.button,
+    color: colors.white,
+    fontSize: 16,
+  },
+  dogToggleRow: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  dogToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(255,255,255,0.7)',
+    borderRadius: spacing.radiusPill,
+    paddingVertical: 4,
+    paddingLeft: 4,
+    paddingRight: 10,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
+  },
+  dogToggleActive: {
+    backgroundColor: colors.white,
+    borderColor: colors.primary,
+  },
+  dogToggleName: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textLight,
+  },
+  dogToggleNameActive: {
+    color: colors.secondary,
   },
 });
