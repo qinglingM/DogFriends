@@ -8,7 +8,7 @@ import { Button, MapPlaceholder } from '../../components';
 
 export default function WalkResultScreen({ navigation }) {
   const handleComplete = () => {
-    navigation.getParent()?.getParent()?.reset({ index: 0, routes: [{ name: 'Walk' }] });
+    navigation.getParent()?.reset({ index: 0, routes: [{ name: 'WalkHome' }] });
   };
 
   return (

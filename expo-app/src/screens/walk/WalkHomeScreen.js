@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
@@ -27,8 +27,6 @@ export default function WalkHomeScreen({ navigation }) {
       return prev.map(d => d.id === id ? { ...d, selected: !d.selected } : d);
     });
   };
-
-  const selectedDogs = dogs.filter(d => d.selected);
 
   return (
     <View style={styles.container}>
@@ -70,53 +68,31 @@ export default function WalkHomeScreen({ navigation }) {
       </View>
 
       <View style={[styles.floatBottom, { paddingBottom: 16 + insets.bottom }]}>
-        <TouchableOpacity
-          style={styles.startButton}
-          activeOpacity={0.8}
-          onPress={() => navigation.navigate('WalkTracking')}
-        >
-          <View style={styles.dogAvatarsRow}>
-            {selectedDogs.slice(0, 3).map((dog, i) => (
-              <TouchableOpacity
-                key={dog.id}
-                style={[styles.avatarWrapper, i > 0 && { marginLeft: -8 }]}
-                onPress={(e) => { e.stopPropagation?.(); toggleDog(dog.id); }}
-                activeOpacity={0.7}
-              >
-                <DogAvatar size={48} />
-                <View style={styles.checkBadge}>
-                  <Ionicons name="checkmark" size={10} color={colors.white} />
-                </View>
-              </TouchableOpacity>
-            ))}
-            {selectedDogs.length > 3 && (
-              <View style={[styles.avatarOverflow, { marginLeft: -8 }]}>
-                <Text style={styles.avatarOverflowText}>+{selectedDogs.length - 3}</Text>
-              </View>
-            )}
-          </View>
-          <Text style={styles.startLabel}>开始遛狗</Text>
-        </TouchableOpacity>
-
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.dogToggleRow}
-        >
+        <View style={styles.dogAvatarsRow}>
           {dogs.map(dog => (
             <TouchableOpacity
               key={dog.id}
+              style={styles.dogItem}
               onPress={() => toggleDog(dog.id)}
               activeOpacity={0.7}
-              style={[styles.dogToggle, dog.selected && styles.dogToggleActive]}
             >
-              <DogAvatar size={20} />
-              <Text style={[styles.dogToggleName, dog.selected && styles.dogToggleNameActive]}>
+              <View style={[styles.avatarRing, dog.selected && styles.avatarRingActive]}>
+                <DogAvatar size={52} />
+              </View>
+              <Text style={[styles.dogName, dog.selected && styles.dogNameActive]}>
                 {dog.name}
               </Text>
             </TouchableOpacity>
           ))}
-        </ScrollView>
+        </View>
+
+        <TouchableOpacity
+          style={styles.goButton}
+          activeOpacity={0.8}
+          onPress={() => navigation.navigate('WalkTracking')}
+        >
+          <Text style={styles.goText}>GO</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -212,91 +188,59 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    paddingHorizontal: 16,
+    paddingHorizontal: 24,
     paddingTop: 16,
     paddingBottom: 16,
     alignItems: 'center',
-    gap: 10,
+    gap: 16,
     zIndex: 10,
   },
-  startButton: {
-    width: '100%',
-    backgroundColor: colors.secondary,
-    borderRadius: spacing.radiusLg,
-    paddingVertical: 16,
-    paddingHorizontal: 24,
+  dogAvatarsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 24,
+  },
+  dogItem: {
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
+  },
+  avatarRing: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    borderWidth: 2.5,
+    borderColor: 'transparent',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  avatarRingActive: {
+    borderColor: colors.primary,
+  },
+  dogName: {
+    ...typography.caption,
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.6)',
+  },
+  dogNameActive: {
+    color: colors.white,
+    fontWeight: '700',
+  },
+  goButton: {
+    backgroundColor: colors.secondary,
+    paddingHorizontal: 48,
+    paddingVertical: 14,
+    borderRadius: spacing.radiusPill,
     shadowColor: colors.secondary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
     elevation: 6,
   },
-  dogAvatarsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  avatarWrapper: {
-    position: 'relative',
-  },
-  checkBadge: {
-    position: 'absolute',
-    bottom: -2,
-    right: -2,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: colors.secondary,
-  },
-  avatarOverflow: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(255,255,255,0.25)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarOverflowText: {
-    ...typography.bodyBold,
-    fontSize: 14,
-    color: colors.white,
-  },
-  startLabel: {
+  goText: {
     ...typography.button,
     color: colors.white,
-    fontSize: 16,
-  },
-  dogToggleRow: {
-    flexDirection: 'row',
-    gap: 6,
-  },
-  dogToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: 'rgba(255,255,255,0.7)',
-    borderRadius: spacing.radiusPill,
-    paddingVertical: 4,
-    paddingLeft: 4,
-    paddingRight: 10,
-    borderWidth: 1.5,
-    borderColor: 'transparent',
-  },
-  dogToggleActive: {
-    backgroundColor: colors.white,
-    borderColor: colors.primary,
-  },
-  dogToggleName: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.textLight,
-  },
-  dogToggleNameActive: {
-    color: colors.secondary,
+    fontSize: 18,
+    letterSpacing: 2,
   },
 });

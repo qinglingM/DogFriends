@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet } from 'react-native';
+import React, { useState, useRef } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
@@ -12,13 +12,13 @@ const ABNORMAL_OPTIONS = [
 ];
 
 const BRISTOL_LEVELS = [
-  { level: 'B1', emoji: '😐' },
-  { level: 'B2', emoji: '🙂' },
-  { level: 'B3', emoji: '😊' },
-  { level: 'B4', emoji: '😄' },
-  { level: 'B5', emoji: '😐' },
-  { level: 'B6', emoji: '😟' },
-  { level: 'B7', emoji: '😣' },
+  { level: 'B1', desc: '干硬颗粒', emoji: '😐', tone: 'warn' },
+  { level: 'B2', desc: '干硬成块', emoji: '🙂', tone: 'warn' },
+  { level: 'B3', desc: '正常偏硬', emoji: '😊', tone: 'normal' },
+  { level: 'B4', desc: '理想便便', emoji: '😄', tone: 'normal' },
+  { level: 'B5', desc: '偏软成型', emoji: '😐', tone: 'normal' },
+  { level: 'B6', desc: '软糊不成形', emoji: '😟', tone: 'danger' },
+  { level: 'B7', desc: '水样拉稀', emoji: '😣', tone: 'danger' },
 ];
 
 const MOODS = [
@@ -34,97 +34,139 @@ const MOCK_DOGS = [
   { id: '2', name: '小白' },
 ];
 
-function DogCheckinBlock({ dog, data, onChange }) {
+function DogCheckinCard({ dog, data, onChange }) {
   const update = (field, value) => onChange({ ...data, [field]: value });
+  const poopActive = data.poop && data.poop !== 'none';
 
   return (
-    <View style={styles.dogBlock}>
-      <View style={styles.dogBlockHeader}>
-        <DogAvatar size={32} />
-        <Text style={styles.dogBlockName}>{dog.name}</Text>
+    <View style={styles.card}>
+      <View style={styles.cardHeader}>
+        <DogAvatar size={48} />
+        <Text style={styles.cardDogName}>{dog.name}</Text>
       </View>
 
-      <View style={styles.fieldRow}>
-        <Text style={styles.fieldLabel}>💧 排尿</Text>
-        <View style={styles.numRow}>
-          {[0, 1, 2, '3+'].map(v => (
+      <View style={styles.fieldSection}>
+        <Text style={styles.sectionLabel}>排尿</Text>
+        <View style={styles.optionRow}>
+          {['none', 'normal', 'more'].map(v => (
             <TouchableOpacity
               key={v}
-              style={[styles.numBtn, data.pee === v && styles.numBtnActive]}
+              style={[styles.optionBtn, data.pee === v && styles.optionBtnActive]}
               onPress={() => update('pee', v)}
             >
-              <Text style={[styles.numText, data.pee === v && styles.numTextActive]}>{v}</Text>
+              <Text style={[styles.optionText, data.pee === v && styles.optionTextActive]}>
+                {v === 'none' ? '没有' : v === 'normal' ? '正常' : '偏多'}
+              </Text>
             </TouchableOpacity>
           ))}
         </View>
       </View>
 
-      <View style={styles.fieldRow}>
-        <Text style={styles.fieldLabel}>💩 排便</Text>
-        <View style={styles.numRow}>
-          {[0, 1, 2, '3+'].map(v => (
+      <View style={styles.fieldSection}>
+        <Text style={styles.sectionLabel}>排便</Text>
+        <View style={styles.optionRow}>
+          {['none', 'normal', 'more'].map(v => (
             <TouchableOpacity
               key={v}
-              style={[styles.numBtn, data.poop === v && styles.numBtnActive]}
+              style={[styles.optionBtn, data.poop === v && styles.optionBtnActive]}
               onPress={() => update('poop', v)}
             >
-              <Text style={[styles.numText, data.poop === v && styles.numTextActive]}>{v}</Text>
+              <Text style={[styles.optionText, data.poop === v && styles.optionTextActive]}>
+                {v === 'none' ? '没有' : v === 'normal' ? '正常' : '偏多'}
+              </Text>
             </TouchableOpacity>
           ))}
         </View>
       </View>
 
-      {data.poop !== 0 && (
-        <View style={styles.fieldRow}>
-          <Text style={styles.fieldLabel}>便便</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.emojiRow}>
-            {BRISTOL_LEVELS.map(b => (
+      <View style={styles.fieldSection}>
+        <Text style={styles.sectionLabel}>便便形态</Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.bristolRow}
+        >
+          {BRISTOL_LEVELS.map(item => {
+            const isActive = data.bristol === item.level;
+            const isDisabled = !poopActive;
+            return (
               <TouchableOpacity
-                key={b.level}
-                style={[styles.emojiBtn, data.bristol === b.level && styles.emojiBtnActive]}
-                onPress={() => update('bristol', b.level)}
+                key={item.level}
+                style={[
+                  styles.bristolCard,
+                  isActive && styles.bristolCardActive,
+                  isDisabled && styles.bristolCardDisabled,
+                  !isActive && !isDisabled && item.tone === 'warn' && styles.bristolCardWarn,
+                  !isActive && !isDisabled && item.tone === 'danger' && styles.bristolCardDanger,
+                ]}
+                onPress={() => !isDisabled && update('bristol', item.level)}
+                activeOpacity={isDisabled ? 1 : 0.7}
               >
-                <Text style={styles.emoji}>{b.emoji}</Text>
+                <Text style={[styles.bristolEmoji, isDisabled && styles.bristolEmojiDisabled]}>
+                  {item.emoji}
+                </Text>
+                <Text style={[styles.bristolLevel, isDisabled && styles.bristolLevelDisabled]}>
+                  {item.level}
+                </Text>
+                <Text style={[styles.bristolDesc, isDisabled && styles.bristolDescDisabled]}>
+                  {item.desc}
+                </Text>
               </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-      )}
+            );
+          })}
+        </ScrollView>
+      </View>
 
-      <View style={styles.fieldRow}>
-        <Text style={styles.fieldLabel}>精神</Text>
-        <View style={styles.emojiRow}>
+      <View style={styles.fieldSection}>
+        <Text style={styles.sectionLabel}>精神状态</Text>
+        <View style={styles.moodRow}>
           {MOODS.map(m => (
             <TouchableOpacity
               key={m.value}
-              style={[styles.emojiBtn, data.mood === m.value && styles.emojiBtnActive]}
+              style={[styles.moodBtn, data.mood === m.value && styles.moodBtnActive]}
               onPress={() => update('mood', m.value)}
             >
-              <Text style={styles.emoji}>{m.emoji}</Text>
-              <Text style={[styles.emojiLabel, data.mood === m.value && styles.emojiLabelActive]}>{m.label}</Text>
+              <Text style={styles.moodEmoji}>{m.emoji}</Text>
+              <Text style={[styles.moodLabel, data.mood === m.value && styles.moodLabelActive]}>
+                {m.label}
+              </Text>
             </TouchableOpacity>
           ))}
         </View>
       </View>
 
-      <View style={styles.fieldCol}>
-        <Text style={styles.fieldLabel}>异常行为</Text>
-        <View style={styles.chipWrap}>
-          {ABNORMAL_OPTIONS.map(opt => (
-            <TouchableOpacity
-              key={opt}
-              style={[styles.chip, data.abnormal?.includes(opt) && styles.chipActive]}
-              onPress={() => {
-                const list = data.abnormal || [];
-                const newList = list.includes(opt) ? list.filter(x => x !== opt) : [...list, opt];
-                update('abnormal', newList);
-              }}
-            >
-              <Text style={[styles.chipText, data.abnormal?.includes(opt) && styles.chipTextActive]}>{opt}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-        {data.abnormal?.length > 0 && (
+      <View style={styles.fieldSection}>
+        <TouchableOpacity
+          style={styles.abnormalToggle}
+          onPress={() => update('showAbnormal', !data.showAbnormal)}
+        >
+          <Text style={styles.sectionLabel}>异常行为</Text>
+          <Ionicons
+            name={data.showAbnormal ? 'chevron-up' : 'chevron-down'}
+            size={16}
+            color={colors.textLight}
+          />
+        </TouchableOpacity>
+        {data.showAbnormal && (
+          <View style={styles.chipWrap}>
+            {ABNORMAL_OPTIONS.map(opt => (
+              <TouchableOpacity
+                key={opt}
+                style={[styles.chip, data.abnormal?.includes(opt) && styles.chipActive]}
+                onPress={() => {
+                  const list = data.abnormal || [];
+                  const newList = list.includes(opt) ? list.filter(x => x !== opt) : [...list, opt];
+                  update('abnormal', newList);
+                }}
+              >
+                <Text style={[styles.chipText, data.abnormal?.includes(opt) && styles.chipTextActive]}>
+                  {opt}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+        {data.showAbnormal && data.abnormal?.length > 0 && (
           <View style={styles.mediaRow}>
             <TouchableOpacity style={styles.mediaThumb}>
               <Ionicons name="image-outline" size={16} color={colors.secondary} />
@@ -136,8 +178,8 @@ function DogCheckinBlock({ dog, data, onChange }) {
         )}
       </View>
 
-      {data.showNote ? (
-        <View style={styles.fieldCol}>
+      <View style={styles.fieldSection}>
+        {data.showNote ? (
           <TextInput
             style={styles.noteInput}
             placeholder={`记录${dog.name}的特殊情况...`}
@@ -146,23 +188,36 @@ function DogCheckinBlock({ dog, data, onChange }) {
             value={data.note}
             onChangeText={(v) => update('note', v)}
           />
-        </View>
-      ) : (
-        <TouchableOpacity onPress={() => update('showNote', true)}>
-          <Text style={styles.addNoteText}>+ 添加备注</Text>
-        </TouchableOpacity>
-      )}
+        ) : (
+          <TouchableOpacity onPress={() => update('showNote', true)}>
+            <Text style={styles.addNoteText}>+ 添加备注</Text>
+          </TouchableOpacity>
+        )}
+      </View>
     </View>
   );
 }
 
 export default function WalkCheckinScreen({ navigation }) {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const scrollX = useRef(new Animated.Value(0)).current;
+  const scrollViewRef = useRef(null);
   const [dogData, setDogData] = useState({
-    '1': { pee: 1, poop: 2, bristol: 'B4', mood: 'energetic', abnormal: [], note: '', showNote: false },
-    '2': { pee: 1, poop: 0, bristol: null, mood: 'happy', abnormal: [], note: '', showNote: false },
+    '1': { pee: null, poop: null, bristol: null, mood: null, abnormal: [], note: '', showAbnormal: false, showNote: false },
+    '2': { pee: null, poop: null, bristol: null, mood: null, abnormal: [], note: '', showAbnormal: false, showNote: false },
   });
 
   const updateDog = (id, data) => setDogData(prev => ({ ...prev, [id]: data }));
+  const isLastDog = currentIndex === MOCK_DOGS.length - 1;
+  const isSingleDog = MOCK_DOGS.length === 1;
+
+  const handleNext = () => {
+    if (!isLastDog) {
+      const nextIndex = currentIndex + 1;
+      setCurrentIndex(nextIndex);
+      scrollViewRef.current?.scrollTo({ x: nextIndex * spacing.screenMargin * 2 + 300, animated: true });
+    }
+  };
 
   const handleSave = () => {
     navigation.replace('WalkResult');
@@ -182,22 +237,53 @@ export default function WalkCheckinScreen({ navigation }) {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
-        {MOCK_DOGS.map(dog => (
-          <DogCheckinBlock
-            key={dog.id}
-            dog={dog}
-            data={dogData[dog.id]}
-            onChange={(data) => updateDog(dog.id, data)}
-          />
-        ))}
+      <View style={styles.cardArea}>
+        <Animated.ScrollView
+          ref={scrollViewRef}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+          onScroll={Animated.event(
+            [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+            { useNativeDriver: false }
+          )}
+          scrollEventThrottle={16}
+        >
+          {MOCK_DOGS.map((dog, index) => (
+            <View key={dog.id} style={styles.cardPage}>
+              <DogCheckinCard
+                dog={dog}
+                data={dogData[dog.id]}
+                onChange={(data) => updateDog(dog.id, data)}
+              />
+            </View>
+          ))}
+        </Animated.ScrollView>
 
-        <Button fullWidth onPress={handleSave} style={{ marginTop: 8 }}>
-          保存并查看结果
-        </Button>
+        {MOCK_DOGS.length > 1 && (
+          <View style={styles.pagination}>
+            {MOCK_DOGS.map((_, index) => (
+              <View
+                key={index}
+                style={[styles.dot, index === currentIndex && styles.dotActive]}
+              />
+            ))}
+          </View>
+        )}
+      </View>
 
-        <View style={{ height: 32 }} />
-      </ScrollView>
+      <View style={styles.bottomBar}>
+        {!isSingleDog && !isLastDog ? (
+          <Button fullWidth onPress={handleNext}>
+            下一只狗 →
+          </Button>
+        ) : (
+          <Button fullWidth onPress={handleSave}>
+            保存并查看结果
+          </Button>
+        )}
+      </View>
     </View>
   );
 }
@@ -218,58 +304,96 @@ const styles = StyleSheet.create({
   headerPlaceholder: { width: 60 },
   headerTitle: { ...typography.bodyBold, fontSize: 16, color: colors.secondary },
   skipText: { ...typography.bodyBold, fontSize: 14, color: colors.textLight },
-  content: { padding: spacing.screenMargin },
-  dogBlock: {
+  cardArea: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  scrollContent: {
+    paddingHorizontal: spacing.screenMargin,
+  },
+  cardPage: {
+    width: 300,
+    marginRight: spacing.screenMargin,
+  },
+  card: {
     backgroundColor: colors.white,
     borderRadius: spacing.radiusMd,
     padding: spacing.md,
-    marginBottom: 16,
-    gap: 12,
+    gap: 16,
   },
-  dogBlockHeader: {
-    flexDirection: 'row',
+  cardHeader: {
     alignItems: 'center',
     gap: 8,
-    paddingBottom: 8,
+    paddingBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
-  dogBlockName: { ...typography.bodyBold, fontSize: 15, color: colors.secondary },
-  fieldRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  fieldCol: { gap: 8 },
-  fieldLabel: { ...typography.captionBold, color: colors.secondary, width: 48 },
-  numRow: { flexDirection: 'row', gap: 6, flex: 1 },
-  numBtn: {
+  cardDogName: { ...typography.h3, fontSize: 16, color: colors.secondary },
+  fieldSection: { gap: 8 },
+  sectionLabel: { ...typography.captionBold, color: colors.secondary },
+  optionRow: { flexDirection: 'row', gap: 8 },
+  optionBtn: {
     flex: 1,
-    paddingVertical: 8,
+    paddingVertical: 10,
     borderRadius: spacing.radiusSm,
     backgroundColor: colors.bg,
     alignItems: 'center',
     borderWidth: 1.5,
     borderColor: 'transparent',
   },
-  numBtnActive: {
+  optionBtnActive: {
     backgroundColor: 'rgba(185, 207, 50, 0.15)',
     borderColor: colors.primary,
   },
-  numText: { ...typography.bodyBold, fontSize: 13, color: colors.textMain },
-  numTextActive: { color: colors.secondary },
-  emojiRow: { flexDirection: 'row', gap: 6, flex: 1 },
-  emojiBtn: {
-    paddingVertical: 4,
+  optionText: { ...typography.captionBold, fontSize: 13, color: colors.textMain },
+  optionTextActive: { color: colors.secondary },
+  bristolRow: { gap: 6, paddingVertical: 4 },
+  bristolCard: {
+    width: 80,
+    paddingVertical: 10,
     paddingHorizontal: 6,
     borderRadius: spacing.radiusSm,
+    backgroundColor: colors.bg,
     alignItems: 'center',
-    minWidth: 36,
+    gap: 4,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
   },
-  emojiBtnActive: { backgroundColor: 'rgba(185, 207, 50, 0.15)' },
-  emoji: { fontSize: 22 },
-  emojiLabel: { fontSize: 9, fontWeight: '600', color: colors.textLight, marginTop: 1 },
-  emojiLabelActive: { color: colors.secondary },
+  bristolCardActive: {
+    borderColor: colors.primary,
+    backgroundColor: 'rgba(185, 207, 50, 0.1)',
+  },
+  bristolCardDisabled: {
+    opacity: 0.4,
+  },
+  bristolCardWarn: {
+    borderColor: 'rgba(146, 102, 153, 0.3)',
+  },
+  bristolCardDanger: {
+    borderColor: 'rgba(231, 76, 60, 0.3)',
+  },
+  bristolEmoji: { fontSize: 24 },
+  bristolEmojiDisabled: { opacity: 0.5 },
+  bristolLevel: { ...typography.captionBold, fontSize: 10, color: colors.secondary },
+  bristolLevelDisabled: { color: colors.textLight },
+  bristolDesc: { fontSize: 9, color: colors.textLight, textAlign: 'center' },
+  bristolDescDisabled: { opacity: 0.5 },
+  moodRow: { flexDirection: 'row', gap: 6 },
+  moodBtn: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: spacing.radiusSm,
+    alignItems: 'center',
+  },
+  moodBtnActive: { backgroundColor: 'rgba(185, 207, 50, 0.15)' },
+  moodEmoji: { fontSize: 24 },
+  moodLabel: { fontSize: 10, fontWeight: '600', color: colors.textLight, marginTop: 2 },
+  moodLabelActive: { color: colors.secondary },
+  abnormalToggle: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
   chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   chip: {
     paddingHorizontal: 10,
@@ -282,8 +406,8 @@ const styles = StyleSheet.create({
   chipTextActive: { color: colors.secondary, fontWeight: '700' },
   mediaRow: { flexDirection: 'row', gap: 8, marginTop: 8 },
   mediaThumb: {
-    width: 48,
-    height: 48,
+    width: 44,
+    height: 44,
     borderRadius: 8,
     backgroundColor: colors.bg,
     alignItems: 'center',
@@ -302,5 +426,26 @@ const styles = StyleSheet.create({
     color: colors.textMain,
     height: 60,
     textAlignVertical: 'top',
+  },
+  pagination: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 12,
+  },
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.border,
+  },
+  dotActive: {
+    width: 18,
+    backgroundColor: colors.primary,
+  },
+  bottomBar: {
+    paddingHorizontal: spacing.screenMargin,
+    paddingBottom: 32,
+    paddingTop: 8,
   },
 });

@@ -94,7 +94,7 @@ export default function WalkTrackingScreen({ navigation }) {
                 onPress={() => setIsPaused(!isPaused)}
               >
                 <View style={styles.pauseCircle}>
-                  <Ionicons name={isPaused ? 'play' : 'pause'} size={22} color={colors.secondary} />
+                  <Ionicons name={isPaused ? 'play' : 'pause'} size={24} color={colors.secondary} />
                 </View>
               </TouchableOpacity>
               <Text style={styles.controlLabel}>{isPaused ? '继续' : '暂停'}</Text>
@@ -106,7 +106,7 @@ export default function WalkTrackingScreen({ navigation }) {
                 onPress={() => navigation.navigate('WalkCheckin')}
               >
                 <View style={styles.stopCircle}>
-                  <Ionicons name="stop" size={24} color={colors.white} />
+                  <Ionicons name="stop" size={26} color={colors.white} />
                 </View>
               </TouchableOpacity>
               <Text style={styles.controlLabel}>结束</Text>
@@ -115,12 +115,7 @@ export default function WalkTrackingScreen({ navigation }) {
             <View style={styles.controlGroup}>
               <TouchableOpacity style={styles.controlBtn} onPress={handleCamera}>
                 <View style={styles.cameraCircle}>
-                  <Ionicons name="camera" size={22} color={colors.secondary} />
-                  {photos.length > 0 && (
-                    <View style={styles.photoBadge}>
-                      <Text style={styles.photoBadgeText}>{photos.length}</Text>
-                    </View>
-                  )}
+                  <Ionicons name="camera" size={24} color={colors.secondary} />
                 </View>
               </TouchableOpacity>
               <Text style={styles.controlLabel}>拍照</Text>
@@ -129,7 +124,7 @@ export default function WalkTrackingScreen({ navigation }) {
             {photos.length > 0 && (
               <TouchableOpacity style={styles.galleryThumb} activeOpacity={0.7}>
                 <View style={styles.galleryInner}>
-                  <Ionicons name="images-outline" size={18} color={colors.secondary} />
+                  <Ionicons name="images-outline" size={20} color={colors.secondary} />
                 </View>
                 <View style={styles.galleryBadge}>
                   <Text style={styles.galleryBadgeText}>{photos.length}</Text>
@@ -269,16 +264,16 @@ const styles = StyleSheet.create({
   controlRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 20,
+    gap: 24,
   },
   controlGroup: {
     alignItems: 'center',
     gap: 6,
   },
   controlBtn: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     backgroundColor: colors.white,
     alignItems: 'center',
     justifyContent: 'center',
@@ -286,9 +281,9 @@ const styles = StyleSheet.create({
     borderColor: colors.secondary,
   },
   pauseCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     backgroundColor: colors.white,
     alignItems: 'center',
     justifyContent: 'center',
@@ -296,9 +291,9 @@ const styles = StyleSheet.create({
     borderColor: colors.secondary,
   },
   stopCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     backgroundColor: colors.danger,
     alignItems: 'center',
     justifyContent: 'center',
@@ -306,9 +301,9 @@ const styles = StyleSheet.create({
     borderColor: '#C0392B',
   },
   cameraCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     backgroundColor: colors.white,
     alignItems: 'center',
     justifyContent: 'center',
@@ -323,33 +318,15 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 4,
   },
-  photoBadge: {
-    position: 'absolute',
-    top: -4,
-    right: -4,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: colors.white,
-  },
-  photoBadgeText: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: colors.secondary,
-  },
   galleryThumb: {
-    width: 48,
-    height: 48,
-    borderRadius: 8,
+    width: 56,
+    height: 56,
+    borderRadius: 10,
     backgroundColor: colors.white,
     borderWidth: 2,
     borderColor: colors.border,
     overflow: 'hidden',
-    marginLeft: 4,
+    marginLeft: 8,
   },
   galleryInner: {
     flex: 1,
@@ -359,19 +336,19 @@ const styles = StyleSheet.create({
   },
   galleryBadge: {
     position: 'absolute',
-    top: -2,
-    right: -2,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
+    top: -3,
+    right: -3,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1.5,
+    borderWidth: 2,
     borderColor: colors.white,
   },
   galleryBadgeText: {
-    fontSize: 8,
+    fontSize: 9,
     fontWeight: '800',
     color: colors.secondary,
   },
