@@ -57,14 +57,14 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.border,
     height: spacing.bottomTabHeight,
-    paddingBottom: 8,
-    paddingTop: 8,
+    paddingBottom: 14,
+    paddingTop: 4,
   },
   tabItem: {
-    paddingVertical: 8,
+    paddingVertical: 2,
   },
   label: {
-    fontSize: 12,
-    marginTop: 4,
+    fontSize: 11,
+    marginTop: 2,
   },
 });
