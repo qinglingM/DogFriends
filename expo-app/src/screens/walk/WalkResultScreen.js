@@ -1,147 +1,162 @@
 import React from 'react';
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { typography } from '../../theme/typography';
-import { Button, MapPlaceholder } from '../../components';
+import { Card, MapPlaceholder, DogAvatar } from '../../components';
 import { useWalk } from '../../contexts/WalkContext';
 
+const TIPS = [
+  { emoji: '💡', text: '连续遛狗超过30分钟，狗狗更容易保持好心情' },
+  { emoji: '💧', text: '记得给狗狗补充水分，尤其是天气热的时候' },
+];
+
 export default function WalkResultScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
   const { records } = useWalk();
-  const lastRecord = records[0] || {};
-  const duration = lastRecord.duration || 0;
-  const distance = lastRecord.distance || 0;
-  const pace = lastRecord.pace || 0;
-  const photos = lastRecord.photos || [];
+  const last = records[0];
+
+  const distance = last?.distance || 0;
+  const duration = last?.duration || 0;
+  const pace = last?.pace || 0;
+  const photos = last?.photos || [];
 
   const formatDuration = (sec) => {
+    if (sec < 60) return `${sec}秒`;
     const m = Math.floor(sec / 60);
     const s = sec % 60;
-    return m > 0 ? `${m} min ${s}s` : `${s}s`;
+    if (m < 60) return s > 0 ? `${m}分${s}秒` : `${m}分`;
+    const h = Math.floor(m / 60);
+    const rm = m % 60;
+    return `${h}时${rm}分`;
   };
 
-  const handleComplete = () => {
-    navigation.getParent()?.reset({ index: 0, routes: [{ name: 'WalkHome' }] });
+  const formatTime = (ts) => {
+    if (!ts) return '';
+    const d = new Date(ts);
+    return `${d.getMonth()+1}月${d.getDate()}日 ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;
   };
 
   return (
-    <View style={styles.screen}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>遛狗记录</Text>
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}>
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+        <Ionicons name="checkmark-circle" size={48} color={colors.primary} />
+        <Text style={styles.title}>遛狗完成！</Text>
+        <Text style={styles.time}>{formatTime(last?.startTime)}</Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <View style={styles.mapWrap}>
         <MapPlaceholder
-          height={200}
-          label="路线回放"
-          sublabel="高德地图路线回放"
-          style={{ borderRadius: spacing.radiusMd }}
+          height={180}
+          label="轨迹地图"
+          sublabel="完成后展示本次路线"
         />
+      </View>
 
-        <View style={styles.statsGrid}>
-          <View style={styles.statItem}>
-            <Ionicons name="trending-up" size={20} color={colors.primary} />
-            <View style={styles.statValueRow}>
-              <Text style={styles.statValue}>{distance.toFixed(1)}</Text>
-              <Text style={styles.statUnit}> km</Text>
-            </View>
-            <Text style={styles.statLabel}>总距离</Text>
+      <View style={styles.statsGrid}>
+        <View style={styles.statItem}>
+          <Ionicons name="trending-up" size={20} color={colors.primary} />
+          <View style={styles.statValueRow}>
+            <Text style={styles.statValue}>{distance.toFixed(1)}</Text>
+            <Text style={styles.statUnit}> km</Text>
           </View>
-          <View style={styles.statItem}>
-            <Ionicons name="timer-outline" size={20} color={colors.primary} />
-            <View style={styles.statValueRow}>
-              <Text style={styles.statValue}>{formatDuration(duration)}</Text>
-            </View>
-            <Text style={styles.statLabel}>总时长</Text>
-          </View>
-          <View style={styles.statItem}>
-            <Ionicons name="speedometer-outline" size={20} color={colors.primary} />
-            <View style={styles.statValueRow}>
-              <Text style={styles.statValue}>{pace}</Text>
-              <Text style={styles.statUnit}> km/h</Text>
-            </View>
-            <Text style={styles.statLabel}>平均配速</Text>
-          </View>
+          <Text style={styles.statLabel}>总距离</Text>
         </View>
+        <View style={styles.statItem}>
+          <Ionicons name="timer-outline" size={20} color={colors.primary} />
+          <View style={styles.statValueRow}>
+            <Text style={styles.statValue}>{formatDuration(duration)}</Text>
+          </View>
+          <Text style={styles.statLabel}>总时长</Text>
+        </View>
+        <View style={styles.statItem}>
+          <Ionicons name="speedometer-outline" size={20} color={colors.primary} />
+          <View style={styles.statValueRow}>
+            <Text style={styles.statValue}>{pace}</Text>
+            <Text style={styles.statUnit}> km/h</Text>
+          </View>
+          <Text style={styles.statLabel}>平均配速</Text>
+        </View>
+      </View>
 
-        <View style={styles.photoSection}>
-          <Text style={styles.photoTitle}>
-            <Ionicons name="camera" size={14} color={colors.primary} /> 打卡照片
-          </Text>
+      {photos.length > 0 && (
+        <View style={styles.photosSection}>
+          <Text style={styles.sectionTitle}>本次照片</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.photoRow}>
-            {[1, 2, 3].map(i => (
-              <View key={i} style={styles.photoItem}>
-                <Ionicons name="image-outline" size={24} color={colors.secondary} style={{ opacity: 0.5 }} />
-                <Text style={styles.photoTime}>10:{20 + i * 10}</Text>
+            {photos.map((p, i) => (
+              <View key={p.id || i} style={styles.photoThumb}>
+                <Ionicons name="image-outline" size={28} color={colors.textLight} />
               </View>
             ))}
           </ScrollView>
         </View>
+      )}
 
-        <Button fullWidth onPress={handleComplete} style={{ marginTop: 8 }}>
-          完成
-        </Button>
+      {last?.checkin && (
+        <Card style={styles.checkinCard}>
+          <View style={styles.dogRow}>
+            <DogAvatar size={40} />
+            <Text style={styles.dogName}>{last.dogs?.[0]?.name || '狗狗'}</Text>
+          </View>
+          <View style={styles.checkinItems}>
+            {last.checkin.pee && <Text style={styles.checkinItem}>排尿: {last.checkin.pee === 'normal' ? '正常' : '偏多'}</Text>}
+            {last.checkin.poop && <Text style={styles.checkinItem}>排便: {last.checkin.poop === 'normal' ? '正常' : '偏多'}</Text>}
+            {last.checkin.bristol && <Text style={styles.checkinItem}>Bristol: {last.checkin.bristol}型</Text>}
+            {last.checkin.mood && <Text style={styles.checkinItem}>精神: {last.checkin.mood}</Text>}
+            {last.checkin.behaviors?.length > 0 && <Text style={styles.checkinItem}>异常: {last.checkin.behaviors.join(', ')}</Text>}
+            {last.checkin.notes ? <Text style={styles.checkinItem}>备注: {last.checkin.notes}</Text> : null}
+          </View>
+        </Card>
+      )}
 
-        <View style={{ height: 32 }} />
-      </ScrollView>
-    </View>
+      <View style={styles.tipsSection}>
+        {TIPS.map((t, i) => <TipCard key={i} emoji={t.emoji} text={t.text} />)}
+      </View>
+
+      <TouchableOpacity
+        style={[styles.finishBtn, { marginBottom: insets.bottom + 20 }]}
+        onPress={() => navigation.reset({ index: 0, routes: [{ name: 'WalkHome' }] })}
+      >
+        <Text style={styles.finishBtnText}>完成</Text>
+      </TouchableOpacity>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bg },
-  header: {
-    alignItems: 'center',
-    paddingTop: 48,
-    paddingBottom: 12,
-    backgroundColor: colors.bg,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  headerTitle: { ...typography.bodyBold, fontSize: 16, color: colors.secondary },
-  content: { padding: spacing.screenMargin },
+  container: { flex: 1, backgroundColor: colors.bgLight },
+  header: { alignItems: 'center', paddingVertical: spacing.xl },
+  title: { ...typography.h1, color: colors.secondary, marginTop: spacing.md },
+  time: { ...typography.body, color: colors.textLight, marginTop: spacing.xs },
+  mapWrap: { marginHorizontal: spacing.lg, borderRadius: spacing.radiusLg, overflow: 'hidden' },
   statsGrid: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: spacing.cardGap,
-    marginTop: spacing.cardGap,
+    flexDirection: 'row', marginHorizontal: spacing.lg, marginTop: spacing.lg,
+    backgroundColor: colors.white, borderRadius: spacing.radiusLg, padding: spacing.md,
   },
-  statItem: {
-    flex: 1,
-    backgroundColor: colors.white,
-    borderRadius: spacing.radiusMd,
-    paddingVertical: 16,
-    paddingHorizontal: 8,
-    alignItems: 'center',
-    gap: 6,
+  statItem: { flex: 1, alignItems: 'center' },
+  statValueRow: { flexDirection: 'row', alignItems: 'baseline', marginTop: spacing.xs },
+  statValue: { ...typography.h2, color: colors.secondary },
+  statUnit: { ...typography.caption, color: colors.textLight, marginLeft: 2 },
+  statLabel: { ...typography.caption, color: colors.textLight, marginTop: spacing.xs },
+  photosSection: { marginTop: spacing.lg, paddingHorizontal: spacing.lg },
+  sectionTitle: { ...typography.bodyBold, color: colors.secondary, marginBottom: spacing.sm },
+  photoRow: { gap: 8 },
+  photoThumb: {
+    width: 100, height: 100, borderRadius: spacing.radiusMd,
+    backgroundColor: colors.surfaceLight, alignItems: 'center', justifyContent: 'center',
   },
-  statValueRow: { flexDirection: 'row', alignItems: 'baseline' },
-  statValue: { ...typography.statValue, fontSize: 20, color: colors.secondary },
-  statUnit: { ...typography.captionBold, fontSize: 12, color: colors.secondary },
-  statLabel: { ...typography.caption, color: colors.textLight },
-  photoSection: { marginBottom: spacing.cardGap },
-  photoTitle: { ...typography.bodyBold, fontSize: 14, color: colors.secondary, marginBottom: 12 },
-  photoRow: { flexDirection: 'row', gap: 8 },
-  photoItem: {
-    width: 72,
-    height: 72,
-    borderRadius: 8,
-    backgroundColor: '#D3E0C8',
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
+  checkinCard: { marginHorizontal: spacing.lg, marginTop: spacing.lg },
+  dogRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.sm },
+  dogName: { ...typography.bodyBold, color: colors.secondary },
+  checkinItems: { gap: 4 },
+  checkinItem: { ...typography.caption, color: colors.textLight },
+  tipsSection: { gap: spacing.sm, paddingHorizontal: spacing.lg, marginTop: spacing.lg },
+  finishBtn: {
+    marginHorizontal: spacing.xl, marginTop: spacing.xl,
+    backgroundColor: colors.primary, borderRadius: spacing.radiusPill,
+    paddingVertical: spacing.buttonHeight, alignItems: 'center',
   },
-  photoTime: {
-    position: 'absolute',
-    bottom: 4,
-    left: 4,
-    fontSize: 8,
-    color: colors.white,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    paddingHorizontal: 4,
-    paddingVertical: 2,
-    borderRadius: 4,
-    overflow: 'hidden',
-  },
+  finishBtnText: { ...typography.button, color: colors.secondary },
 });

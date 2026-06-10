@@ -1,346 +1,312 @@
-import React, { useState, useRef } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet, Animated } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform, StyleSheet, Keyboard } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { typography } from '../../theme/typography';
-import { Button, DogAvatar } from '../../components';
+import { DogAvatar, TipCard } from '../../components';
 import { useWalk } from '../../contexts/WalkContext';
 
-const ABNORMAL_OPTIONS = [
-  '跛行', '过度喘气', '不愿走', '异常嗅探', '频繁挠痒', '呕吐迹象',
-  '吠叫不止', '打架/攻击', '过度兴奋', '捡食异物', '拉拽严重', '其他',
+const BRISTOL_OPTIONS = [
+  { key: '1', label: '硬球', emoji: '🫘' },
+  { key: '2', label: '香肠', emoji: '🥖' },
+  { key: '3', label: '裂纹', emoji: '🧱' },
+  { key: '4', label: '光滑', emoji: '🐍' },
+  { key: '5', label: '软块', emoji: '☁️' },
+  { key: '6', label: '糊状', emoji: '💧' },
+  { key: '7', label: '水样', emoji: '🌊' },
 ];
 
-const BRISTOL_LEVELS = [
-  { level: 'B1', desc: '干硬', emoji: '😐', tone: 'warn' },
-  { level: 'B2', desc: '成块', emoji: '🙂', tone: 'warn' },
-  { level: 'B3', desc: '偏硬', emoji: '😊', tone: 'normal' },
-  { level: 'B4', desc: '理想', emoji: '😄', tone: 'normal' },
-  { level: 'B5', desc: '偏软', emoji: '😐', tone: 'normal' },
-  { level: 'B6', desc: '软糊', emoji: '😟', tone: 'danger' },
-  { level: 'B7', desc: '水样', emoji: '😣', tone: 'danger' },
-];
+const MOOD_OPTIONS = ['😊', '😐', '😔', '焦躁', '攻击性', '嗜睡', '分离焦虑'];
 
-const MOODS = [
-  { value: 'energetic', emoji: '😄' },
-  { value: 'happy', emoji: '🙂' },
-  { value: 'calm', emoji: '😐' },
-  { value: 'tired', emoji: '😴' },
-  { value: 'unwell', emoji: '🤒' },
-];
-
-const MOCK_DOGS = [
-  { id: '1', name: '旺财' },
-  { id: '2', name: '小白' },
-];
-
-function DogCheckinCard({ dog, data, onChange }) {
-  const update = (field, value) => onChange({ ...data, [field]: value });
-  const poopActive = data.poop && data.poop !== 'none';
-
-  return (
-    <View style={styles.card}>
-      <View style={styles.cardHeader}>
-        <DogAvatar size={40} />
-        <Text style={styles.cardDogName}>{dog.name}</Text>
-      </View>
-
-      <View style={styles.inlineRow}>
-        <View style={styles.inlineField}>
-          <Text style={styles.inlineLabel}>💧 排尿</Text>
-          <View style={styles.optionRow}>
-            {['none', 'normal', 'more'].map(v => (
-              <TouchableOpacity
-                key={v}
-                style={[styles.optionBtn, data.pee === v && styles.optionBtnActive]}
-                onPress={() => update('pee', v)}
-              >
-                <Text style={[styles.optionText, data.pee === v && styles.optionTextActive]}>
-                  {v === 'none' ? '没有' : v === 'normal' ? '正常' : '偏多'}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-        <View style={styles.inlineField}>
-          <Text style={styles.inlineLabel}>💩 排便</Text>
-          <View style={styles.optionRow}>
-            {['none', 'normal', 'more'].map(v => (
-              <TouchableOpacity
-                key={v}
-                style={[styles.optionBtn, data.poop === v && styles.optionBtnActive]}
-                onPress={() => update('poop', v)}
-              >
-                <Text style={[styles.optionText, data.poop === v && styles.optionTextActive]}>
-                  {v === 'none' ? '没有' : v === 'normal' ? '正常' : '偏多'}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-      </View>
-
-      <View style={styles.fieldSection}>
-        <Text style={styles.sectionLabel}>便便形态</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.bristolRow}>
-          {BRISTOL_LEVELS.map(item => {
-            const isActive = data.bristol === item.level;
-            const isDisabled = !poopActive;
-            return (
-              <TouchableOpacity
-                key={item.level}
-                style={[
-                  styles.bristolCard,
-                  isActive && styles.bristolCardActive,
-                  isDisabled && styles.bristolCardDisabled,
-                  !isActive && !isDisabled && item.tone === 'warn' && styles.bristolCardWarn,
-                  !isActive && !isDisabled && item.tone === 'danger' && styles.bristolCardDanger,
-                ]}
-                onPress={() => !isDisabled && update('bristol', item.level)}
-                activeOpacity={isDisabled ? 1 : 0.7}
-              >
-                <Text style={[styles.bristolEmoji, isDisabled && { opacity: 0.4 }]}>{item.emoji}</Text>
-                <Text style={[styles.bristolLevel, isDisabled && { color: colors.textLight }]}>{item.level}</Text>
-                <Text style={[styles.bristolDesc, isDisabled && { opacity: 0.4 }]}>{item.desc}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-      </View>
-
-      <View style={styles.fieldSection}>
-        <Text style={styles.sectionLabel}>精神状态</Text>
-        <View style={styles.moodRow}>
-          {MOODS.map(m => (
-            <TouchableOpacity
-              key={m.value}
-              style={[styles.moodBtn, data.mood === m.value && styles.moodBtnActive]}
-              onPress={() => update('mood', m.value)}
-            >
-              <Text style={styles.moodEmoji}>{m.emoji}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-
-      <View style={styles.fieldSection}>
-        <TouchableOpacity
-          style={styles.abnormalToggle}
-          onPress={() => update('showAbnormal', !data.showAbnormal)}
-        >
-          <Text style={styles.sectionLabel}>异常行为</Text>
-          <Ionicons name={data.showAbnormal ? 'chevron-up' : 'chevron-down'} size={14} color={colors.textLight} />
-        </TouchableOpacity>
-        {data.showAbnormal && (
-          <View style={styles.chipWrap}>
-            {ABNORMAL_OPTIONS.map(opt => (
-              <TouchableOpacity
-                key={opt}
-                style={[styles.chip, data.abnormal?.includes(opt) && styles.chipActive]}
-                onPress={() => {
-                  const list = data.abnormal || [];
-                  const newList = list.includes(opt) ? list.filter(x => x !== opt) : [...list, opt];
-                  update('abnormal', newList);
-                }}
-              >
-                <Text style={[styles.chipText, data.abnormal?.includes(opt) && styles.chipTextActive]}>{opt}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
-        {data.showAbnormal && data.abnormal?.length > 0 && (
-          <View style={styles.mediaRow}>
-            <TouchableOpacity style={styles.mediaThumb}>
-              <Ionicons name="image-outline" size={14} color={colors.secondary} />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.mediaThumb}>
-              <Ionicons name="videocam-outline" size={14} color={colors.secondary} />
-            </TouchableOpacity>
-          </View>
-        )}
-      </View>
-
-      <View style={styles.fieldSection}>
-        {data.showNote ? (
-          <TextInput
-            style={styles.noteInput}
-            placeholder={`记录${dog.name}的特殊情况...`}
-            placeholderTextColor="#A0B3A2"
-            multiline
-            value={data.note}
-            onChangeText={(v) => update('note', v)}
-          />
-        ) : (
-          <TouchableOpacity onPress={() => update('showNote', true)}>
-            <Text style={styles.addNoteText}>+ 添加备注</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-    </View>
-  );
-}
+const BEHAVIOR_OPTIONS = ['爆冲', '拖行', '对狗吠叫', '扑人', '捡食', '追车', '护食'];
 
 export default function WalkCheckinScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
+  const { saveCheckin, finishWalk, dogs: currentDogs } = useWalk();
+  const dogs = currentDogs?.length ? currentDogs : [{ id: '1', name: '旺财' }];
+
   const [currentIndex, setCurrentIndex] = useState(0);
-  const scrollViewRef = useRef(null);
-  const { saveCheckin, finishWalk, currentWalk } = useWalk();
-  const dogs = currentWalk?.dogs || MOCK_DOGS;
-  const [dogData, setDogData] = useState(() => {
-    const initial = {};
-    dogs.forEach(d => {
-      initial[d.id] = { pee: null, poop: null, bristol: null, mood: null, abnormal: [], note: '', showAbnormal: false, showNote: false };
-    });
-    return initial;
-  });
+  const [records, setRecords] = useState({});
+  const [showBristol, setShowBristol] = useState(true);
+  const [showBehavior, setShowBehavior] = useState(false);
 
-  const updateDog = (id, data) => setDogData(prev => ({ ...prev, [id]: data }));
-  const isLastDog = currentIndex === dogs.length - 1;
-  const isSingleDog = dogs.length === 1;
+  const currentDog = dogs[currentIndex];
+  const currentId = currentDog?.id || '0';
+  const current = records[currentId] || { pee: null, poop: null, bristol: null, mood: null, behaviors: [], notes: '' };
 
-  const handleNext = () => {
-    if (!isLastDog) {
-      const nextIndex = currentIndex + 1;
-      setCurrentIndex(nextIndex);
-      scrollViewRef.current?.scrollTo({ x: nextIndex * 280, animated: true });
+  const update = (field, value) => {
+    setRecords(prev => ({ ...prev, [currentId]: { ...prev[currentId], [field]: value } }));
+  };
+
+  const toggleBehavior = (b) => {
+    const list = current.behaviors || [];
+    update('behaviors', list.includes(b) ? list.filter(x => x !== b) : [...list, b]);
+  };
+
+  const hasData = current.pee !== null || current.poop !== null || current.mood !== null || current.behaviors?.length > 0;
+
+  const handleSave = () => {
+    Keyboard.dismiss();
+    saveCheckin(current);
+    if (currentIndex < dogs.length - 1) {
+      setCurrentIndex(prev => prev + 1);
+    } else {
+      finishWalk();
+      navigation.replace('WalkResult');
     }
   };
 
-  const handleSave = () => {
-    saveCheckin(dogData);
-    finishWalk();
-    navigation.replace('WalkResult');
-  };
-
   const handleSkip = () => {
-    finishWalk();
-    navigation.replace('WalkResult');
+    Keyboard.dismiss();
+    if (currentIndex < dogs.length - 1) {
+      setCurrentIndex(prev => prev + 1);
+    } else {
+      finishWalk();
+      navigation.replace('WalkResult');
+    }
   };
 
   return (
-    <View style={styles.screen}>
-      <View style={styles.header}>
-        <View style={styles.headerPlaceholder} />
-        <Text style={styles.headerTitle}>记录狗狗状态</Text>
-        <TouchableOpacity onPress={handleSkip} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-          <Text style={styles.skipText}>跳过</Text>
-        </TouchableOpacity>
-      </View>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={0}
+    >
+      <View style={styles.screen}>
+        <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
+          <Text style={styles.headerTitle}>记录狗狗状态</Text>
+          <Text style={styles.headerSub}>
+            {dogs.length > 1 ? `${currentIndex + 1} / ${dogs.length}` : '可跳过'}
+          </Text>
+        </View>
 
-      <View style={styles.cardArea}>
-        <Animated.ScrollView
-          ref={scrollViewRef}
-          horizontal
-          pagingEnabled
-          showsHorizontalScrollIndicator={false}
+        <ScrollView
           contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          onScrollBeginDrag={() => Keyboard.dismiss()}
         >
-          {dogs.map((dog) => (
-            <View key={dog.id} style={styles.cardPage}>
-              <DogCheckinCard
-                dog={dog}
-                data={dogData[dog.id]}
-                onChange={(data) => updateDog(dog.id, data)}
+          <View style={styles.dogCard}>
+            <View style={styles.dogHeader}>
+              <DogAvatar size={44} />
+              <View style={styles.dogInfo}>
+                <Text style={styles.dogName}>{currentDog?.name || '未知'}</Text>
+                <Text style={styles.dogBreed}>刚才遛了多久</Text>
+              </View>
+            </View>
+
+            <View style={styles.divider} />
+
+            <Text style={styles.sectionTitle}>排尿排便</Text>
+            <View style={styles.bwRow}>
+              <TouchableOpacity
+                style={[styles.bwBtn, current.pee === 'normal' && styles.bwBtnActive]}
+                onPress={() => update('pee', current.pee === 'normal' ? null : 'normal')}
+              >
+                <Text style={[styles.bwBtnText, current.pee === 'normal' && styles.bwBtnTextActive]}>排尿</Text>
+                <Text style={[styles.bwBtnSub, current.pee === 'normal' && styles.bwBtnSubActive]}>正常</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.bwBtn, current.pee === 'much' && styles.bwBtnActive]}
+                onPress={() => update('pee', current.pee === 'much' ? null : 'much')}
+              >
+                <Text style={[styles.bwBtnText, current.pee === 'much' && styles.bwBtnTextActive]}>排尿</Text>
+                <Text style={[styles.bwBtnSub, current.pee === 'much' && styles.bwBtnSubActive]}>偏多</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.bwRow}>
+              <TouchableOpacity
+                style={[styles.bwBtn, current.poop === 'normal' && styles.bwBtnActive]}
+                onPress={() => update('poop', current.poop === 'normal' ? null : 'normal')}
+              >
+                <Text style={[styles.bwBtnText, current.poop === 'normal' && styles.bwBtnTextActive]}>排便</Text>
+                <Text style={[styles.bwBtnSub, current.poop === 'normal' && styles.bwBtnSubActive]}>正常</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.bwBtn, current.poop === 'much' && styles.bwBtnActive]}
+                onPress={() => update('poop', current.poop === 'much' ? null : 'much')}
+              >
+                <Text style={[styles.bwBtnText, current.poop === 'much' && styles.bwBtnTextActive]}>排便</Text>
+                <Text style={[styles.bwBtnSub, current.poop === 'much' && styles.bwBtnSubActive]}>偏多</Text>
+              </TouchableOpacity>
+            </View>
+
+            {current.poop !== null && (
+              <View style={styles.bristolSection}>
+                <Text style={styles.bristolTitle}>粪便形态 (Bristol)</Text>
+                <View style={styles.bristolGrid}>
+                  {BRISTOL_OPTIONS.map(b => (
+                    <TouchableOpacity
+                      key={b.key}
+                      style={[styles.bristolCard, current.bristol === b.key && styles.bristolCardActive]}
+                      onPress={() => update('bristol', current.bristol === b.key ? null : b.key)}
+                    >
+                      <Text style={styles.bristolEmoji}>{b.emoji}</Text>
+                      <Text style={[styles.bristolLabel, current.bristol === b.key && styles.bristolLabelActive]}>{b.key}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            )}
+
+            <Text style={styles.sectionTitle}>精神状态</Text>
+            <View style={styles.moodRow}>
+              {MOOD_OPTIONS.map((m, i) => (
+                <TouchableOpacity
+                  key={i}
+                  style={[styles.moodItem, current.mood === m && styles.moodItemActive]}
+                  onPress={() => update('mood', current.mood === m ? null : m)}
+                >
+                  <Text style={styles.moodEmoji}>{m}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <TouchableOpacity
+              style={styles.collapseToggle}
+              onPress={() => setShowBehavior(!showBehavior)}
+            >
+              <Text style={styles.collapseText}>
+                {showBehavior ? '收起异常行为 ▲' : '记录异常行为 ▼'}
+              </Text>
+            </TouchableOpacity>
+
+            {showBehavior && (
+              <View style={styles.chipGrid}>
+                {BEHAVIOR_OPTIONS.map(b => (
+                  <TouchableOpacity
+                    key={b}
+                    style={[styles.chip, current.behaviors?.includes(b) && styles.chipActive]}
+                    onPress={() => toggleBehavior(b)}
+                  >
+                    <Text style={[styles.chipText, current.behaviors?.includes(b) && styles.chipTextActive]}>{b}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+
+            <View style={styles.notesSection}>
+              <TextInput
+                style={styles.notesInput}
+                placeholder="添加备注"
+                placeholderTextColor={colors.textLight}
+                value={current.notes}
+                onChangeText={(t) => update('notes', t)}
+                multiline
+                numberOfLines={3}
+                textAlignVertical="top"
+                returnKeyType="done"
+                blurOnSubmit
+                onSubmitEditing={() => Keyboard.dismiss()}
               />
             </View>
-          ))}
-        </Animated.ScrollView>
-
-        {dogs.length > 1 && (
-          <View style={styles.pagination}>
-            {dogs.map((_, index) => (
-              <View key={index} style={[styles.dot, index === currentIndex && styles.dotActive]} />
-            ))}
           </View>
-        )}
-      </View>
+        </ScrollView>
 
-      <View style={styles.bottomBar}>
-        {!isSingleDog && !isLastDog ? (
-          <Button fullWidth onPress={handleNext}>下一只狗 →</Button>
-        ) : (
-          <Button fullWidth onPress={handleSave}>保存并查看结果</Button>
-        )}
+        <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 12 }]}>
+          <View style={styles.bottomBtns}>
+            <TouchableOpacity style={styles.skipBtn} onPress={handleSkip}>
+              <Text style={styles.skipText}>跳过</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.saveBtn, !hasData && styles.saveBtnDisabled]}
+              onPress={handleSave}
+              disabled={!hasData}
+            >
+              <Text style={[styles.saveText, !hasData && styles.saveTextDisabled]}>
+                {currentIndex < dogs.length - 1 ? '下一只' : '保存并查看结果'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bg },
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: spacing.md, paddingTop: 48, paddingBottom: 10,
-    backgroundColor: colors.bg, borderBottomWidth: 1, borderBottomColor: colors.border,
+  container: { flex: 1, backgroundColor: colors.bgLight },
+  screen: { flex: 1 },
+  header: { alignItems: 'center', paddingBottom: 8 },
+  headerTitle: { ...typography.h2, color: colors.secondary },
+  headerSub: { ...typography.caption, color: colors.textLight, marginTop: 2 },
+  scrollContent: { flexGrow: 1, justifyContent: 'center', padding: spacing.lg, paddingBottom: 160 },
+  dogCard: {
+    backgroundColor: colors.white, borderRadius: spacing.radiusLg, padding: spacing.lg,
+    shadowColor: colors.secondary, shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08, shadowRadius: 16, elevation: 4,
   },
-  headerPlaceholder: { width: 60 },
-  headerTitle: { ...typography.bodyBold, fontSize: 16, color: colors.secondary },
-  skipText: { ...typography.bodyBold, fontSize: 14, color: colors.textLight },
-  cardArea: { flex: 1, justifyContent: 'flex-end' },
-  scrollContent: { paddingHorizontal: spacing.screenMargin },
-  cardPage: { width: 280, marginRight: spacing.screenMargin },
-  card: {
-    backgroundColor: colors.white, borderRadius: spacing.radiusMd,
-    padding: 12, gap: 10,
+  dogHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  dogInfo: { flex: 1 },
+  dogName: { ...typography.bodyBold, color: colors.secondary },
+  dogBreed: { ...typography.caption, color: colors.textLight },
+  divider: { height: 1, backgroundColor: colors.border, marginVertical: spacing.md },
+  sectionTitle: { ...typography.bodyBold, color: colors.secondary, marginTop: spacing.md, marginBottom: spacing.sm },
+  bwRow: { flexDirection: 'row', gap: 8, marginBottom: 8 },
+  bwBtn: {
+    flex: 1, paddingVertical: 10, borderRadius: spacing.radiusSm,
+    borderWidth: 1.5, borderColor: colors.border, backgroundColor: colors.bgLight,
+    alignItems: 'center',
   },
-  cardHeader: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: colors.border,
-  },
-  cardDogName: { ...typography.bodyBold, fontSize: 15, color: colors.secondary },
-  inlineRow: { gap: 8 },
-  inlineField: { gap: 4 },
-  inlineLabel: { ...typography.caption, fontSize: 11, fontWeight: '700', color: colors.secondary },
-  optionRow: { flexDirection: 'row', gap: 4 },
-  optionBtn: {
-    flex: 1, paddingVertical: 6, borderRadius: 6,
-    backgroundColor: colors.bg, alignItems: 'center', borderWidth: 1.5, borderColor: 'transparent',
-  },
-  optionBtnActive: { backgroundColor: 'rgba(185, 207, 50, 0.15)', borderColor: colors.primary },
-  optionText: { ...typography.caption, fontSize: 11, fontWeight: '600', color: colors.textMain },
-  optionTextActive: { color: colors.secondary },
-  fieldSection: { gap: 4 },
-  sectionLabel: { ...typography.caption, fontSize: 11, fontWeight: '700', color: colors.secondary },
-  bristolRow: { gap: 4, paddingVertical: 2 },
+  bwBtnActive: { borderColor: colors.primary, backgroundColor: '#F0F5E6' },
+  bwBtnText: { ...typography.captionBold, color: colors.textLight, fontSize: 12 },
+  bwBtnTextActive: { color: colors.secondary },
+  bwBtnSub: { ...typography.caption, color: colors.textLight, fontSize: 11, marginTop: 1 },
+  bwBtnSubActive: { color: colors.primary },
+  bristolSection: { marginTop: spacing.sm },
+  bristolTitle: { ...typography.caption, color: colors.textLight, marginBottom: 6 },
+  bristolGrid: { flexDirection: 'row', gap: 4, flexWrap: 'wrap' },
   bristolCard: {
-    width: 52, paddingVertical: 6, paddingHorizontal: 4,
-    borderRadius: 6, backgroundColor: colors.bg, alignItems: 'center', gap: 2, borderWidth: 1.5, borderColor: 'transparent',
+    width: 52, height: 56, borderRadius: spacing.radiusSm, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: '#F7F7F7', borderWidth: 1, borderColor: '#EEE',
   },
-  bristolCardActive: { borderColor: colors.primary, backgroundColor: 'rgba(185, 207, 50, 0.1)' },
-  bristolCardDisabled: { opacity: 0.4 },
-  bristolCardWarn: { borderColor: 'rgba(146, 102, 153, 0.3)' },
-  bristolCardDanger: { borderColor: 'rgba(231, 76, 60, 0.3)' },
+  bristolCardActive: { backgroundColor: '#D3E0C8', borderColor: colors.primary },
   bristolEmoji: { fontSize: 18 },
-  bristolLevel: { fontSize: 9, fontWeight: '700', color: colors.secondary },
-  bristolDesc: { fontSize: 8, color: colors.textLight, textAlign: 'center' },
-  moodRow: { flexDirection: 'row', gap: 4 },
-  moodBtn: {
-    flex: 1, paddingVertical: 6, borderRadius: 6, alignItems: 'center',
+  bristolLabel: { ...typography.caption, color: colors.textLight, fontSize: 9, marginTop: 2 },
+  bristolLabelActive: { color: colors.secondary },
+  moodRow: { flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
+  moodItem: {
+    width: 44, height: 44, borderRadius: 22, borderWidth: 1.5, borderColor: colors.border,
+    backgroundColor: colors.bgLight, alignItems: 'center', justifyContent: 'center',
   },
-  moodBtnActive: { backgroundColor: 'rgba(185, 207, 50, 0.15)' },
-  moodEmoji: { fontSize: 22 },
-  abnormalToggle: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-  },
-  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
+  moodItemActive: { borderColor: colors.primary, backgroundColor: '#D3E0C8' },
+  moodEmoji: { fontSize: 20 },
+  collapseToggle: { marginTop: spacing.md, paddingVertical: 4, alignItems: 'center' },
+  collapseText: { ...typography.caption, color: colors.textLight, fontWeight: '500' },
+  chipGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: spacing.sm },
   chip: {
-    paddingHorizontal: 8, paddingVertical: 4, borderRadius: spacing.radiusPill, backgroundColor: colors.chipDefault,
+    paddingVertical: 6, paddingHorizontal: 12, borderRadius: spacing.radiusPill,
+    borderWidth: 1.5, borderColor: colors.border, backgroundColor: colors.bgLight,
   },
-  chipActive: { backgroundColor: colors.primary },
-  chipText: { fontSize: 11, color: colors.textMain },
-  chipTextActive: { color: colors.secondary, fontWeight: '700' },
-  mediaRow: { flexDirection: 'row', gap: 6, marginTop: 4 },
-  mediaThumb: {
-    width: 36, height: 36, borderRadius: 6, backgroundColor: colors.bg,
-    alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: colors.border, borderStyle: 'dashed',
+  chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  chipText: { ...typography.caption, color: colors.textLight, fontWeight: '500' },
+  chipTextActive: { color: colors.secondary, fontWeight: '600' },
+  notesSection: { marginTop: spacing.md },
+  notesInput: {
+    borderWidth: 1.5, borderColor: colors.border, borderRadius: spacing.radiusMd,
+    padding: spacing.md, ...typography.body, color: colors.secondary,
+    minHeight: 80, maxHeight: 120, backgroundColor: colors.bgLight,
   },
-  addNoteText: { fontSize: 11, color: colors.textLight },
-  noteInput: {
-    width: '100%', backgroundColor: colors.bg, borderRadius: 6, padding: 8,
-    fontSize: 12, color: colors.textMain, height: 48, textAlignVertical: 'top',
+  bottomBar: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    backgroundColor: colors.white, borderTopWidth: 1, borderTopColor: colors.border,
+    paddingTop: spacing.md,
   },
-  pagination: { flexDirection: 'row', justifyContent: 'center', gap: 6, paddingVertical: 8 },
-  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.border },
-  dotActive: { width: 18, backgroundColor: colors.primary },
-  bottomBar: { paddingHorizontal: spacing.screenMargin, paddingBottom: 32, paddingTop: 8 },
+  bottomBtns: {
+    flexDirection: 'row', gap: 12, paddingHorizontal: spacing.lg,
+  },
+  skipBtn: {
+    flex: 1, paddingVertical: 14, borderRadius: spacing.radiusPill,
+    borderWidth: 1.5, borderColor: colors.border, backgroundColor: colors.bgLight,
+    alignItems: 'center',
+  },
+  skipText: { ...typography.bodyBold, color: colors.textLight, fontSize: 14 },
+  saveBtn: {
+    flex: 2, paddingVertical: 14, borderRadius: spacing.radiusPill,
+    backgroundColor: colors.primary, alignItems: 'center',
+  },
+  saveBtnDisabled: { opacity: 0.4 },
+  saveText: { ...typography.bodyBold, color: colors.secondary, fontSize: 14 },
+  saveTextDisabled: { color: colors.textLight },
 });
