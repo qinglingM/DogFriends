@@ -5,16 +5,44 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { typography } from '../../theme/typography';
-import { NavBar, Button, Chip, DogAvatar, NumberSelector, BristolScale, EmojiSelector } from '../../components';
+import { NavBar, Button, Chip, DogAvatar, BristolScale, EmojiSelector } from '../../components';
 import { useWalk } from '../../contexts/WalkContext';
 
-const PEE_POOP_OPTIONS = [
+const PEE_OPTIONS = [
+  { value: 'none', label: '没有' },
+  { value: 'normal', label: '正常' },
+  { value: 'much', label: '偏多' },
+];
+
+const POOP_OPTIONS = [
   { value: 'none', label: '没有' },
   { value: 'normal', label: '正常' },
   { value: 'much', label: '偏多' },
 ];
 
 const BEHAVIOR_OPTIONS = ['爆冲', '拖行', '对狗吠叫', '扑人', '捡食', '追车', '护食'];
+
+function InlineOption({ options, value, onChange }) {
+  return (
+    <View style={styles.optionRow}>
+      {options.map(opt => {
+        const isActive = value === opt.value;
+        return (
+          <TouchableOpacity
+            key={opt.value}
+            style={[styles.optionBtn, isActive && styles.optionBtnActive]}
+            onPress={() => onChange(isActive ? null : opt.value)}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.optionText, isActive && styles.optionTextActive]}>
+              {opt.label}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+}
 
 export default function WalkCheckinScreen({ navigation }) {
   const insets = useSafeAreaInsets();
@@ -67,130 +95,112 @@ export default function WalkCheckinScreen({ navigation }) {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={0}
-    >
+    <View style={styles.screen}>
       <NavBar title="记录狗狗状态" onBack={() => navigation.goBack()} />
 
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-        onScrollBeginDrag={() => Keyboard.dismiss()}
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={0}
       >
-        <View style={styles.dogHeader}>
-          <DogAvatar size={44} />
-          <View style={styles.dogInfo}>
-            <Text style={styles.dogName}>{currentDog?.name || '未知'}</Text>
-          </View>
-          {walkPhotos.length > 0 && (
-            <TouchableOpacity style={styles.photoPreviewBtn} onPress={() => setPhotoPreviewVisible(true)}>
-              <Ionicons name="images-outline" size={20} color={colors.secondary} />
-              <View style={styles.photoCountBadge}>
-                <Text style={styles.photoCountText}>{walkPhotos.length}</Text>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          onScrollBeginDrag={() => Keyboard.dismiss()}
+        >
+          <View style={styles.card}>
+            <View style={styles.dogHeader}>
+              <DogAvatar size={44} />
+              <View style={styles.dogInfo}>
+                <Text style={styles.dogName}>{currentDog?.name || '未知'}</Text>
               </View>
+              {walkPhotos.length > 0 && (
+                <TouchableOpacity style={styles.photoPreviewBtn} onPress={() => setPhotoPreviewVisible(true)}>
+                  <Ionicons name="images-outline" size={20} color={colors.secondary} />
+                  <View style={styles.photoCountBadge}>
+                    <Text style={styles.photoCountText}>{walkPhotos.length}</Text>
+                  </View>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            <View style={styles.divider} />
+
+            <Text style={styles.fieldLabel}>排尿排便</Text>
+
+            <Text style={styles.subLabel}>排尿</Text>
+            <InlineOption options={PEE_OPTIONS} value={current.pee} onChange={(v) => update('pee', v)} />
+
+            <Text style={[styles.subLabel, { marginTop: spacing.md }]}>排便</Text>
+            <InlineOption options={POOP_OPTIONS} value={current.poop} onChange={(v) => update('poop', v)} />
+
+            {current.poop && current.poop !== 'none' && (
+              <View style={styles.bristolSection}>
+                <Text style={styles.subLabel}>粪便形态</Text>
+                <BristolScale value={current.bristol} onChange={(v) => update('bristol', v)} />
+              </View>
+            )}
+
+            <View style={styles.divider} />
+
+            <Text style={styles.fieldLabel}>精神状态</Text>
+            <EmojiSelector value={current.mood} onChange={(v) => update('mood', v)} />
+
+            <View style={styles.divider} />
+
+            <TouchableOpacity
+              style={styles.collapseToggle}
+              onPress={() => setShowBehavior(!showBehavior)}
+            >
+              <Text style={styles.collapseLabel}>异常行为（选填）</Text>
+              <Ionicons name={showBehavior ? 'chevron-up' : 'chevron-down'} size={20} color={colors.textLight} />
             </TouchableOpacity>
-          )}
-        </View>
 
-        <View style={styles.divider} />
+            {showBehavior && (
+              <View style={styles.chipGrid}>
+                {BEHAVIOR_OPTIONS.map(b => (
+                  <Chip key={b} active={current.behaviors?.includes(b)} onPress={() => toggleBehavior(b)}>
+                    {b}
+                  </Chip>
+                ))}
+              </View>
+            )}
 
-        <Text style={styles.fieldLabel}>排尿排便</Text>
+            <View style={styles.divider} />
 
-        <Text style={styles.subLabel}>排尿</Text>
-        <NumberSelector
-          value={current.pee}
-          onChange={(v) => update('pee', v)}
-          labels={PEE_POOP_OPTIONS}
-        />
-
-        <Text style={[styles.subLabel, { marginTop: spacing.md }]}>排便</Text>
-        <NumberSelector
-          value={current.poop}
-          onChange={(v) => update('poop', v)}
-          labels={PEE_POOP_OPTIONS}
-        />
-
-        {current.poop && current.poop !== 'none' && (
-          <View style={styles.bristolSection}>
-            <Text style={styles.subLabel}>粪便形态</Text>
-            <BristolScale
-              value={current.bristol}
-              onChange={(v) => update('bristol', v)}
+            <Text style={styles.fieldLabel}>备注（选填）</Text>
+            <TextInput
+              style={styles.noteInput}
+              placeholder="添加备注"
+              placeholderTextColor="#A0B3A2"
+              value={current.notes}
+              onChangeText={(t) => update('notes', t)}
+              multiline
+              numberOfLines={2}
+              textAlignVertical="top"
+              returnKeyType="done"
+              blurOnSubmit
+              onSubmitEditing={() => Keyboard.dismiss()}
             />
           </View>
-        )}
 
-        <View style={styles.divider} />
-
-        <Text style={styles.fieldLabel}>精神状态</Text>
-        <EmojiSelector
-          value={current.mood}
-          onChange={(v) => update('mood', v)}
-        />
-
-        <View style={styles.divider} />
-
-        <TouchableOpacity
-          style={styles.collapseToggle}
-          onPress={() => setShowBehavior(!showBehavior)}
-        >
-          <Text style={styles.collapseLabel}>异常行为（选填）</Text>
-          <Ionicons
-            name={showBehavior ? 'chevron-up' : 'chevron-down'}
-            size={20}
-            color={colors.textLight}
-          />
-        </TouchableOpacity>
-
-        {showBehavior && (
-          <View style={styles.chipGrid}>
-            {BEHAVIOR_OPTIONS.map(b => (
-              <Chip
-                key={b}
-                active={current.behaviors?.includes(b)}
-                onPress={() => toggleBehavior(b)}
-              >
-                {b}
-              </Chip>
-            ))}
+          <View style={styles.btnRow}>
+            <Button variant="secondary" onPress={handleSkip} style={styles.skipBtn}>
+              跳过
+            </Button>
+            <Button
+              variant="primary"
+              onPress={handleSave}
+              disabled={!hasData}
+              style={[styles.saveBtn, !hasData && { opacity: 0.4 }]}
+            >
+              {currentIndex < dogs.length - 1 ? '下一只' : '保存并查看结果'}
+            </Button>
           </View>
-        )}
 
-        <View style={styles.divider} />
-
-        <Text style={styles.fieldLabel}>备注（选填）</Text>
-        <TextInput
-          style={styles.noteInput}
-          placeholder="添加备注"
-          placeholderTextColor="#A0B3A2"
-          value={current.notes}
-          onChangeText={(t) => update('notes', t)}
-          multiline
-          numberOfLines={2}
-          textAlignVertical="top"
-          returnKeyType="done"
-          blurOnSubmit
-          onSubmitEditing={() => Keyboard.dismiss()}
-        />
-
-        <View style={{ height: 120 }} />
-      </ScrollView>
-
-      <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 12 }]}>
-        <Button variant="secondary" onPress={handleSkip} style={styles.skipBtn}>
-          跳过
-        </Button>
-        <Button
-          variant="primary"
-          onPress={handleSave}
-          disabled={!hasData}
-          style={[styles.saveBtn, !hasData && { opacity: 0.4 }]}
-        >
-          {currentIndex < dogs.length - 1 ? '下一只' : '保存并查看结果'}
-        </Button>
-      </View>
+          <View style={{ height: spacing.xl }} />
+        </ScrollView>
+      </KeyboardAvoidingView>
 
       <Modal visible={photoPreviewVisible} transparent animationType="fade">
         <TouchableOpacity
@@ -210,17 +220,26 @@ export default function WalkCheckinScreen({ navigation }) {
           </View>
         </TouchableOpacity>
       </Modal>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg },
+  screen: { flex: 1, backgroundColor: colors.bg },
+  flex: { flex: 1 },
   scrollContent: { padding: spacing.screenMargin },
+  card: {
+    backgroundColor: colors.white,
+    borderRadius: spacing.radiusLg,
+    padding: spacing.lg,
+    shadowColor: colors.secondary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 3,
+  },
   dogHeader: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
-    backgroundColor: colors.white, borderRadius: spacing.radiusMd,
-    padding: spacing.md,
   },
   dogInfo: { flex: 1 },
   dogName: { ...typography.h3, fontSize: 16, color: colors.secondary },
@@ -237,14 +256,22 @@ const styles = StyleSheet.create({
   },
   photoCountText: { fontSize: 9, fontWeight: '800', color: colors.secondary },
   divider: { height: 1, backgroundColor: colors.border, marginVertical: spacing.md },
-  fieldLabel: {
-    ...typography.bodyBold, color: colors.secondary,
-    marginBottom: spacing.sm,
+  fieldLabel: { ...typography.bodyBold, color: colors.secondary, marginBottom: spacing.sm },
+  subLabel: { ...typography.captionBold, color: colors.textLight, marginBottom: spacing.xs },
+  optionRow: { flexDirection: 'row', gap: spacing.sm },
+  optionBtn: {
+    flex: 1, paddingVertical: spacing.sm + 2,
+    borderRadius: spacing.radiusMd,
+    backgroundColor: colors.bgLight,
+    borderWidth: 1.5, borderColor: colors.border,
+    alignItems: 'center',
   },
-  subLabel: {
-    ...typography.captionBold, color: colors.textLight,
-    marginBottom: spacing.xs,
+  optionBtnActive: {
+    backgroundColor: colors.chipActive,
+    borderColor: colors.secondary,
   },
+  optionText: { ...typography.captionBold, color: colors.textLight },
+  optionTextActive: { color: colors.secondary },
   bristolSection: { marginTop: spacing.md },
   collapseToggle: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
@@ -254,7 +281,7 @@ const styles = StyleSheet.create({
   chipGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm },
   noteInput: {
     width: '100%',
-    backgroundColor: colors.white,
+    backgroundColor: colors.bgLight,
     borderRadius: spacing.radiusMd,
     padding: spacing.md,
     fontSize: 14,
@@ -264,13 +291,9 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: colors.border,
   },
-  bottomBar: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
+  btnRow: {
     flexDirection: 'row', gap: spacing.sm,
-    paddingHorizontal: spacing.screenMargin,
-    backgroundColor: colors.white,
-    borderTopWidth: 1, borderTopColor: colors.border,
-    paddingTop: spacing.md,
+    marginTop: spacing.lg,
   },
   skipBtn: { flex: 1 },
   saveBtn: { flex: 2 },
