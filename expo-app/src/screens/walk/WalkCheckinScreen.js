@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform, StyleSheet, Keyboard, Modal } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform, StyleSheet, Keyboard, Modal, Dimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
@@ -7,6 +7,9 @@ import { spacing } from '../../theme/spacing';
 import { typography } from '../../theme/typography';
 import { NavBar, Button, Chip, DogAvatar, EmojiSelector } from '../../components';
 import { useWalk } from '../../contexts/WalkContext';
+
+const SCREEN_WIDTH = Dimensions.get('window').width;
+const CARD_HORIZONTAL_PADDING = 16;
 
 const PEE_OPTIONS = [
   { value: 'none', label: '无' },
@@ -75,7 +78,7 @@ function CompactBristol({ value, onChange, disabled }) {
   );
 }
 
-function DogCheckinCard({ dog, data, onChange, walkPhotos, onPhotoPreview, scrollViewRef }) {
+function DogCheckinCard({ dog, data, onChange, walkPhotos, onPhotoPreview }) {
   const [showBehavior, setShowBehavior] = useState(false);
   const update = (field, value) => onChange({ ...data, [field]: value });
   const poopDisabled = !data.poop || data.poop === 'none';
@@ -89,13 +92,13 @@ function DogCheckinCard({ dog, data, onChange, walkPhotos, onPhotoPreview, scrol
   return (
     <View style={styles.card}>
       <View style={styles.dogHeader}>
-        <DogAvatar size={40} />
+        <DogAvatar size={36} />
         <View style={styles.dogInfo}>
           <Text style={styles.dogName}>{dog.name}</Text>
         </View>
         {walkPhotos.length > 0 && (
           <TouchableOpacity style={styles.photoPreviewBtn} onPress={onPhotoPreview}>
-            <Ionicons name="images-outline" size={18} color={colors.secondary} />
+            <Ionicons name="images-outline" size={16} color={colors.secondary} />
             <View style={styles.photoCountBadge}>
               <Text style={styles.photoCountText}>{walkPhotos.length}</Text>
             </View>
@@ -108,10 +111,10 @@ function DogCheckinCard({ dog, data, onChange, walkPhotos, onPhotoPreview, scrol
       <Text style={styles.fieldLabel}>排尿</Text>
       <InlineOption options={PEE_OPTIONS} value={data.pee} onChange={(v) => update('pee', v)} />
 
-      <Text style={[styles.fieldLabel, { marginTop: spacing.md }]}>排便</Text>
+      <Text style={[styles.fieldLabel, { marginTop: spacing.sm }]}>排便</Text>
       <InlineOption options={PEE_OPTIONS} value={data.poop} onChange={(v) => update('poop', v)} />
 
-      <Text style={[styles.subLabel, { marginTop: spacing.md }]}>粪便形态</Text>
+      <Text style={[styles.subLabel, { marginTop: spacing.sm }]}>粪便形态</Text>
       <CompactBristol value={data.bristol} onChange={(v) => update('bristol', v)} disabled={poopDisabled} />
 
       <View style={styles.divider} />
@@ -132,7 +135,7 @@ function DogCheckinCard({ dog, data, onChange, walkPhotos, onPhotoPreview, scrol
               <Text style={styles.countBadgeText}>{behaviorCount}</Text>
             </View>
           )}
-          <Ionicons name={showBehavior ? 'chevron-up' : 'chevron-down'} size={20} color={colors.textLight} />
+          <Ionicons name={showBehavior ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textLight} />
         </View>
       </TouchableOpacity>
 
@@ -161,9 +164,6 @@ function DogCheckinCard({ dog, data, onChange, walkPhotos, onPhotoPreview, scrol
         returnKeyType="done"
         blurOnSubmit
         onSubmitEditing={() => Keyboard.dismiss()}
-        onFocus={() => {
-          setTimeout(() => scrollViewRef?.current?.scrollToEnd({ animated: true }), 300);
-        }}
       />
     </View>
   );
@@ -182,8 +182,9 @@ export default function WalkCheckinScreen({ navigation }) {
     });
     return init;
   });
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [photoPreviewVisible, setPhotoPreviewVisible] = useState(false);
-  const scrollViewRef = useRef(null);
+  const scrollRef = useRef(null);
 
   const updateDog = (dogId, data) => {
     setRecords(prev => ({ ...prev, [dogId]: data }));
@@ -208,6 +209,12 @@ export default function WalkCheckinScreen({ navigation }) {
     navigation.replace('WalkResult');
   };
 
+  const onScroll = (e) => {
+    const x = e.nativeEvent.contentOffset.x;
+    const index = Math.round(x / (SCREEN_WIDTH - CARD_HORIZONTAL_PADDING * 2));
+    setCurrentIndex(index);
+  };
+
   return (
     <View style={styles.screen}>
       <NavBar title="记录狗狗状态" onBack={() => navigation.goBack()} />
@@ -218,40 +225,50 @@ export default function WalkCheckinScreen({ navigation }) {
         keyboardVerticalOffset={44}
       >
         <ScrollView
-          ref={scrollViewRef}
-          contentContainerStyle={styles.scrollContent}
+          ref={scrollRef}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onMomentumScrollEnd={onScroll}
+          contentContainerStyle={styles.horizontalScroll}
           keyboardShouldPersistTaps="handled"
           onScrollBeginDrag={() => Keyboard.dismiss()}
         >
-          {dogs.map((dog, i) => (
-            <DogCheckinCard
-              key={dog.id}
-              dog={dog}
-              data={records[dog.id]}
-              onChange={(data) => updateDog(dog.id, data)}
-              walkPhotos={walkPhotos}
-              onPhotoPreview={() => setPhotoPreviewVisible(true)}
-              scrollViewRef={scrollViewRef}
-            />
+          {dogs.map((dog) => (
+            <View key={dog.id} style={styles.cardPage}>
+              <DogCheckinCard
+                dog={dog}
+                data={records[dog.id]}
+                onChange={(data) => updateDog(dog.id, data)}
+                walkPhotos={walkPhotos}
+                onPhotoPreview={() => setPhotoPreviewVisible(true)}
+              />
+            </View>
           ))}
-
-          <View style={styles.btnRow}>
-            <Button variant="secondary" onPress={handleSkip} style={styles.skipBtn}>
-              跳过
-            </Button>
-            <Button
-              variant="primary"
-              onPress={handleSave}
-              disabled={!anyHasData}
-              style={[styles.saveBtn, !anyHasData && { opacity: 0.4 }]}
-            >
-              保存并查看结果
-            </Button>
-          </View>
-
-          <View style={{ height: spacing.xl }} />
         </ScrollView>
+
+        {dogs.length > 1 && (
+          <View style={styles.dotsRow}>
+            {dogs.map((_, i) => (
+              <View key={i} style={[styles.dot, i === currentIndex && styles.dotActive]} />
+            ))}
+          </View>
+        )}
       </KeyboardAvoidingView>
+
+      <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 8 }]}>
+        <Button variant="secondary" onPress={handleSkip} style={styles.skipBtn}>
+          跳过
+        </Button>
+        <Button
+          variant="primary"
+          onPress={handleSave}
+          disabled={!anyHasData}
+          style={[styles.saveBtn, !anyHasData && { opacity: 0.4 }]}
+        >
+          保存并查看结果
+        </Button>
+      </View>
 
       <Modal visible={photoPreviewVisible} transparent animationType="fade">
         <TouchableOpacity
@@ -278,88 +295,107 @@ export default function WalkCheckinScreen({ navigation }) {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   flex: { flex: 1 },
-  scrollContent: { padding: spacing.screenMargin },
+  horizontalScroll: {
+    paddingHorizontal: CARD_HORIZONTAL_PADDING,
+    alignItems: 'stretch',
+  },
+  cardPage: {
+    width: SCREEN_WIDTH - CARD_HORIZONTAL_PADDING * 2,
+    justifyContent: 'center',
+  },
   card: {
     backgroundColor: colors.white,
     borderRadius: spacing.radiusLg,
-    padding: spacing.lg,
-    marginBottom: spacing.md,
+    padding: spacing.md,
     shadowColor: colors.secondary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 12,
     elevation: 3,
   },
-  dogHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  dogHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   dogInfo: { flex: 1 },
-  dogName: { ...typography.h3, fontSize: 16, color: colors.secondary },
+  dogName: { ...typography.h3, fontSize: 15, color: colors.secondary },
   photoPreviewBtn: {
-    width: 36, height: 36, borderRadius: spacing.radiusMd,
+    width: 32, height: 32, borderRadius: spacing.radiusMd,
     backgroundColor: colors.bgLight, alignItems: 'center', justifyContent: 'center',
     borderWidth: 1.5, borderColor: colors.border,
   },
   photoCountBadge: {
-    position: 'absolute', top: -4, right: -4,
-    width: 16, height: 16, borderRadius: 8,
+    position: 'absolute', top: -3, right: -3,
+    width: 14, height: 14, borderRadius: 7,
     backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 2, borderColor: colors.white,
+    borderWidth: 1.5, borderColor: colors.white,
   },
-  photoCountText: { fontSize: 8, fontWeight: '800', color: colors.secondary },
-  divider: { height: 1, backgroundColor: colors.border, marginVertical: spacing.md },
-  fieldLabel: { ...typography.bodyBold, color: colors.secondary, marginBottom: spacing.sm },
+  photoCountText: { fontSize: 7, fontWeight: '800', color: colors.secondary },
+  divider: { height: 1, backgroundColor: colors.border, marginVertical: spacing.sm },
+  fieldLabel: { ...typography.captionBold, color: colors.secondary, marginBottom: spacing.xs },
   subLabel: { ...typography.captionBold, color: colors.textLight, marginBottom: spacing.xs },
-  optionRow: { flexDirection: 'row', gap: spacing.sm },
+  optionRow: { flexDirection: 'row', gap: spacing.xs },
   optionBtn: {
-    flex: 1, paddingVertical: spacing.sm + 2,
+    flex: 1, paddingVertical: spacing.xs + 1,
     borderRadius: spacing.radiusMd,
     backgroundColor: colors.bgLight,
     borderWidth: 1.5, borderColor: colors.border,
     alignItems: 'center',
   },
   optionBtnActive: { backgroundColor: colors.chipActive, borderColor: colors.secondary },
-  optionText: { ...typography.captionBold, color: colors.textLight },
+  optionText: { ...typography.caption, fontSize: 12, color: colors.textLight },
   optionTextActive: { color: colors.secondary },
-  bristolRow: {
-    flexDirection: 'row', gap: 4,
-  },
+  bristolRow: { flexDirection: 'row', gap: 3 },
   bristolItem: {
-    flex: 1, paddingVertical: 6, borderRadius: spacing.radiusSm,
+    flex: 1, paddingVertical: 4, borderRadius: spacing.radiusSm,
     backgroundColor: colors.bgLight, borderWidth: 1.5, borderColor: colors.border,
     alignItems: 'center',
   },
   bristolItemActive: { backgroundColor: colors.chipActive, borderColor: colors.secondary },
   bristolItemDisabled: { opacity: 0.4 },
-  bristolEmoji: { fontSize: 16 },
-  bristolLevel: { ...typography.caption, fontSize: 9, fontWeight: '700', color: colors.textLight, marginTop: 2 },
+  bristolEmoji: { fontSize: 14 },
+  bristolLevel: { ...typography.caption, fontSize: 8, fontWeight: '700', color: colors.textLight, marginTop: 1 },
   bristolLevelActive: { color: colors.secondary },
-  bristolDesc: { ...typography.caption, fontSize: 8, color: colors.textLight, marginTop: 1 },
+  bristolDesc: { fontSize: 8, color: colors.textLight },
   bristolTextDisabled: { opacity: 0.4 },
   collapseToggle: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingVertical: spacing.xs,
+    paddingVertical: 2,
   },
   collapseRight: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
   },
   countBadge: {
-    width: 20, height: 20, borderRadius: 10,
+    width: 18, height: 18, borderRadius: 9,
     backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center',
   },
-  countBadgeText: { ...typography.caption, fontSize: 10, fontWeight: '800', color: colors.secondary },
-  chipGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm },
+  countBadgeText: { fontSize: 9, fontWeight: '800', color: colors.secondary },
+  chipGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginTop: spacing.xs },
   noteInput: {
     width: '100%',
     backgroundColor: colors.bgLight,
     borderRadius: spacing.radiusMd,
-    padding: spacing.md,
-    fontSize: 14,
+    padding: spacing.sm,
+    fontSize: 13,
     color: colors.textMain,
-    height: 64,
+    height: 52,
     textAlignVertical: 'top',
     borderWidth: 1.5,
     borderColor: colors.border,
   },
-  btnRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.lg },
+  dotsRow: {
+    flexDirection: 'row', justifyContent: 'center', gap: 6,
+    paddingVertical: spacing.sm,
+  },
+  dot: {
+    width: 6, height: 6, borderRadius: 3,
+    backgroundColor: colors.border,
+  },
+  dotActive: {
+    backgroundColor: colors.primary, width: 16,
+  },
+  bottomBar: {
+    flexDirection: 'row', gap: spacing.sm,
+    paddingHorizontal: spacing.screenMargin,
+    backgroundColor: colors.bg,
+  },
   skipBtn: { flex: 1 },
   saveBtn: { flex: 2 },
   modalOverlay: {

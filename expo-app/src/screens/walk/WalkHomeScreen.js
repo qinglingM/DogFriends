@@ -72,27 +72,22 @@ export default function WalkHomeScreen({ navigation }) {
       </View>
 
       <View style={[styles.floatBottom, { paddingBottom: 16 + insets.bottom }]}>
-        <View style={styles.dogRowWrap}>
-          <View style={styles.dogAvatarsRow}>
-            {dogs.map(dog => (
-              <TouchableOpacity
-                key={dog.id}
-                style={styles.dogItem}
-                onPress={() => toggleDog(dog.id)}
-                activeOpacity={0.7}
-              >
-                <View style={[styles.avatarRing, dog.selected && styles.avatarRingActive]}>
-                  <DogAvatar size={52} />
-                </View>
-                <Text style={[styles.dogName, dog.selected && styles.dogNameActive]}>
-                  {dog.name}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-          <TouchableOpacity style={styles.recenterBtn} activeOpacity={0.7}>
-            <Ionicons name="locate" size={22} color={colors.secondary} />
-          </TouchableOpacity>
+        <View style={styles.dogAvatarsRow}>
+          {dogs.map(dog => (
+            <TouchableOpacity
+              key={dog.id}
+              style={styles.dogItem}
+              onPress={() => toggleDog(dog.id)}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.avatarRing, dog.selected && styles.avatarRingActive]}>
+                <DogAvatar size={52} />
+              </View>
+              <Text style={[styles.dogName, dog.selected && styles.dogNameActive]}>
+                {dog.name}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </View>
 
         <TouchableOpacity
@@ -101,6 +96,12 @@ export default function WalkHomeScreen({ navigation }) {
           onPress={handleStart}
         >
           <Text style={styles.goText}>GO</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.mapBottomRight}>
+        <TouchableOpacity style={styles.recenterBtn} activeOpacity={0.7}>
+          <Ionicons name="locate" size={22} color={colors.secondary} />
         </TouchableOpacity>
       </View>
     </View>
@@ -173,6 +174,25 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.textLight,
   },
+  mapBottomRight: {
+    position: 'absolute',
+    right: 16,
+    bottom: 140,
+    zIndex: 5,
+  },
+  recenterBtn: {
+    width: 48,
+    height: 48,
+    backgroundColor: colors.white,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: colors.secondary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 6,
+  },
   floatBottom: {
     position: 'absolute',
     bottom: 0,
@@ -184,12 +204,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 16,
     zIndex: 10,
-  },
-  dogRowWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 16,
   },
   dogAvatarsRow: {
     flexDirection: 'row',

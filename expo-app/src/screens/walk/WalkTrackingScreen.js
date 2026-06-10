@@ -127,7 +127,7 @@ export default function WalkTrackingScreen({ navigation }) {
           {photos.length > 0 && (
             <TouchableOpacity style={styles.galleryThumb} activeOpacity={0.7}>
               <View style={styles.galleryInner}>
-                <Ionicons name="images-outline" size={20} color={colors.secondary} />
+                <Ionicons name="images-outline" size={18} color={colors.secondary} />
               </View>
               <View style={styles.galleryBadge}>
                 <Text style={styles.galleryBadgeText}>{photos.length}</Text>
@@ -215,7 +215,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   galleryThumb: {
-    marginTop: 12, width: 56, height: 56, borderRadius: 10,
+    position: 'absolute', top: -68, right: 0,
+    width: 48, height: 48, borderRadius: 10,
     backgroundColor: colors.white, borderWidth: 2, borderColor: colors.border,
     overflow: 'hidden',
   },
