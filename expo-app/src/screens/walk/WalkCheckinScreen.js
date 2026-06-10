@@ -9,9 +9,10 @@ import { NavBar, Button, Chip, DogAvatar, EmojiSelector } from '../../components
 import { useWalk } from '../../contexts/WalkContext';
 
 const PEE_OPTIONS = [
-  { value: 'none', label: '没有' },
-  { value: 'normal', label: '正常' },
+  { value: 'none', label: '无' },
+  { value: 'less', label: '偏少' },
   { value: 'much', label: '偏多' },
+  { value: 'normal', label: '正常' },
 ];
 
 const BRISTOL = [
@@ -24,7 +25,11 @@ const BRISTOL = [
   { level: 'B7', emoji: '🌊', desc: '水样拉稀' },
 ];
 
-const BEHAVIOR_OPTIONS = ['爆冲', '拖行', '对狗吠叫', '扑人', '捡食', '追车', '护食'];
+const BEHAVIOR_OPTIONS = [
+  '呕吐反胃', '咳嗽喷嚏', '跛行异常', '拒走趴地',
+  '异常喘息', '捡食异物', '频繁吃草', '舔脚挠痒',
+  '异常吠叫', '扑人扑狗', '攻击倾向', '受惊躲避',
+];
 
 function InlineOption({ options, value, onChange }) {
   return (
@@ -70,8 +75,10 @@ function CompactBristol({ value, onChange, disabled }) {
 }
 
 function DogCheckinCard({ dog, data, onChange, walkPhotos, onPhotoPreview }) {
+  const [showBehavior, setShowBehavior] = useState(false);
   const update = (field, value) => onChange({ ...data, [field]: value });
   const poopDisabled = !data.poop || data.poop === 'none';
+  const behaviorCount = data.behaviors?.length || 0;
 
   const toggleBehavior = (b) => {
     const list = data.behaviors || [];
@@ -97,11 +104,10 @@ function DogCheckinCard({ dog, data, onChange, walkPhotos, onPhotoPreview }) {
 
       <View style={styles.divider} />
 
-      <Text style={styles.fieldLabel}>排尿排便</Text>
-      <Text style={styles.subLabel}>排尿</Text>
+      <Text style={styles.fieldLabel}>排尿</Text>
       <InlineOption options={PEE_OPTIONS} value={data.pee} onChange={(v) => update('pee', v)} />
 
-      <Text style={[styles.subLabel, { marginTop: spacing.md }]}>排便</Text>
+      <Text style={[styles.fieldLabel, { marginTop: spacing.md }]}>排便</Text>
       <InlineOption options={PEE_OPTIONS} value={data.poop} onChange={(v) => update('poop', v)} />
 
       <Text style={[styles.subLabel, { marginTop: spacing.md }]}>粪便形态</Text>
@@ -114,14 +120,30 @@ function DogCheckinCard({ dog, data, onChange, walkPhotos, onPhotoPreview }) {
 
       <View style={styles.divider} />
 
-      <Text style={styles.fieldLabel}>异常行为（选填）</Text>
-      <View style={styles.chipGrid}>
-        {BEHAVIOR_OPTIONS.map(b => (
-          <Chip key={b} active={data.behaviors?.includes(b)} onPress={() => toggleBehavior(b)}>
-            {b}
-          </Chip>
-        ))}
-      </View>
+      <TouchableOpacity
+        style={styles.collapseToggle}
+        onPress={() => setShowBehavior(!showBehavior)}
+      >
+        <Text style={styles.fieldLabel}>异常行为（选填）</Text>
+        <View style={styles.collapseRight}>
+          {behaviorCount > 0 && (
+            <View style={styles.countBadge}>
+              <Text style={styles.countBadgeText}>{behaviorCount}</Text>
+            </View>
+          )}
+          <Ionicons name={showBehavior ? 'chevron-up' : 'chevron-down'} size={20} color={colors.textLight} />
+        </View>
+      </TouchableOpacity>
+
+      {showBehavior && (
+        <View style={styles.chipGrid}>
+          {BEHAVIOR_OPTIONS.map(b => (
+            <Chip key={b} active={data.behaviors?.includes(b)} onPress={() => toggleBehavior(b)}>
+              {b}
+            </Chip>
+          ))}
+        </View>
+      )}
 
       <View style={styles.divider} />
 
@@ -304,7 +326,19 @@ const styles = StyleSheet.create({
   bristolLevel: { ...typography.caption, fontSize: 9, fontWeight: '700', color: colors.textLight, marginTop: 2 },
   bristolLevelActive: { color: colors.secondary },
   bristolTextDisabled: { opacity: 0.4 },
-  chipGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  collapseToggle: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingVertical: spacing.xs,
+  },
+  collapseRight: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
+  },
+  countBadge: {
+    width: 20, height: 20, borderRadius: 10,
+    backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center',
+  },
+  countBadgeText: { ...typography.caption, fontSize: 10, fontWeight: '800', color: colors.secondary },
+  chipGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm },
   noteInput: {
     width: '100%',
     backgroundColor: colors.bgLight,
