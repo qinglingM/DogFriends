@@ -37,7 +37,13 @@ function reducer(state, action) {
       return {
         ...state,
         currentWalk: state.currentWalk
-          ? { ...state.currentWalk, checkin: action.checkin }
+          ? {
+              ...state.currentWalk,
+              checkins: {
+                ...(state.currentWalk.checkins || {}),
+                [action.dogId]: action.checkin,
+              },
+            }
           : null,
       };
 
@@ -76,7 +82,7 @@ export function WalkProvider({ children }) {
 
   const startWalk = useCallback((dogs) => dispatch({ type: 'START_WALK', dogs }), []);
   const updateWalk = useCallback((updates) => dispatch({ type: 'UPDATE_WALK', updates }), []);
-  const saveCheckin = useCallback((checkin) => dispatch({ type: 'SAVE_CHECKIN', checkin }), []);
+  const saveCheckin = useCallback((dogId, checkin) => dispatch({ type: 'SAVE_CHECKIN', dogId, checkin }), []);
   const finishWalk = useCallback(() => dispatch({ type: 'FINISH_WALK' }), []);
   const addPhoto = useCallback((photo) => dispatch({ type: 'ADD_PHOTO', photo }), []);
 

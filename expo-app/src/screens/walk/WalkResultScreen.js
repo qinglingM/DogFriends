@@ -89,20 +89,27 @@ export default function WalkResultScreen({ navigation }) {
         </View>
       )}
 
-      {last?.checkin && (
+      {last?.checkins && Object.keys(last.checkins).length > 0 && (
         <Card style={styles.checkinCard}>
-          <View style={styles.dogRow}>
-            <DogAvatar size={40} />
-            <Text style={styles.dogName}>{last.dogs?.[0]?.name || '狗狗'}</Text>
-          </View>
-          <View style={styles.checkinItems}>
-            {last.checkin.pee && <Text style={styles.checkinItem}>排尿: {last.checkin.pee === 'none' ? '没有' : last.checkin.pee === 'normal' ? '正常' : '偏多'}</Text>}
-            {last.checkin.poop && <Text style={styles.checkinItem}>排便: {last.checkin.poop === 'none' ? '没有' : last.checkin.poop === 'normal' ? '正常' : '偏多'}</Text>}
-            {last.checkin.bristol && <Text style={styles.checkinItem}>Bristol: {last.checkin.bristol}</Text>}
-            {last.checkin.mood && <Text style={styles.checkinItem}>精神: {last.checkin.mood}</Text>}
-            {last.checkin.behaviors?.length > 0 && <Text style={styles.checkinItem}>异常: {last.checkin.behaviors.join(', ')}</Text>}
-            {last.checkin.notes ? <Text style={styles.checkinItem}>备注: {last.checkin.notes}</Text> : null}
-          </View>
+          {Object.entries(last.checkins).map(([dogId, ci]) => {
+            const dog = last.dogs?.find(d => d.id === dogId);
+            return (
+              <View key={dogId} style={styles.checkinDogBlock}>
+                <View style={styles.dogRow}>
+                  <DogAvatar size={36} />
+                  <Text style={styles.dogName}>{dog?.name || '狗狗'}</Text>
+                </View>
+                <View style={styles.checkinItems}>
+                  {ci.pee && <Text style={styles.checkinItem}>排尿: {ci.pee === 'none' ? '没有' : ci.pee === 'normal' ? '正常' : '偏多'}</Text>}
+                  {ci.poop && <Text style={styles.checkinItem}>排便: {ci.poop === 'none' ? '没有' : ci.poop === 'normal' ? '正常' : '偏多'}</Text>}
+                  {ci.bristol && <Text style={styles.checkinItem}>粪便: {ci.bristol}</Text>}
+                  {ci.mood && <Text style={styles.checkinItem}>精神: {ci.mood}</Text>}
+                  {ci.behaviors?.length > 0 && <Text style={styles.checkinItem}>异常: {ci.behaviors.join(', ')}</Text>}
+                  {ci.notes ? <Text style={styles.checkinItem}>备注: {ci.notes}</Text> : null}
+                </View>
+              </View>
+            );
+          })}
         </Card>
       )}
 
@@ -144,7 +151,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceLight, alignItems: 'center', justifyContent: 'center',
   },
   checkinCard: { marginHorizontal: spacing.lg, marginTop: spacing.lg },
-  dogRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.sm },
+  checkinDogBlock: { marginBottom: spacing.md },
+  dogRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs },
   dogName: { ...typography.bodyBold, color: colors.secondary },
   checkinItems: { gap: 4 },
   checkinItem: { ...typography.caption, color: colors.textLight },
