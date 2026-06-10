@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform, StyleSheet, Keyboard, Modal, Dimensions } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, KeyboardAvoidingView, StyleSheet, Keyboard, Dimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
@@ -78,8 +78,8 @@ function CompactBristol({ value, onChange, disabled }) {
   );
 }
 
-function DogCheckinCard({ dog, data, onChange, walkPhotos, onPhotoPreview }) {
-  const [showBehavior, setShowBehavior] = useState(false);
+function DogCheckinCard({ dog, data, onChange }) {
+  const [showBehavior, setShowBehavior] = useState(true);
   const update = (field, value) => onChange({ ...data, [field]: value });
   const poopDisabled = !data.poop || data.poop === 'none';
   const behaviorCount = data.behaviors?.length || 0;
@@ -96,14 +96,6 @@ function DogCheckinCard({ dog, data, onChange, walkPhotos, onPhotoPreview }) {
         <View style={styles.dogInfo}>
           <Text style={styles.dogName}>{dog.name}</Text>
         </View>
-        {walkPhotos.length > 0 && (
-          <TouchableOpacity style={styles.photoPreviewBtn} onPress={onPhotoPreview}>
-            <Ionicons name="images-outline" size={16} color={colors.secondary} />
-            <View style={styles.photoCountBadge}>
-              <Text style={styles.photoCountText}>{walkPhotos.length}</Text>
-            </View>
-          </TouchableOpacity>
-        )}
       </View>
 
       <View style={styles.divider} />
@@ -111,10 +103,10 @@ function DogCheckinCard({ dog, data, onChange, walkPhotos, onPhotoPreview }) {
       <Text style={styles.fieldLabel}>排尿</Text>
       <InlineOption options={PEE_OPTIONS} value={data.pee} onChange={(v) => update('pee', v)} />
 
-      <Text style={[styles.fieldLabel, { marginTop: spacing.sm }]}>排便</Text>
+      <Text style={[styles.fieldLabel, { marginTop: spacing.md }]}>排便</Text>
       <InlineOption options={PEE_OPTIONS} value={data.poop} onChange={(v) => update('poop', v)} />
 
-      <Text style={[styles.subLabel, { marginTop: spacing.sm }]}>粪便形态</Text>
+      <Text style={[styles.subLabel, { marginTop: spacing.md }]}>粪便形态</Text>
       <CompactBristol value={data.bristol} onChange={(v) => update('bristol', v)} disabled={poopDisabled} />
 
       <View style={styles.divider} />
@@ -128,12 +120,20 @@ function DogCheckinCard({ dog, data, onChange, walkPhotos, onPhotoPreview }) {
         style={styles.collapseToggle}
         onPress={() => setShowBehavior(!showBehavior)}
       >
-        <View style={styles.collapseLeft}>
-          <Text style={styles.fieldLabel}>异常行为</Text>
-          {behaviorCount > 0 && (
-            <Text style={styles.behaviorNames} numberOfLines={1} ellipsizeMode="tail">
-              {data.behaviors.join(', ')}
-            </Text>
+        <View style={styles.behaviorInline}>
+          <View style={styles.countBadge}>
+            <Text style={styles.countBadgeText}>{behaviorCount}</Text>
+          </View>
+          {behaviorCount > 0 ? (
+            <View style={styles.behaviorPills}>
+              {data.behaviors.map((b) => (
+                <View key={b} style={styles.pill}>
+                  <Text style={styles.pillText}>{b}</Text>
+                </View>
+              ))}
+            </View>
+          ) : (
+            <Text style={styles.behaviorPlaceholder}>点击选择</Text>
           )}
         </View>
         <Ionicons name={showBehavior ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textLight} />
@@ -148,23 +148,6 @@ function DogCheckinCard({ dog, data, onChange, walkPhotos, onPhotoPreview }) {
           ))}
         </View>
       )}
-
-      <View style={styles.divider} />
-
-      <Text style={styles.fieldLabel}>备注</Text>
-      <TextInput
-        style={styles.noteInput}
-        placeholder="添加备注"
-        placeholderTextColor="#A0B3A2"
-        value={data.notes}
-        onChangeText={(t) => update('notes', t)}
-        multiline
-        numberOfLines={2}
-        textAlignVertical="top"
-        returnKeyType="done"
-        blurOnSubmit
-        onSubmitEditing={() => Keyboard.dismiss()}
-      />
     </View>
   );
 }
@@ -173,18 +156,15 @@ export default function WalkCheckinScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const { saveCheckin, finishWalk, currentWalk } = useWalk();
   const dogs = currentWalk?.dogs?.length ? currentWalk.dogs : [{ id: '1', name: '旺财' }];
-  const walkPhotos = currentWalk?.photos || [];
 
   const [records, setRecords] = useState(() => {
     const init = {};
     dogs.forEach(dog => {
-      init[dog.id] = { pee: null, poop: null, bristol: null, mood: null, behaviors: [], notes: '' };
+      init[dog.id] = { pee: null, poop: null, bristol: null, mood: null, behaviors: [] };
     });
     return init;
   });
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [photoPreviewVisible, setPhotoPreviewVisible] = useState(false);
-  const [photoIndex, setPhotoIndex] = useState(0);
   const scrollRef = useRef(null);
 
   const updateDog = (dogId, data) => {
@@ -241,8 +221,6 @@ export default function WalkCheckinScreen({ navigation }) {
                 dog={dog}
                 data={records[dog.id]}
                 onChange={(data) => updateDog(dog.id, data)}
-                walkPhotos={walkPhotos}
-                onPhotoPreview={() => setPhotoPreviewVisible(true)}
               />
             </View>
           ))}
@@ -271,38 +249,6 @@ export default function WalkCheckinScreen({ navigation }) {
         </Button>
       </View>
 
-      <Modal visible={photoPreviewVisible} transparent animationType="fade">
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setPhotoPreviewVisible(false)}
-        >
-          <View style={styles.modalContent}>
-            {walkPhotos.length > 1 && (
-              <Text style={styles.modalCounter}>{photoIndex + 1}/{walkPhotos.length}</Text>
-            )}
-            <ScrollView
-              horizontal
-              pagingEnabled
-              snapToInterval={SCREEN_WIDTH}
-              decelerationRate="fast"
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.modalScrollContent}
-              onMomentumScrollEnd={(e) => {
-                const idx = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
-                setPhotoIndex(idx);
-              }}
-            >
-              {walkPhotos.map((p, i) => (
-                <View key={p.id || i} style={styles.modalPhoto}>
-                  <Ionicons name="image-outline" size={48} color={colors.textLight} />
-                  <Text style={styles.modalPhotoTime}>{p.time}</Text>
-                </View>
-              ))}
-            </ScrollView>
-          </View>
-        </TouchableOpacity>
-      </Modal>
     </View>
   );
 }
@@ -333,18 +279,6 @@ const styles = StyleSheet.create({
   dogHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   dogInfo: { flex: 1 },
   dogName: { ...typography.h3, fontSize: 15, color: colors.secondary },
-  photoPreviewBtn: {
-    width: 32, height: 32, borderRadius: spacing.radiusMd,
-    backgroundColor: colors.bgLight, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1.5, borderColor: colors.border,
-  },
-  photoCountBadge: {
-    position: 'absolute', top: -3, right: -3,
-    width: 14, height: 14, borderRadius: 7,
-    backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1.5, borderColor: colors.white,
-  },
-  photoCountText: { fontSize: 7, fontWeight: '800', color: colors.secondary },
   divider: { height: 1, backgroundColor: colors.border, marginVertical: spacing.sm },
   fieldLabel: { ...typography.captionBold, color: colors.secondary, marginBottom: spacing.xs },
   subLabel: { ...typography.captionBold, color: colors.textLight, marginBottom: spacing.xs },
@@ -376,25 +310,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingVertical: 2,
   },
-  collapseLeft: {
-    flex: 1, marginRight: spacing.sm,
+  behaviorInline: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
+    marginRight: spacing.sm, overflow: 'hidden',
   },
-  behaviorNames: {
-    ...typography.caption, fontSize: 12, color: colors.textLight, marginTop: 2,
+  countBadge: {
+    width: 20, height: 20, borderRadius: 10,
+    backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center',
+    flexShrink: 0,
   },
-  chipGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginTop: spacing.xs },
-  noteInput: {
-    width: '100%',
-    backgroundColor: colors.bgLight,
-    borderRadius: spacing.radiusMd,
-    padding: spacing.sm,
-    fontSize: 13,
-    color: colors.textMain,
-    height: 52,
-    textAlignVertical: 'top',
-    borderWidth: 1.5,
-    borderColor: colors.border,
+  countBadgeText: { fontSize: 10, fontWeight: '800', color: colors.secondary },
+  behaviorPills: {
+    flexDirection: 'row', gap: 4, flex: 1, overflow: 'hidden',
   },
+  pill: {
+    backgroundColor: colors.primary, borderRadius: spacing.radiusPill,
+    paddingHorizontal: 8, paddingVertical: 3, flexShrink: 0,
+  },
+  pillText: { ...typography.caption, fontSize: 11, color: colors.secondary, fontWeight: '700' },
+  behaviorPlaceholder: { ...typography.caption, color: colors.textLight },
+  chipGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginTop: spacing.sm },
   dotsRow: {
     flexDirection: 'row', justifyContent: 'center', gap: 6,
     paddingVertical: spacing.sm,
@@ -413,22 +348,4 @@ const styles = StyleSheet.create({
   },
   skipBtn: { flex: 1 },
   saveBtn: { flex: 2 },
-  modalOverlay: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.85)',
-    justifyContent: 'center', alignItems: 'center',
-  },
-  modalContent: { width: '100%', maxHeight: '70%' },
-  modalCounter: {
-    ...typography.caption, color: 'rgba(255,255,255,0.7)',
-    textAlign: 'center', marginBottom: spacing.sm,
-  },
-  modalScrollContent: { alignItems: 'center' },
-  modalPhoto: {
-    width: SCREEN_WIDTH, height: 400,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  modalPhotoTime: {
-    position: 'absolute', bottom: spacing.md,
-    ...typography.caption, color: 'rgba(255,255,255,0.7)',
-  },
 });

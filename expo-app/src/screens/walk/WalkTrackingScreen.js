@@ -82,16 +82,16 @@ export default function WalkTrackingScreen({ navigation }) {
 
         <View style={[styles.statsRow, { top: insets.top + 56 }]}>
           <View style={styles.statBox}>
+            <Text style={styles.statValue}>--</Text>
+            <Text style={styles.statLabel}>配速</Text>
+          </View>
+          <View style={styles.statBox}>
             <Text style={styles.statTime}>{formatTime(seconds)}</Text>
             <Text style={styles.statTimeLabel}>时间</Text>
           </View>
           <View style={styles.statBox}>
             <Text style={styles.statValue}>--</Text>
             <Text style={styles.statLabel}>距离</Text>
-          </View>
-          <View style={styles.statBox}>
-            <Text style={styles.statValue}>--</Text>
-            <Text style={styles.statLabel}>配速</Text>
           </View>
         </View>
 

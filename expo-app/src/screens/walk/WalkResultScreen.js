@@ -35,29 +35,20 @@ export default function WalkResultScreen({ navigation }) {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}>
+    <View style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-        <Ionicons name="checkmark-circle" size={48} color={colors.primary} />
         <Text style={styles.title}>遛狗完成！</Text>
         <Text style={styles.time}>{formatTime(last?.startTime)}</Text>
       </View>
 
-      <View style={styles.mapWrap}>
-        <MapPlaceholder
-          height={180}
-          label="轨迹地图"
-          sublabel="完成后展示本次路线"
-        />
-      </View>
-
       <View style={styles.statsGrid}>
         <View style={styles.statItem}>
-          <Ionicons name="trending-up" size={20} color={colors.primary} />
+          <Ionicons name="speedometer-outline" size={20} color={colors.primary} />
           <View style={styles.statValueRow}>
-            <Text style={styles.statValue}>{distance.toFixed(1)}</Text>
-            <Text style={styles.statUnit}> km</Text>
+            <Text style={styles.statValue}>{pace}</Text>
+            <Text style={styles.statUnit}> km/h</Text>
           </View>
-          <Text style={styles.statLabel}>总距离</Text>
+          <Text style={styles.statLabel}>平均配速</Text>
         </View>
         <View style={styles.statItem}>
           <Ionicons name="timer-outline" size={20} color={colors.primary} />
@@ -67,13 +58,21 @@ export default function WalkResultScreen({ navigation }) {
           <Text style={styles.statLabel}>总时长</Text>
         </View>
         <View style={styles.statItem}>
-          <Ionicons name="speedometer-outline" size={20} color={colors.primary} />
+          <Ionicons name="trending-up" size={20} color={colors.primary} />
           <View style={styles.statValueRow}>
-            <Text style={styles.statValue}>{pace}</Text>
-            <Text style={styles.statUnit}> km/h</Text>
+            <Text style={styles.statValue}>{distance.toFixed(1)}</Text>
+            <Text style={styles.statUnit}> km</Text>
           </View>
-          <Text style={styles.statLabel}>平均配速</Text>
+          <Text style={styles.statLabel}>总距离</Text>
         </View>
+      </View>
+
+      <View style={styles.mapWrap}>
+        <MapPlaceholder
+          height={160}
+          label="轨迹地图"
+          sublabel="完成后展示本次路线"
+        />
       </View>
 
       {photos.length > 0 && (
@@ -93,24 +92,25 @@ export default function WalkResultScreen({ navigation }) {
         <TipCard icon="bulb-outline" title="小贴士" description="连续遛狗超过30分钟，狗狗更容易保持好心情" tone="blue" />
       </View>
 
+      <View style={styles.bottomFill} />
+
       <TouchableOpacity
         style={[styles.finishBtn, { marginBottom: insets.bottom + 20 }]}
         onPress={() => navigation.reset({ index: 0, routes: [{ name: 'WalkHome' }] })}
       >
         <Text style={styles.finishBtnText}>完成</Text>
       </TouchableOpacity>
-    </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  header: { alignItems: 'center', paddingVertical: spacing.xl },
-  title: { ...typography.h1, color: colors.secondary, marginTop: spacing.md },
+  header: { alignItems: 'center', paddingVertical: spacing.lg },
+  title: { ...typography.h1, color: colors.secondary },
   time: { ...typography.body, color: colors.textLight, marginTop: spacing.xs },
-  mapWrap: { marginHorizontal: spacing.lg, borderRadius: spacing.radiusLg, overflow: 'hidden' },
   statsGrid: {
-    flexDirection: 'row', marginHorizontal: spacing.lg, marginTop: spacing.lg,
+    flexDirection: 'row', marginHorizontal: spacing.lg, marginTop: spacing.md,
     backgroundColor: colors.white, borderRadius: spacing.radiusLg, padding: spacing.md,
   },
   statItem: { flex: 1, alignItems: 'center' },
@@ -118,16 +118,18 @@ const styles = StyleSheet.create({
   statValue: { ...typography.h2, color: colors.secondary },
   statUnit: { ...typography.caption, color: colors.textLight, marginLeft: 2 },
   statLabel: { ...typography.caption, color: colors.textLight, marginTop: spacing.xs },
-  photosSection: { marginTop: spacing.lg, paddingHorizontal: spacing.lg },
+  mapWrap: { marginHorizontal: spacing.lg, marginTop: spacing.md, borderRadius: spacing.radiusLg, overflow: 'hidden' },
+  photosSection: { marginTop: spacing.md, paddingHorizontal: spacing.lg },
   sectionTitle: { ...typography.bodyBold, color: colors.secondary, marginBottom: spacing.sm },
   photoRow: { gap: 8 },
   photoThumb: {
     width: 100, height: 100, borderRadius: spacing.radiusMd,
     backgroundColor: colors.surfaceLight, alignItems: 'center', justifyContent: 'center',
   },
-  tipsSection: { gap: spacing.sm, paddingHorizontal: spacing.lg, marginTop: spacing.lg },
+  tipsSection: { gap: spacing.sm, paddingHorizontal: spacing.lg, marginTop: spacing.md },
+  bottomFill: { flex: 1 },
   finishBtn: {
-    marginHorizontal: spacing.xl, marginTop: spacing.xl,
+    marginHorizontal: spacing.xl, marginTop: spacing.md,
     backgroundColor: colors.primary, borderRadius: spacing.radiusPill,
     paddingVertical: spacing.md, alignItems: 'center',
   },
