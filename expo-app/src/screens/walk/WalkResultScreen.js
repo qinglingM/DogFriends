@@ -5,13 +5,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { typography } from '../../theme/typography';
-import { Card, MapPlaceholder, DogAvatar } from '../../components';
+import { Card, MapPlaceholder, DogAvatar, TipCard } from '../../components';
 import { useWalk } from '../../contexts/WalkContext';
-
-const TIPS = [
-  { emoji: '💡', text: '连续遛狗超过30分钟，狗狗更容易保持好心情' },
-  { emoji: '💧', text: '记得给狗狗补充水分，尤其是天气热的时候' },
-];
 
 export default function WalkResultScreen({ navigation }) {
   const insets = useSafeAreaInsets();
@@ -36,7 +31,7 @@ export default function WalkResultScreen({ navigation }) {
   const formatTime = (ts) => {
     if (!ts) return '';
     const d = new Date(ts);
-    return `${d.getMonth()+1}月${d.getDate()}日 ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;
+    return `${d.getMonth() + 1}月${d.getDate()}日 ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
   };
 
   return (
@@ -101,9 +96,9 @@ export default function WalkResultScreen({ navigation }) {
             <Text style={styles.dogName}>{last.dogs?.[0]?.name || '狗狗'}</Text>
           </View>
           <View style={styles.checkinItems}>
-            {last.checkin.pee && <Text style={styles.checkinItem}>排尿: {last.checkin.pee === 'normal' ? '正常' : '偏多'}</Text>}
-            {last.checkin.poop && <Text style={styles.checkinItem}>排便: {last.checkin.poop === 'normal' ? '正常' : '偏多'}</Text>}
-            {last.checkin.bristol && <Text style={styles.checkinItem}>Bristol: {last.checkin.bristol}型</Text>}
+            {last.checkin.pee && <Text style={styles.checkinItem}>排尿: {last.checkin.pee === 'none' ? '没有' : last.checkin.pee === 'normal' ? '正常' : '偏多'}</Text>}
+            {last.checkin.poop && <Text style={styles.checkinItem}>排便: {last.checkin.poop === 'none' ? '没有' : last.checkin.poop === 'normal' ? '正常' : '偏多'}</Text>}
+            {last.checkin.bristol && <Text style={styles.checkinItem}>Bristol: {last.checkin.bristol}</Text>}
             {last.checkin.mood && <Text style={styles.checkinItem}>精神: {last.checkin.mood}</Text>}
             {last.checkin.behaviors?.length > 0 && <Text style={styles.checkinItem}>异常: {last.checkin.behaviors.join(', ')}</Text>}
             {last.checkin.notes ? <Text style={styles.checkinItem}>备注: {last.checkin.notes}</Text> : null}
@@ -112,7 +107,8 @@ export default function WalkResultScreen({ navigation }) {
       )}
 
       <View style={styles.tipsSection}>
-        {TIPS.map((t, i) => <TipCard key={i} emoji={t.emoji} text={t.text} />)}
+        <TipCard icon="bulb-outline" title="小贴士" description="连续遛狗超过30分钟，狗狗更容易保持好心情" tone="blue" />
+        <TipCard icon="water-outline" title="小贴士" description="记得给狗狗补充水分，尤其是天气热的时候" tone="blue" />
       </View>
 
       <TouchableOpacity
@@ -126,7 +122,7 @@ export default function WalkResultScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bgLight },
+  container: { flex: 1, backgroundColor: colors.bg },
   header: { alignItems: 'center', paddingVertical: spacing.xl },
   title: { ...typography.h1, color: colors.secondary, marginTop: spacing.md },
   time: { ...typography.body, color: colors.textLight, marginTop: spacing.xs },
@@ -156,7 +152,7 @@ const styles = StyleSheet.create({
   finishBtn: {
     marginHorizontal: spacing.xl, marginTop: spacing.xl,
     backgroundColor: colors.primary, borderRadius: spacing.radiusPill,
-    paddingVertical: spacing.buttonHeight, alignItems: 'center',
+    paddingVertical: spacing.md, alignItems: 'center',
   },
   finishBtnText: { ...typography.button, color: colors.secondary },
 });

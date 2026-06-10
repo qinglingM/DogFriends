@@ -3,6 +3,8 @@ export const colors = {
   secondary: '#347048',
   accent: '#926699',
   bg: '#EBE1D8',
+  bgLight: '#F5F0EB',
+  surfaceLight: '#D3E0C8',
   white: '#FFFFFF',
 
   textMain: '#2C3E2D',

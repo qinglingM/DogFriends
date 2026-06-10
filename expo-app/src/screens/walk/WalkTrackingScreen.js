@@ -102,9 +102,7 @@ export default function WalkTrackingScreen({ navigation }) {
                 style={styles.controlBtn}
                 onPress={() => setIsPaused(!isPaused)}
               >
-                <View style={styles.pauseCircle}>
-                  <Ionicons name={isPaused ? 'play' : 'pause'} size={24} color={colors.secondary} />
-                </View>
+                <Ionicons name={isPaused ? 'play' : 'pause'} size={24} color={colors.secondary} />
               </TouchableOpacity>
               <Text style={styles.controlLabel}>{isPaused ? '继续' : '暂停'}</Text>
             </View>
@@ -120,9 +118,7 @@ export default function WalkTrackingScreen({ navigation }) {
 
             <View style={styles.controlGroup}>
               <TouchableOpacity style={styles.controlBtn} onPress={handleCamera}>
-                <View style={styles.cameraCircle}>
-                  <Ionicons name="camera" size={24} color={colors.secondary} />
-                </View>
+                <Ionicons name="camera" size={24} color={colors.secondary} />
               </TouchableOpacity>
               <Text style={styles.controlLabel}>拍照</Text>
             </View>
@@ -206,24 +202,17 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white, alignItems: 'center', justifyContent: 'center',
     borderWidth: 2, borderColor: colors.secondary,
   },
-  pauseCircle: {
-    width: 64, height: 64, borderRadius: 32,
-    backgroundColor: colors.white, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 2, borderColor: colors.secondary,
-  },
   stopCircle: {
     width: 64, height: 64, borderRadius: 32,
     backgroundColor: colors.danger, alignItems: 'center', justifyContent: 'center',
     borderWidth: 2, borderColor: '#C0392B',
   },
-  cameraCircle: {
-    width: 64, height: 64, borderRadius: 32,
-    backgroundColor: colors.white, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 2, borderColor: colors.secondary,
-  },
   controlLabel: {
-    fontSize: 11, fontWeight: '700', color: colors.white,
-    textShadowColor: 'rgba(0,0,0,0.3)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 4,
+    ...typography.captionBold, fontSize: 11, color: colors.white,
+    backgroundColor: 'rgba(52, 112, 72, 0.7)',
+    paddingHorizontal: 8, paddingVertical: 2,
+    borderRadius: spacing.radiusPill,
+    overflow: 'hidden',
   },
   galleryThumb: {
     marginTop: 12, width: 56, height: 56, borderRadius: 10,
