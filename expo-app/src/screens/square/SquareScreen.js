@@ -1,10 +1,10 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { typography } from '../../theme/typography';
-import { NavBar } from '../../components';
 import { useSquare } from '../../contexts/SquareContext';
 import { SQUARE_TAGS } from '../../data/squareData';
 
@@ -19,6 +19,7 @@ function splitColumns(posts) {
 }
 
 export default function SquareScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
   const { posts, toggleLike, toggleFavorite } = useSquare();
   const [activeTag, setActiveTag] = useState('all');
   const openAuthorProfile = (post) => {
@@ -106,31 +107,27 @@ export default function SquareScreen({ navigation }) {
   );
 
   return (
-    <View style={styles.screen}>
-      <NavBar
-        title="广场"
-        rightIcon="add"
-        rightAction={() => navigation.navigate('CreatePost')}
-      />
-
+    <View style={[styles.screen, { paddingTop: insets.top }]}>
       <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.tagTabs}>
-          {['all', ...SQUARE_TAGS].map(tag => {
-            const active = activeTag === tag;
-            return (
-              <TouchableOpacity
-                key={tag}
-                style={styles.tagTab}
-                activeOpacity={0.75}
-                onPress={() => setActiveTag(tag)}
-              >
-                <Text style={[styles.tagTabText, active && styles.tagTabTextActive]} numberOfLines={1}>
-                  {tag === 'all' ? '全部' : tag}
-                </Text>
-                <View style={[styles.tagTabLine, active && styles.tagTabLineActive]} />
-              </TouchableOpacity>
-            );
-          })}
+        <View style={styles.topRow}>
+          <View style={styles.tagTabs}>
+            {['all', ...SQUARE_TAGS].map(tag => {
+              const active = activeTag === tag;
+              return (
+                <TouchableOpacity
+                  key={tag}
+                  style={styles.tagTab}
+                  activeOpacity={0.75}
+                  onPress={() => setActiveTag(tag)}
+                >
+                  <Text style={[styles.tagTabText, active && styles.tagTabTextActive]} numberOfLines={1}>
+                    {tag === 'all' ? '全部' : tag}
+                  </Text>
+                  <View style={[styles.tagTabLine, active && styles.tagTabLineActive]} />
+                </TouchableOpacity>
+              );
+            })}
+          </View>
         </View>
 
         <View style={styles.masonry}>
@@ -138,6 +135,14 @@ export default function SquareScreen({ navigation }) {
           <View style={styles.column}>{columns[1].map(renderPostCard)}</View>
         </View>
       </ScrollView>
+
+      <TouchableOpacity
+        style={styles.fab}
+        activeOpacity={0.85}
+        onPress={() => navigation.navigate('CreatePost')}
+      >
+        <Ionicons name="pencil" size={24} color={colors.secondary} />
+      </TouchableOpacity>
     </View>
   );
 }
@@ -148,10 +153,34 @@ const styles = StyleSheet.create({
     padding: spacing.screenMargin,
     paddingBottom: 96,
   },
-  tagTabs: {
+  topRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     marginBottom: 14,
+    gap: 8,
+  },
+  tagTabs: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+  },
+  fab: {
+    position: 'absolute',
+    right: 20,
+    bottom: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 10,
+    elevation: 6,
+    borderBottomWidth: 3,
+    borderBottomColor: colors.secondary,
   },
   tagTab: {
     flex: 1,

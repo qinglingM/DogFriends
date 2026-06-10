@@ -7,6 +7,44 @@ const initialState = {
   posts: INITIAL_POSTS,
 };
 
+function appendReplyToThread(comments, targetId, reply) {
+  return comments.map(comment => {
+    if (comment.id === targetId) {
+      return {
+        ...comment,
+        replies: [...(comment.replies || []), reply],
+      };
+    }
+
+    if (comment.replies?.length) {
+      return {
+        ...comment,
+        replies: appendReplyToThread(comment.replies, targetId, reply),
+      };
+    }
+
+    return comment;
+  });
+}
+
+function toggleThreadLike(comments, targetId) {
+  return comments.map(comment => {
+    if (comment.id === targetId) {
+      const liked = !comment.liked;
+      return { ...comment, liked, likes: (comment.likes || 0) + (liked ? 1 : -1) };
+    }
+
+    if (comment.replies?.length) {
+      return {
+        ...comment,
+        replies: toggleThreadLike(comment.replies, targetId),
+      };
+    }
+
+    return comment;
+  });
+}
+
 function reducer(state, action) {
   switch (action.type) {
     case 'ADD_POST':
@@ -47,8 +85,30 @@ function reducer(state, action) {
                 text: action.text,
                 likes: 0,
                 liked: false,
+                replies: [],
               },
             ],
+          };
+        }),
+      };
+
+    case 'ADD_COMMENT_REPLY':
+      return {
+        ...state,
+        posts: state.posts.map(post => {
+          if (post.id !== action.postId) return post;
+          return {
+            ...post,
+            comments: appendReplyToThread(post.comments, action.targetId, {
+              id: `reply_${Date.now()}`,
+              authorName: '小明',
+              replyTo: action.replyTo,
+              text: action.text,
+              likes: 0,
+              liked: false,
+              replies: [],
+              createdAt: new Date().toISOString().slice(0, 10),
+            }),
           };
         }),
       };
@@ -60,11 +120,7 @@ function reducer(state, action) {
           if (post.id !== action.postId) return post;
           return {
             ...post,
-            comments: post.comments.map(comment => {
-              if (comment.id !== action.commentId) return comment;
-              const liked = !comment.liked;
-              return { ...comment, liked, likes: comment.likes + (liked ? 1 : -1) };
-            }),
+            comments: toggleThreadLike(post.comments, action.commentId),
           };
         }),
       };
@@ -98,6 +154,9 @@ export function SquareProvider({ children }) {
   const toggleLike = useCallback(id => dispatch({ type: 'TOGGLE_LIKE', id }), []);
   const toggleFavorite = useCallback(id => dispatch({ type: 'TOGGLE_FAVORITE', id }), []);
   const addComment = useCallback((id, text) => dispatch({ type: 'ADD_COMMENT', id, text }), []);
+  const addCommentReply = useCallback((postId, targetId, replyTo, text) => {
+    dispatch({ type: 'ADD_COMMENT_REPLY', postId, targetId, replyTo, text });
+  }, []);
   const toggleCommentLike = useCallback((postId, commentId) => {
     dispatch({ type: 'TOGGLE_COMMENT_LIKE', postId, commentId });
   }, []);
@@ -108,9 +167,10 @@ export function SquareProvider({ children }) {
     toggleLike,
     toggleFavorite,
     addComment,
+    addCommentReply,
     toggleCommentLike,
     getPost: id => state.posts.find(post => post.id === id),
-  }), [state, addPost, toggleLike, toggleFavorite, addComment, toggleCommentLike]);
+  }), [state, addPost, toggleLike, toggleFavorite, addComment, addCommentReply, toggleCommentLike]);
 
   return <SquareContext.Provider value={value}>{children}</SquareContext.Provider>;
 }

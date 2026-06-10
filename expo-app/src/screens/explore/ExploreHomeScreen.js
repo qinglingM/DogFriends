@@ -1,33 +1,51 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { typography } from '../../theme/typography';
-import { NavBar, Chip, StatusBadge } from '../../components';
+import { StatusBadge } from '../../components';
 import { useExplore } from '../../contexts/ExploreContext';
 import {
   CATEGORIES,
   SCENE_FILTERS,
   LOCATION_STATUS,
+  CITY_OPTIONS,
   getContributionLabel,
 } from '../../data/exploreData';
 
+function matchFilter(key, loc) {
+  switch (key) {
+    case 'multi_verified':
+      return loc.status === LOCATION_STATUS.MULTI_VERIFIED;
+    case 'indoor':
+      return loc.entryArea === 'indoor';
+    case 'outdoor':
+      return ['outdoor', 'terrace_only'].includes(loc.entryArea);
+    case 'large_dog':
+      return loc.dogSize?.includes('large') || loc.dogSize?.includes('all');
+    default:
+      return true;
+  }
+}
+
 export default function ExploreHomeScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
   const { locations, favorites, toggleFavorite } = useExplore();
+  const [selectedCity, setSelectedCity] = useState('上海');
+  const [cityPickerOpen, setCityPickerOpen] = useState(false);
   const [category, setCategory] = useState('all');
-  const [activeFilter, setActiveFilter] = useState(null);
+  const [selectedFilter, setSelectedFilter] = useState(null);
 
   const filtered = useMemo(() => {
     return locations.filter(loc => {
+      if (loc.city !== selectedCity) return false;
       if (category !== 'all' && loc.category !== category) return false;
-      if (activeFilter === 'multi_verified' && loc.status !== LOCATION_STATUS.MULTI_VERIFIED) return false;
-      if (activeFilter === 'indoor' && loc.entryArea !== 'indoor') return false;
-      if (activeFilter === 'outdoor' && !['outdoor', 'terrace_only'].includes(loc.entryArea)) return false;
-      if (activeFilter === 'large_dog' && !(loc.dogSize?.includes('large') || loc.dogSize?.includes('all'))) return false;
+      if (selectedFilter && !matchFilter(selectedFilter, loc)) return false;
       return true;
     });
-  }, [locations, category, activeFilter]);
+  }, [locations, selectedCity, category, selectedFilter]);
 
   const renderCard = (loc) => {
     const isFav = !!favorites[loc.id];
@@ -76,30 +94,49 @@ export default function ExploreHomeScreen({ navigation }) {
   };
 
   return (
-    <View style={styles.screen}>
-      <NavBar title="去玩" bgColor={colors.bg} />
+    <View style={[styles.screen, { paddingTop: insets.top }]}>
+      <View style={styles.searchRow}>
+        <View style={styles.citySelectorWrap}>
+          <TouchableOpacity
+            style={styles.citySelector}
+            onPress={() => setCityPickerOpen(!cityPickerOpen)}
+          >
+            <Text style={styles.cityText}>{selectedCity}</Text>
+            <Ionicons name={cityPickerOpen ? "chevron-up" : "chevron-down"} size={12} color={colors.secondary} />
+          </TouchableOpacity>
+          {cityPickerOpen && (
+            <View style={styles.cityPickerDropdown}>
+              <ScrollView showsVerticalScrollIndicator={false}>
+                {CITY_OPTIONS.map(city => {
+                  const active = city.name === selectedCity;
+                  return (
+                    <TouchableOpacity
+                      key={city.name}
+                      style={[styles.cityPickerRow, active && styles.cityPickerRowActive]}
+                      activeOpacity={0.7}
+                      onPress={() => {
+                        setSelectedCity(city.name);
+                        setCityPickerOpen(false);
+                      }}
+                    >
+                      <Text style={[styles.cityPickerText, active && styles.cityPickerTextActive]}>
+                        {city.name}
+                      </Text>
+                      {active && <Ionicons name="checkmark" size={18} color={colors.secondary} />}
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          )}
+        </View>
+        <TouchableOpacity style={styles.searchBar}>
+          <Ionicons name="search" size={18} color={colors.textLight} />
+          <Text style={styles.searchPlaceholder}>搜索地点或咖啡店...</Text>
+        </TouchableOpacity>
+      </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.searchRow}>
-          <TouchableOpacity style={styles.citySelector}>
-            <Text style={styles.cityText}>上海</Text>
-            <Ionicons name="chevron-down" size={12} color={colors.secondary} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.searchBar}>
-            <Ionicons name="search" size={18} color={colors.textLight} />
-            <Text style={styles.searchPlaceholder}>搜索地点或咖啡店...</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.addIconBtn}
-            onPress={() => navigation.navigate('AddLocation')}
-            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-          >
-            <Ionicons name="add" size={24} color={colors.secondary} />
-          </TouchableOpacity>
-        </View>
-
-        <Text style={styles.heroSub}>带上狗，一起探索城市</Text>
-
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -122,16 +159,24 @@ export default function ExploreHomeScreen({ navigation }) {
           })}
         </ScrollView>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
-          {SCENE_FILTERS.map((f) => (
-            <Chip
-              key={f.key}
-              active={activeFilter === f.key}
-              onPress={() => setActiveFilter(activeFilter === f.key ? null : f.key)}
-            >
-              {f.label}
-            </Chip>
-          ))}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.sceneFilters}
+        >
+          {SCENE_FILTERS.map(f => {
+            const active = f.key === selectedFilter;
+            return (
+              <TouchableOpacity
+                key={f.key}
+                style={[styles.sceneChip, active && styles.sceneChipActive]}
+                activeOpacity={0.7}
+                onPress={() => setSelectedFilter(active ? null : f.key)}
+              >
+                <Text style={[styles.sceneChipText, active && styles.sceneChipTextActive]}>{f.label}</Text>
+              </TouchableOpacity>
+            );
+          })}
         </ScrollView>
 
         <View style={styles.list}>
@@ -147,6 +192,15 @@ export default function ExploreHomeScreen({ navigation }) {
         </View>
 
       </ScrollView>
+
+      <TouchableOpacity
+        style={styles.fab}
+        activeOpacity={0.85}
+        onPress={() => navigation.navigate('AddLocation')}
+      >
+        <Ionicons name="location" size={20} color={colors.secondary} />
+        <Text style={styles.fabLabel}>新增地点</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -159,26 +213,69 @@ const styles = StyleSheet.create({
     padding: spacing.screenMargin,
     paddingBottom: 4,
   },
+  citySelectorWrap: { position: 'relative', zIndex: 10 },
   citySelector: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   cityText: { ...typography.bodyBold, fontSize: 16, color: colors.secondary, fontWeight: '800' },
+  cityPickerDropdown: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    marginTop: 4,
+    backgroundColor: colors.white,
+    borderRadius: spacing.radiusMd,
+    borderWidth: 1,
+    borderColor: colors.border,
+    minWidth: 140,
+    maxHeight: 300,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+    paddingVertical: 4,
+    zIndex: 100,
+  },
+  cityPickerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  cityPickerRowActive: {
+    backgroundColor: 'rgba(185, 207, 50, 0.15)',
+  },
+  cityPickerText: { ...typography.body, color: colors.textMain, fontSize: 15 },
+  cityPickerTextActive: { color: colors.secondary, fontWeight: '700' },
   searchBar: {
     flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8,
     backgroundColor: colors.white, borderRadius: spacing.radiusPill,
     paddingVertical: 10, paddingHorizontal: 16,
   },
   searchPlaceholder: { ...typography.body, color: colors.textLight, fontSize: 14 },
-  addIconBtn: {
-    width: 40, height: 40, borderRadius: 20,
+  fab: {
+    position: 'absolute',
+    right: 20,
+    bottom: 24,
+    height: 52,
+    paddingHorizontal: 18,
+    borderRadius: 26,
     backgroundColor: colors.primary,
-    alignItems: 'center', justifyContent: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 10,
+    elevation: 6,
     borderBottomWidth: 3,
     borderBottomColor: colors.secondary,
   },
-  heroSub: {
-    ...typography.body,
-    color: colors.textLight,
-    paddingHorizontal: spacing.screenMargin,
-    marginBottom: spacing.md,
+  fabLabel: {
+    ...typography.bodyBold,
+    color: colors.secondary,
+    fontSize: 15,
   },
   categories: {
     flexDirection: 'row', gap: 16,
@@ -193,10 +290,24 @@ const styles = StyleSheet.create({
   catIconBoxActive: { backgroundColor: colors.primary },
   catLabel: { ...typography.caption, color: colors.textLight },
   catLabelActive: { color: colors.secondary, fontWeight: '800' },
-  filterRow: {
+  sceneFilters: {
     flexDirection: 'row', gap: 8,
     paddingHorizontal: spacing.screenMargin, marginBottom: spacing.cardGap,
   },
+  sceneChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: spacing.radiusPill,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  sceneChipActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  sceneChipText: { ...typography.captionBold, color: colors.textMain, fontSize: 13 },
+  sceneChipTextActive: { color: colors.secondary },
   list: { paddingHorizontal: spacing.screenMargin },
   locCard: {
     backgroundColor: colors.white, borderRadius: spacing.radiusMd,

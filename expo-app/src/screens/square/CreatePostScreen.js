@@ -1,10 +1,23 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet } from 'react-native';
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  TextInput,
+  StyleSheet,
+  Image,
+  Alert,
+  Linking,
+  Platform,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { typography } from '../../theme/typography';
-import { NavBar, Card, Button } from '../../components';
+import { Card, Button } from '../../components';
 import { SQUARE_TAGS } from '../../data/squareData';
 import { useSquare } from '../../contexts/SquareContext';
 
@@ -16,58 +29,132 @@ const VISIBILITY_OPTIONS = [
 ];
 
 export default function CreatePostScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
   const { addPost } = useSquare();
+  const [title, setTitle] = useState('');
   const [text, setText] = useState('');
+  const [media, setMedia] = useState([]);
   const [tag, setTag] = useState(null);
   const [location, setLocation] = useState('上海 徐汇');
   const [visibility, setVisibility] = useState('public');
   const [openPicker, setOpenPicker] = useState(null);
 
+  const addMedia = async () => {
+    // 1. 请求相册权限（首次会弹系统弹窗）
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (permission.status !== 'granted') {
+      Alert.alert(
+        '需要相册权限',
+        '请在系统设置里允许「狗友」访问你的照片，才能上传图片。',
+        [
+          { text: '取消', style: 'cancel' },
+          { text: '去设置', onPress: () => Linking.openSettings?.() },
+        ]
+      );
+      return;
+    }
+    // 2. 调起系统相册选择器
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.All,
+        allowsMultipleSelection: Platform.OS !== 'android', // Android 多选需 13+，统一保守
+        quality: 0.85,
+      });
+      if (result.canceled) return;
+      const newAssets = (result.assets || []).map(a => ({
+        id: a.assetId || `m_${Date.now()}_${Math.random()}`,
+        type: a.type === 'video' ? 'video' : 'image',
+        uri: a.uri,
+      }));
+      setMedia(prev => [...prev, ...newAssets]);
+    } catch (err) {
+      Alert.alert('选择失败', err?.message || '请稍后再试');
+    }
+  };
+  const removeMedia = (id) => setMedia(prev => prev.filter(m => m.id !== id));
+
   const publish = () => {
-    const content = text.trim() || '分享今天的遛狗日常。';
+    const body = text.trim();
+    const content = title.trim()
+      ? (body ? `${title.trim()}\n${body}` : title.trim())
+      : (body || '分享今天的遛狗日常。');
+    const cover = media[0];
     addPost({
       text: content,
       tag,
       location,
       visibility,
-      mediaType: 'image',
-      mediaUrl: MOCK_IMAGE,
+      mediaType: cover?.type === 'video' ? 'video' : 'image',
+      mediaUrl: cover?.uri || MOCK_IMAGE,
     });
     navigation.navigate('SquareHome');
   };
 
   return (
-    <View style={styles.screen}>
-      <NavBar
-        title="发帖"
-        onBack={() => navigation.goBack()}
-        rightIcon="checkmark"
-        rightAction={publish}
-      />
+    <View style={[styles.screen, { paddingTop: insets.top }]}>
+      <View style={styles.header}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Ionicons name="chevron-back" size={28} color={colors.textMain} />
+        </TouchableOpacity>
+      </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        <Card>
-          <TextInput
-            value={text}
-            onChangeText={setText}
-            multiline
-            placeholder="分享你的遛狗日常..."
-            placeholderTextColor={colors.textLight}
-            style={styles.textInput}
-          />
-        </Card>
+        {/* 媒体格子（横向滑动） */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.mediaScroll}
+        >
+          {media.map(m => (
+            <View key={m.id} style={styles.mediaTile}>
+              {m.uri ? (
+                <Image source={{ uri: m.uri }} style={styles.mediaImage} resizeMode="cover" />
+              ) : (
+                <Ionicons name="image" size={36} color={colors.secondary} style={{ opacity: 0.5 }} />
+              )}
+              {m.type === 'video' && (
+                <View style={styles.videoMarker}>
+                  <Ionicons name="play" size={14} color={colors.white} />
+                </View>
+              )}
+              <TouchableOpacity
+                style={styles.removeMediaBtn}
+                onPress={() => removeMedia(m.id)}
+                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+              >
+                <Ionicons name="close-circle" size={20} color={colors.danger} />
+              </TouchableOpacity>
+            </View>
+          ))}
+          <TouchableOpacity style={[styles.mediaTile, styles.addTile]} onPress={addMedia} activeOpacity={0.7}>
+            <Ionicons name="add" size={40} color={colors.textLight} />
+          </TouchableOpacity>
+        </ScrollView>
 
-        <TouchableOpacity style={styles.mediaPicker} activeOpacity={0.75}>
-          <View style={styles.mediaIconBox}>
-            <Ionicons name="image-outline" size={22} color={colors.secondary} />
-          </View>
-          <View style={styles.mediaTextBlock}>
-            <Text style={styles.mediaTitle}>选择图片或视频</Text>
-            <Text style={styles.mediaHint}>从手机相册上传</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={16} color={colors.textLight} />
-        </TouchableOpacity>
+        {/* 标题 */}
+        <TextInput
+          value={title}
+          onChangeText={setTitle}
+          placeholder="添加标题"
+          placeholderTextColor={colors.textLight}
+          style={styles.titleInput}
+          maxLength={50}
+        />
 
+        {/* 正文 */}
+        <TextInput
+          value={text}
+          onChangeText={setText}
+          placeholder="添加正文"
+          placeholderTextColor={colors.textLight}
+          multiline
+          style={styles.bodyInput}
+        />
+
+        {/* 以下保留：标签 / 位置 / 可见性 / 发布 */}
         <Text style={styles.sectionTitle}>标签（可选）</Text>
         <View style={styles.tagWrap}>
           {SQUARE_TAGS.map(item => (
@@ -144,35 +231,83 @@ export default function CreatePostScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
+  header: {
+    paddingHorizontal: spacing.screenMargin,
+    paddingVertical: 12,
+  },
   content: { padding: spacing.screenMargin, paddingBottom: 48 },
-  textInput: {
-    minHeight: 120,
-    textAlignVertical: 'top',
-    ...typography.body,
-    color: colors.textMain,
-  },
-  sectionTitle: { ...typography.bodyBold, color: colors.secondary, marginBottom: 10, marginTop: 4 },
-  mediaPicker: {
+
+  // 媒体格子
+  mediaScroll: {
     flexDirection: 'row',
-    alignItems: 'center',
     gap: 12,
-    backgroundColor: colors.white,
-    borderRadius: spacing.radiusMd,
-    padding: spacing.md,
-    marginBottom: spacing.cardGap,
-    minHeight: 88,
+    paddingVertical: 4,
+    marginBottom: 16,
   },
-  mediaIconBox: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
-    backgroundColor: 'rgba(185, 207, 50, 0.18)',
+  mediaTile: {
+    width: 96,
+    height: 96,
+    borderRadius: 12,
+    backgroundColor: colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  mediaImage: {
+    width: '100%',
+    height: '100%',
+  },
+  videoMarker: {
+    position: 'absolute',
+    bottom: 6,
+    left: 6,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: 'rgba(0,0,0,0.5)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  mediaTextBlock: { flex: 1 },
-  mediaTitle: { ...typography.bodyBold, color: colors.textMain, marginBottom: 2 },
-  mediaHint: { ...typography.captionBold, color: colors.textLight },
+  addTile: {
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    borderStyle: 'dashed',
+  },
+  removeMediaBtn: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: colors.white,
+    borderRadius: 12,
+  },
+
+  // 标题
+  titleInput: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.textMain,
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+  },
+
+  // 正文
+  bodyInput: {
+    ...typography.body,
+    color: colors.textMain,
+    textAlignVertical: 'top',
+    minHeight: 80,
+    paddingVertical: 14,
+    paddingHorizontal: 0,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+    marginBottom: 20,
+  },
+
+  // 以下保留原样式
+  sectionTitle: { ...typography.bodyBold, color: colors.secondary, marginBottom: 10, marginTop: 4 },
   tagWrap: {
     flexDirection: 'row',
     flexWrap: 'wrap',
