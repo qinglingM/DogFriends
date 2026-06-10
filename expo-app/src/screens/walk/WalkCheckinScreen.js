@@ -1,5 +1,6 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, KeyboardAvoidingView, StyleSheet, Keyboard, Dimensions } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
@@ -9,7 +10,7 @@ import { NavBar, Button, Chip, DogAvatar, EmojiSelector } from '../../components
 import { useWalk } from '../../contexts/WalkContext';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
-const CARD_GAP = 16;
+const CARD_GAP = 12;
 
 const PEE_OPTIONS = [
   { value: 'none', label: '无' },
@@ -78,7 +79,7 @@ function CompactBristol({ value, onChange, disabled }) {
   );
 }
 
-function DogCheckinCard({ dog, data, onChange }) {
+function DogCheckinCard({ dog, data, onChange, sortedBehaviors }) {
   const [showBehavior, setShowBehavior] = useState(true);
   const update = (field, value) => onChange({ ...data, [field]: value });
   const poopDisabled = !data.poop || data.poop === 'none';
@@ -120,28 +121,20 @@ function DogCheckinCard({ dog, data, onChange }) {
         style={styles.collapseToggle}
         onPress={() => setShowBehavior(!showBehavior)}
       >
-        <View style={styles.behaviorInline}>
-          <View style={styles.countBadge}>
-            <Text style={styles.countBadgeText}>{behaviorCount}</Text>
-          </View>
-          {behaviorCount > 0 ? (
-            <View style={styles.behaviorPills}>
-              {data.behaviors.map((b) => (
-                <View key={b} style={styles.pill}>
-                  <Text style={styles.pillText}>{b}</Text>
-                </View>
-              ))}
+        <Text style={styles.fieldLabel}>异常行为</Text>
+        <View style={styles.collapseRight}>
+          {behaviorCount > 0 && (
+            <View style={styles.countBadge}>
+              <Text style={styles.countBadgeText}>{behaviorCount}</Text>
             </View>
-          ) : (
-            <Text style={styles.behaviorPlaceholder}>点击选择</Text>
           )}
+          <Ionicons name={showBehavior ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textLight} />
         </View>
-        <Ionicons name={showBehavior ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textLight} />
       </TouchableOpacity>
 
       {showBehavior && (
         <View style={styles.chipGrid}>
-          {BEHAVIOR_OPTIONS.map(b => (
+          {sortedBehaviors.map(b => (
             <Chip key={b} active={data.behaviors?.includes(b)} onPress={() => toggleBehavior(b)}>
               {b}
             </Chip>
@@ -152,11 +145,14 @@ function DogCheckinCard({ dog, data, onChange }) {
   );
 }
 
+const BEHAVIOR_STORAGE_KEY = '@dogfriends_behavior_history';
+
 export default function WalkCheckinScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const { saveCheckin, finishWalk, currentWalk } = useWalk();
   const dogs = currentWalk?.dogs?.length ? currentWalk.dogs : [{ id: '1', name: '旺财' }];
 
+  const [behaviorHistory, setBehaviorHistory] = useState({});
   const [records, setRecords] = useState(() => {
     const init = {};
     dogs.forEach(dog => {
@@ -167,6 +163,24 @@ export default function WalkCheckinScreen({ navigation }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const scrollRef = useRef(null);
 
+  useEffect(() => {
+    AsyncStorage.getItem(BEHAVIOR_STORAGE_KEY).then(data => {
+      if (data) setBehaviorHistory(JSON.parse(data));
+    });
+  }, []);
+
+  const sortedBehaviors = useMemo(() => {
+    return [...BEHAVIOR_OPTIONS].sort((a, b) => {
+      const countA = behaviorHistory[a] || 0;
+      const countB = behaviorHistory[b] || 0;
+      return countB - countA;
+    });
+  }, [behaviorHistory]);
+
+  const isMultiDog = dogs.length > 1;
+  const cardWidth = isMultiDog ? SCREEN_WIDTH * 0.88 : SCREEN_WIDTH * 0.96;
+  const sidePadding = (SCREEN_WIDTH - cardWidth) / 2;
+
   const updateDog = (dogId, data) => {
     setRecords(prev => ({ ...prev, [dogId]: data }));
   };
@@ -175,10 +189,21 @@ export default function WalkCheckinScreen({ navigation }) {
     d.pee !== null || d.poop !== null || d.mood !== null || d.behaviors?.length > 0
   );
 
+  const saveBehaviorHistory = (behaviors) => {
+    if (!behaviors || behaviors.length === 0) return;
+    const updated = { ...behaviorHistory };
+    behaviors.forEach(b => {
+      updated[b] = (updated[b] || 0) + 1;
+    });
+    setBehaviorHistory(updated);
+    AsyncStorage.setItem(BEHAVIOR_STORAGE_KEY, JSON.stringify(updated));
+  };
+
   const handleSave = () => {
     Keyboard.dismiss();
     Object.entries(records).forEach(([dogId, data]) => {
       saveCheckin(dogId, data);
+      saveBehaviorHistory(data.behaviors);
     });
     finishWalk();
     navigation.replace('WalkResult');
@@ -192,8 +217,8 @@ export default function WalkCheckinScreen({ navigation }) {
 
   const onScroll = (e) => {
     const x = e.nativeEvent.contentOffset.x;
-    const index = Math.round(x / SCREEN_WIDTH);
-    setCurrentIndex(index);
+    const index = Math.round(x / (cardWidth + CARD_GAP));
+    setCurrentIndex(Math.min(Math.max(index, 0), dogs.length - 1));
   };
 
   return (
@@ -208,19 +233,21 @@ export default function WalkCheckinScreen({ navigation }) {
         <ScrollView
           ref={scrollRef}
           horizontal
-          pagingEnabled
           showsHorizontalScrollIndicator={false}
+          contentContainerStyle={[styles.horizontalScroll, { paddingLeft: sidePadding, paddingRight: sidePadding }]}
+          snapToInterval={cardWidth + CARD_GAP}
+          decelerationRate="fast"
           onMomentumScrollEnd={onScroll}
-          contentContainerStyle={styles.horizontalScroll}
           keyboardShouldPersistTaps="handled"
           onScrollBeginDrag={() => Keyboard.dismiss()}
         >
           {dogs.map((dog) => (
-            <View key={dog.id} style={styles.cardPage}>
+            <View key={dog.id} style={[styles.cardPage, { width: cardWidth }]}>
               <DogCheckinCard
                 dog={dog}
                 data={records[dog.id]}
                 onChange={(data) => updateDog(dog.id, data)}
+                sortedBehaviors={sortedBehaviors}
               />
             </View>
           ))}
@@ -260,8 +287,7 @@ const styles = StyleSheet.create({
     alignItems: 'stretch',
   },
   cardPage: {
-    width: SCREEN_WIDTH,
-    paddingHorizontal: CARD_GAP / 2,
+    marginRight: CARD_GAP,
     justifyContent: 'center',
   },
   card: {
@@ -310,25 +336,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingVertical: 2,
   },
-  behaviorInline: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-    marginRight: spacing.sm, overflow: 'hidden',
+  collapseRight: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
   },
   countBadge: {
     width: 20, height: 20, borderRadius: 10,
     backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center',
-    flexShrink: 0,
   },
   countBadgeText: { fontSize: 10, fontWeight: '800', color: colors.secondary },
-  behaviorPills: {
-    flexDirection: 'row', gap: 4, flex: 1, overflow: 'hidden',
-  },
-  pill: {
-    backgroundColor: colors.primary, borderRadius: spacing.radiusPill,
-    paddingHorizontal: 8, paddingVertical: 3, flexShrink: 0,
-  },
-  pillText: { ...typography.caption, fontSize: 11, color: colors.secondary, fontWeight: '700' },
-  behaviorPlaceholder: { ...typography.caption, color: colors.textLight },
   chipGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginTop: spacing.sm },
   dotsRow: {
     flexDirection: 'row', justifyContent: 'center', gap: 6,

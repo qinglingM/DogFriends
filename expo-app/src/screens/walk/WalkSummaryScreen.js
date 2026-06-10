@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, TextInput } from 'react-native';
+import React, { useState, useRef, useCallback } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, TextInput, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
@@ -20,7 +20,10 @@ const MOCK_DOGS = [
 ];
 
 function DogCheckinBlock({ dog, data, onChange }) {
+  const [abnormalOpen, setAbnormalOpen] = useState(false);
   const update = (field, value) => onChange({ ...data, [field]: value });
+
+  const abnormalPreview = (data.abnormal || []).join('，');
 
   return (
     <View style={styles.dogBlock}>
@@ -70,41 +73,66 @@ function DogCheckinBlock({ dog, data, onChange }) {
       </View>
 
       <View style={styles.field}>
-        <Text style={styles.fieldLabel}>异常行为 (选填)</Text>
-        <View style={styles.chipWrap}>
-          {ABNORMAL_OPTIONS.map(opt => (
-            <Chip
-              key={opt}
-              active={data.abnormal?.includes(opt)}
-              onPress={() => {
-                const list = data.abnormal || [];
-                const newList = list.includes(opt)
-                  ? list.filter(x => x !== opt)
-                  : [...list, opt];
-                update('abnormal', newList);
-              }}
-            >
-              {opt}
-            </Chip>
-          ))}
-        </View>
-        {data.abnormal?.length > 0 && (
-          <View style={styles.mediaRow}>
-            <TouchableOpacity style={styles.mediaThumb}>
-              <Ionicons name="image-outline" size={20} color={colors.secondary} style={{ opacity: 0.6 }} />
-              <Text style={styles.mediaBadge}>照片</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.mediaThumb}>
-              <Ionicons name="videocam-outline" size={20} color={colors.secondary} style={{ opacity: 0.6 }} />
-              <Text style={styles.mediaBadge}>视频</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.mediaAdd}>
-              <Ionicons name="add" size={20} color={colors.textLight} />
-              <Text style={styles.mediaAddText}>补充</Text>
-            </TouchableOpacity>
-          </View>
+        <TouchableOpacity
+          style={styles.abnormalHeader}
+          onPress={() => setAbnormalOpen(!abnormalOpen)}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.fieldLabel}>异常行为</Text>
+          {abnormalPreview ? (
+            <Text style={styles.abnormalPreview} numberOfLines={1} ellipsizeMode="tail">
+              {abnormalPreview}
+            </Text>
+          ) : null}
+          {(data.abnormal || []).length > 0 && (
+            <View style={styles.abnormalBadge}>
+              <Text style={styles.abnormalBadgeText}>{(data.abnormal || []).length}</Text>
+            </View>
+          )}
+          <Ionicons
+            name={abnormalOpen ? 'chevron-up' : 'chevron-down'}
+            size={18}
+            color={colors.textLight}
+          />
+        </TouchableOpacity>
+        {abnormalOpen && (
+          <>
+            <View style={styles.chipWrap}>
+              {ABNORMAL_OPTIONS.map(opt => (
+                <Chip
+                  key={opt}
+                  active={data.abnormal?.includes(opt)}
+                  onPress={() => {
+                    const list = data.abnormal || [];
+                    const newList = list.includes(opt)
+                      ? list.filter(x => x !== opt)
+                      : [...list, opt];
+                    update('abnormal', newList);
+                  }}
+                >
+                  {opt}
+                </Chip>
+              ))}
+            </View>
+            {data.abnormal?.length > 0 && (
+              <View style={styles.mediaRow}>
+                <TouchableOpacity style={styles.mediaThumb}>
+                  <Ionicons name="image-outline" size={20} color={colors.secondary} style={{ opacity: 0.6 }} />
+                  <Text style={styles.mediaBadge}>照片</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.mediaThumb}>
+                  <Ionicons name="videocam-outline" size={20} color={colors.secondary} style={{ opacity: 0.6 }} />
+                  <Text style={styles.mediaBadge}>视频</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.mediaAdd}>
+                  <Ionicons name="add" size={20} color={colors.textLight} />
+                  <Text style={styles.mediaAddText}>补充</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+            <Text style={styles.mediaHint}>选中异常行为后可上传照片或视频作为记录</Text>
+          </>
         )}
-        <Text style={styles.mediaHint}>选中异常行为后可上传照片或视频作为记录</Text>
       </View>
 
       <View style={styles.field}>
@@ -124,6 +152,8 @@ function DogCheckinBlock({ dog, data, onChange }) {
 
 export default function WalkSummaryScreen({ navigation }) {
   const [checkinOpen, setCheckinOpen] = useState(true);
+  const [activeDogIndex, setActiveDogIndex] = useState(0);
+  const scrollRef = useRef(null);
   const [dogData, setDogData] = useState({
     '1': { pee: 1, poop: 2, bristol: 'B4', mood: 'energetic', abnormal: ['不愿走'], note: '' },
     '2': { pee: 1, poop: 0, bristol: null, mood: 'happy', abnormal: [], note: '' },
@@ -132,6 +162,18 @@ export default function WalkSummaryScreen({ navigation }) {
   const updateDog = (id, data) => {
     setDogData(prev => ({ ...prev, [id]: data }));
   };
+
+  const screenWidth = Dimensions.get('window').width;
+  const containerPadding = spacing.screenMargin * 2;
+  const containerWidth = screenWidth - containerPadding;
+  const cardGap = 12;
+  const cardWidth = containerWidth * 0.92;
+
+  const handleScroll = useCallback((e) => {
+    const contentOffset = e.nativeEvent.contentOffset.x;
+    const index = Math.round(contentOffset / (cardWidth + cardGap));
+    setActiveDogIndex(Math.min(Math.max(index, 0), MOCK_DOGS.length - 1));
+  }, [cardWidth]);
 
   return (
     <View style={styles.screen}>
@@ -163,14 +205,38 @@ export default function WalkSummaryScreen({ navigation }) {
 
           {checkinOpen && (
             <View style={styles.checkinBody}>
-              {MOCK_DOGS.map(dog => (
-                <DogCheckinBlock
-                  key={dog.id}
-                  dog={dog}
-                  data={dogData[dog.id]}
-                  onChange={(data) => updateDog(dog.id, data)}
-                />
-              ))}
+              <ScrollView
+                ref={scrollRef}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.dogCarousel}
+                snapToInterval={cardWidth + cardGap}
+                decelerationRate="fast"
+                onScroll={handleScroll}
+                scrollEventThrottle={16}
+              >
+                {MOCK_DOGS.map((dog, index) => {
+                  const isFirst = index === 0;
+                  const isLast = index === MOCK_DOGS.length - 1;
+                  return (
+                    <View
+                      key={dog.id}
+                      style={[
+                        styles.dogCarouselCard,
+                        { width: cardWidth },
+                        isFirst && styles.dogCarouselCardFirst,
+                        isLast && styles.dogCarouselCardLast,
+                      ]}
+                    >
+                      <DogCheckinBlock
+                        dog={dog}
+                        data={dogData[dog.id]}
+                        onChange={(data) => updateDog(dog.id, data)}
+                      />
+                    </View>
+                  );
+                })}
+              </ScrollView>
 
               <Button
                 fullWidth
@@ -289,13 +355,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bg,
     borderRadius: spacing.radiusMd,
     padding: spacing.md,
-    gap: 16,
+    paddingBottom: spacing.sm,
+    gap: 12,
   },
   dogBlockHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    paddingBottom: 8,
+    gap: 10,
+    paddingBottom: 6,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
@@ -305,7 +372,7 @@ const styles = StyleSheet.create({
     color: colors.secondary,
   },
   field: {
-    gap: 8,
+    gap: 6,
   },
   fieldLabel: {
     ...typography.bodyBold,
@@ -448,5 +515,44 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     borderRadius: 4,
     overflow: 'hidden',
+  },
+  dogCarousel: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  dogCarouselCard: {
+    flexShrink: 0,
+  },
+  dogCarouselCardFirst: {
+    marginLeft: 0,
+  },
+  dogCarouselCardLast: {
+    marginRight: 0,
+  },
+  abnormalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  abnormalPreview: {
+    flex: 1,
+    ...typography.caption,
+    color: colors.textLight,
+    marginLeft: 8,
+  },
+  abnormalBadge: {
+    backgroundColor: colors.primary,
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+    marginLeft: 8,
+  },
+  abnormalBadgeText: {
+    ...typography.captionBold,
+    fontSize: 11,
+    color: colors.secondary,
   },
 });

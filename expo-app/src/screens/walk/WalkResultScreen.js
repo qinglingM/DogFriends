@@ -5,18 +5,19 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { typography } from '../../theme/typography';
-import { MapPlaceholder, TipCard } from '../../components';
+import { MapPlaceholder, TipCard, DogAvatar } from '../../components';
 import { useWalk } from '../../contexts/WalkContext';
 
 export default function WalkResultScreen({ navigation }) {
   const insets = useSafeAreaInsets();
-  const { records } = useWalk();
+  const { records, currentWalk } = useWalk();
   const last = records[0];
 
   const distance = last?.distance || 0;
   const duration = last?.duration || 0;
   const pace = last?.pace || 0;
   const photos = last?.photos || [];
+  const dogs = last?.dogs || currentWalk?.dogs || [];
 
   const formatDuration = (sec) => {
     if (sec < 60) return `${sec}秒`;
@@ -37,9 +38,23 @@ export default function WalkResultScreen({ navigation }) {
   return (
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+        <View style={styles.checkIcon}>
+          <Ionicons name="checkmark-circle" size={56} color={colors.primary} />
+        </View>
         <Text style={styles.title}>遛狗完成！</Text>
         <Text style={styles.time}>{formatTime(last?.startTime)}</Text>
       </View>
+
+      {dogs.length > 0 && (
+        <View style={styles.dogRow}>
+          {dogs.map(dog => (
+            <View key={dog.id} style={styles.dogItem}>
+              <DogAvatar size={48} />
+              <Text style={styles.dogName}>{dog.name}</Text>
+            </View>
+          ))}
+        </View>
+      )}
 
       <View style={styles.statsGrid}>
         <View style={styles.statItem}>
@@ -107,8 +122,25 @@ export default function WalkResultScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   header: { alignItems: 'center', paddingVertical: spacing.lg },
+  checkIcon: { marginBottom: spacing.sm },
   title: { ...typography.h1, color: colors.secondary },
   time: { ...typography.body, color: colors.textLight, marginTop: spacing.xs },
+  dogRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: spacing.lg,
+    marginTop: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  dogItem: {
+    alignItems: 'center',
+    gap: 6,
+  },
+  dogName: {
+    ...typography.caption,
+    fontWeight: '700',
+    color: colors.secondary,
+  },
   statsGrid: {
     flexDirection: 'row', marginHorizontal: spacing.lg, marginTop: spacing.md,
     backgroundColor: colors.white, borderRadius: spacing.radiusLg, padding: spacing.md,
