@@ -8,8 +8,15 @@ import { NavBar, Button, Card } from '../../components';
 
 export default function DogEditScreen({ navigation }) {
   const [gender, setGender] = useState('male');
+  const [size, setSize] = useState('large');
   const [neutered, setNeutered] = useState(true);
   const [weight, setWeight] = useState('32');
+
+  const DOG_SIZES = [
+    { key: 'small', label: '小型犬', range: '< 10kg' },
+    { key: 'medium', label: '中型犬', range: '10-25kg' },
+    { key: 'large', label: '大型犬', range: '> 25kg' },
+  ];
 
   return (
     <View style={styles.screen}>
@@ -37,6 +44,22 @@ export default function DogEditScreen({ navigation }) {
             <Text style={styles.selectText}>金毛寻回犬</Text>
             <Ionicons name="chevron-down" size={16} color={colors.textLight} />
           </TouchableOpacity>
+        </View>
+
+        <View style={styles.field}>
+          <Text style={styles.label}>犬型 <Text style={styles.required}>*</Text></Text>
+          <View style={styles.sizeRow}>
+            {DOG_SIZES.map(s => (
+              <TouchableOpacity
+                key={s.key}
+                style={[styles.sizeBtn, size === s.key && styles.sizeBtnActive]}
+                onPress={() => setSize(s.key)}
+              >
+                <Text style={[styles.sizeLabel, size === s.key && styles.sizeLabelActive]}>{s.label}</Text>
+                <Text style={[styles.sizeRange, size === s.key && styles.sizeRangeActive]}>{s.range}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
 
         <View style={styles.field}>
@@ -163,6 +186,23 @@ const styles = StyleSheet.create({
     padding: spacing.md, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
   },
   selectText: { fontSize: 16, color: colors.textMain },
+  sizeRow: { flexDirection: 'row', gap: 10 },
+  sizeBtn: {
+    flex: 1,
+    backgroundColor: colors.white,
+    borderRadius: spacing.radiusMd,
+    padding: spacing.md,
+    alignItems: 'center',
+    gap: 4,
+    minHeight: 72,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  sizeBtnActive: { borderColor: colors.primary, backgroundColor: 'rgba(185, 207, 50, 0.1)' },
+  sizeLabel: { ...typography.bodyBold, color: colors.textLight },
+  sizeLabelActive: { color: colors.secondary, fontWeight: '800' },
+  sizeRange: { ...typography.caption, color: colors.textLight },
+  sizeRangeActive: { color: colors.secondary },
   genderRow: { flexDirection: 'row', gap: 16 },
   genderBtn: {
     flex: 1, backgroundColor: colors.white, borderRadius: spacing.radiusMd,

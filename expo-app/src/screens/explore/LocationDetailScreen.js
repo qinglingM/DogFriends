@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image, Dimensions } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
@@ -10,14 +11,18 @@ import {
   StatusBadge,
   ValidationCard,
   InaccuracySheet,
+  ImageViewer,
 } from '../../components';
 import { useExplore } from '../../contexts/ExploreContext';
 import {
   getStatusBanner,
   ENTRY_AREAS,
   DOG_SIZES,
-  getContributionLabel,
+  BEHAVIOR_ICONS,
+  FACILITY_ICONS,
 } from '../../data/exploreData';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function LocationDetailScreen({ route, navigation }) {
   const id = route?.params?.id;
@@ -36,127 +41,203 @@ export default function LocationDetailScreen({ route, navigation }) {
 
   const [sheetVisible, setSheetVisible] = useState(false);
   const [targetValidationId, setTargetValidationId] = useState(null);
+  const [showAllFacilities, setShowAllFacilities] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [viewerVisible, setViewerVisible] = useState(false);
+  const [viewerIndex, setViewerIndex] = useState(0);
   const banner = getStatusBanner(location.status);
   const isFav = !!favorites[location.id];
 
-  const entryAreaLabel = ENTRY_AREAS.find(e => e.key === location.entryArea)?.label || '—';
-  const dogSizeLabels = (location.dogSize || [])
-    .map(k => DOG_SIZES.find(s => s.key === k)?.label)
-    .filter(Boolean);
+  // 收集所有图片（用户上传的照片 + 缩略图）
+  const allImages = [
+    ...(location.photos || []),
+    ...(location.thumbnailUrl && !location.photos?.includes(location.thumbnailUrl) ? [location.thumbnailUrl] : []),
+  ];
+
+  const matchedEntryArea = ENTRY_AREAS.find(e => e.key === location.entryArea);
+  const matchedDogSizes = DOG_SIZES.filter(s => (location.dogSize || []).includes(s.key));
+  const matchedFacilityItems = [
+    ...(location.behaviors || []).map(t => ({ label: t, icon: BEHAVIOR_ICONS[t] || 'help-circle' })),
+    ...(location.facilities || []).map(t => ({ label: t, icon: FACILITY_ICONS[t] || 'help-circle' })),
+  ];
+  const displayedFacilityItems = showAllFacilities ? matchedFacilityItems : matchedFacilityItems.slice(0, 4);
+  const hasMoreFacilities = matchedFacilityItems.length > 4;
 
   const visible = validations.slice(0, 3);
   const hasMore = validations.length > 3;
 
+  useFocusEffect(
+    useCallback(() => {
+      const parent = navigation.getParent();
+      parent?.setOptions({ tabBarStyle: { display: 'none' } });
+      return () => {
+        parent?.setOptions({
+          tabBarStyle: {
+            backgroundColor: colors.white,
+            borderTopWidth: 1,
+            borderTopColor: colors.border,
+            height: spacing.bottomTabHeight,
+            paddingBottom: 8,
+            paddingTop: 8,
+          },
+        });
+      };
+    }, [navigation])
+  );
+
   return (
     <View style={styles.screen}>
-      <View style={styles.hero}>
-        <MapPlaceholder height={240} label="地点照片" style={{ borderRadius: 0 }} />
+      <View style={styles.topBar}>
         <TouchableOpacity
           style={styles.backBtn}
           onPress={() => navigation.goBack()}
         >
           <Ionicons name="arrow-back" size={24} color={colors.secondary} />
         </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.bookmarkBtn}
+          onPress={() => toggleFavorite(location.id)}
+        >
+          <Ionicons name={isFav ? 'bookmark' : 'bookmark-outline'} size={24} color={colors.secondary} />
+        </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.titleRow}>
-          <Text style={styles.title}>{location.name}</Text>
-          <TouchableOpacity onPress={() => toggleFavorite(location.id)}>
-            <Ionicons name={isFav ? 'bookmark' : 'bookmark-outline'} size={24} color={colors.secondary} />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.addressRow}>
-          <Ionicons name="location" size={14} color={colors.textLight} />
-          <Text style={styles.address}>{location.categoryLabel} · {location.address}</Text>
-        </View>
-
-        <View style={styles.quickActions}>
-          <Button
-            size="sm"
-            variant="secondary"
-            style={{ flex: 1 }}
-            icon={<Ionicons name="call" size={14} color={colors.secondary} />}
-          >
-            电话
-          </Button>
-          <Button
-            size="sm"
-            style={{ flex: 1 }}
-            icon={<Ionicons name="navigate" size={14} color={colors.secondary} />}
-          >
-            导航
-          </Button>
-          <Button
-            size="sm"
-            variant="secondary"
-            style={{ flex: 1 }}
-            icon={<Ionicons name="checkmark-circle-outline" size={14} color={colors.secondary} />}
-            onPress={() => navigation.navigate('UpdateInfo', { id: location.id })}
-          >
-            我去过
-          </Button>
-        </View>
-
-        <View style={styles.statusBanner}>
-          <StatusBadge status={location.status} size="lg" />
-          <Text style={styles.statusSub}>
-            {getContributionLabel(location.verifierCount)} · {location.lastUpdatedLabel}
-          </Text>
-        </View>
-
-        <Text style={styles.disclaimer}>
-          信息由狗主人共同更新，可能随时间变化，出发前建议电话确认。
-        </Text>
-
-        {banner && (
-          <View style={[styles.warnBanner, bannerToneStyle(banner.tone)]}>
-            <Ionicons
-              name={banner.tone === 'danger' ? 'alert-circle' : banner.tone === 'warning' ? 'warning' : 'information-circle'}
-              size={16}
-              color={bannerToneIconColor(banner.tone)}
-            />
-            <Text style={[styles.warnText, { color: bannerToneIconColor(banner.tone) }]}>
-              {banner.text}
-            </Text>
-          </View>
-        )}
-
-        <Text style={styles.sectionTitle}>宠物规则</Text>
-        <View style={styles.rulesGrid}>
-          <View style={styles.ruleItem}>
-            <Ionicons name="home-outline" size={16} color={colors.secondary} />
-            <Text style={styles.ruleText}>{entryAreaLabel}</Text>
-          </View>
-          {dogSizeLabels.length > 0 && (
-            <View style={styles.ruleItem}>
-              <Ionicons name="paw-outline" size={16} color={colors.secondary} />
-              <Text style={styles.ruleText}>{dogSizeLabels[0]}</Text>
-            </View>
+        <View style={styles.hero}>
+          {allImages.length > 0 ? (
+            <>
+              <ScrollView
+                horizontal
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
+                onScroll={(e) => {
+                  const index = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+                  if (index !== currentImageIndex) {
+                    setCurrentImageIndex(index);
+                  }
+                }}
+                scrollEventThrottle={100}
+                style={styles.imageCarousel}
+              >
+                {allImages.map((uri, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    activeOpacity={0.9}
+                    onPress={() => {
+                      setViewerIndex(index);
+                      setViewerVisible(true);
+                    }}
+                  >
+                    <Image source={{ uri }} style={styles.heroImage} />
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+              {allImages.length > 1 && (
+                <View style={styles.pagination}>
+                  {allImages.map((_, index) => (
+                    <View
+                      key={index}
+                      style={[
+                        styles.paginationDot,
+                        index === currentImageIndex && styles.paginationDotActive,
+                      ]}
+                    />
+                  ))}
+                </View>
+              )}
+            </>
+          ) : (
+            <MapPlaceholder height={200} label="地点照片" style={{ borderRadius: 0 }} />
           )}
         </View>
 
-        {(location.facilities?.length > 0 || location.behaviors?.length > 0) && (
-          <>
-            <Text style={styles.sectionTitle}>设施与要求</Text>
-            <View style={styles.facilityTags}>
-              {[...(location.behaviors || []), ...(location.facilities || [])].map((t, i) => (
-                <View key={i} style={styles.tagChip}>
-                  <Text style={styles.tagText}>{t}</Text>
-                </View>
-              ))}
+        <View style={styles.infoSection}>
+          <View style={styles.titleRow}>
+            <Text style={styles.title}>{location.name}</Text>
+            <StatusBadge status={location.status} size="sm" />
+          </View>
+
+          <TouchableOpacity style={styles.addressRow}>
+            <Ionicons name="location" size={14} color={colors.textLight} />
+            <Text style={styles.address}>{location.categoryLabel} · {location.address}</Text>
+            <TouchableOpacity>
+              <Ionicons name="call" size={16} color={colors.secondary} />
+            </TouchableOpacity>
+          </TouchableOpacity>
+
+          {banner && (
+            <View style={[styles.warnBanner, bannerToneStyle(banner.tone)]}>
+              <Ionicons
+                name={banner.tone === 'danger' ? 'alert-circle' : banner.tone === 'warning' ? 'warning' : 'information-circle'}
+                size={16}
+                color={bannerToneIconColor(banner.tone)}
+              />
+              <Text style={[styles.warnText, { color: bannerToneIconColor(banner.tone) }]}>
+                {banner.text}
+              </Text>
             </View>
-          </>
-        )}
+          )}
+
+          <View style={styles.divider} />
+
+          <Text style={styles.sectionTitle}>宠物规则</Text>
+          <View style={styles.rulesGrid}>
+            {matchedEntryArea && (
+              <View style={styles.ruleItem}>
+                <Ionicons name={matchedEntryArea.icon} size={14} color={colors.secondary} />
+                <Text style={styles.ruleTextActive}>{matchedEntryArea.label}</Text>
+              </View>
+            )}
+            {matchedDogSizes.map(size => (
+              <View key={size.key} style={styles.ruleItem}>
+                <Ionicons name={size.icon} size={14} color={colors.secondary} />
+                <Text style={styles.ruleTextActive}>{size.label}</Text>
+              </View>
+            ))}
+          </View>
+
+          {matchedFacilityItems.length > 0 && (
+            <>
+              <Text style={styles.sectionTitle}>设施与要求</Text>
+              <View style={styles.facilityTags}>
+                {showAllFacilities ? (
+                  matchedFacilityItems.map((item, i) => (
+                    <View key={`f-${i}`} style={[styles.tagChip, styles.tagChipActive]}>
+                      <Ionicons name={item.icon} size={12} color={colors.secondary} style={{ marginRight: 4 }} />
+                      <Text style={styles.tagTextActive}>{item.label}</Text>
+                    </View>
+                  ))
+                ) : (
+                  <>
+                    {matchedFacilityItems.slice(0, 4).map((item, i) => (
+                      <View key={`f-${i}`} style={[styles.tagChip, styles.tagChipActive]}>
+                        <Ionicons name={item.icon} size={12} color={colors.secondary} style={{ marginRight: 4 }} />
+                        <Text style={styles.tagTextActive}>{item.label}</Text>
+                      </View>
+                    ))}
+                    {matchedFacilityItems.length > 4 && (
+                      <TouchableOpacity style={styles.tagChip} onPress={() => setShowAllFacilities(true)}>
+                        <Text style={styles.expandChipText}>查看全部</Text>
+                        <Ionicons name="chevron-forward" size={12} color={colors.secondary} />
+                      </TouchableOpacity>
+                    )}
+                  </>
+                )}
+              </View>
+              {showAllFacilities && matchedFacilityItems.length > 4 && (
+                <TouchableOpacity style={styles.collapseBtn} onPress={() => setShowAllFacilities(false)}>
+                  <Text style={styles.expandText}>收起</Text>
+                  <Ionicons name="chevron-up" size={12} color={colors.secondary} />
+                </TouchableOpacity>
+              )}
+            </>
+          )}
+        </View>
 
         <View style={styles.validationSection}>
-          <View style={styles.validationHeader}>
-            <Text style={styles.sectionTitle}>狗主人验证</Text>
-            {validations.length > 0 && (
-              <Text style={styles.validationCount}>{validations.length} 条</Text>
-            )}
-          </View>
+          <Text style={styles.sectionTitle}>
+            狗主人验证{validations.length > 0 ? `（${validations.length}）` : ''}
+          </Text>
 
           {validations.length === 0 ? (
             <View style={styles.emptyValidation}>
@@ -167,7 +248,7 @@ export default function LocationDetailScreen({ route, navigation }) {
                 onPress={() => navigation.navigate('UpdateInfo', { id: location.id })}
                 style={{ marginTop: 16 }}
               >
-                我去过，更新信息
+                我来反馈
               </Button>
             </View>
           ) : (
@@ -195,6 +276,15 @@ export default function LocationDetailScreen({ route, navigation }) {
         </View>
       </ScrollView>
 
+      <View style={styles.bottomBar}>
+        <Button
+          icon={<Ionicons name="create-outline" size={18} color={colors.secondary} />}
+          onPress={() => navigation.navigate('UpdateInfo', { id: location.id })}
+        >
+          我来反馈
+        </Button>
+      </View>
+
       <InaccuracySheet
         visible={sheetVisible}
         onClose={() => setSheetVisible(false)}
@@ -203,6 +293,13 @@ export default function LocationDetailScreen({ route, navigation }) {
             reportInaccuracy(location.id, targetValidationId, reason);
           }
         }}
+      />
+
+      <ImageViewer
+        visible={viewerVisible}
+        images={allImages}
+        initialIndex={viewerIndex}
+        onClose={() => setViewerVisible(false)}
       />
     </View>
   );
@@ -232,7 +329,43 @@ function bannerToneIconColor(tone) {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
+  topBar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+  },
   hero: { position: 'relative' },
+  imageCarousel: {
+    width: SCREEN_WIDTH,
+  },
+  heroImage: {
+    width: SCREEN_WIDTH,
+    height: 200,
+  },
+  pagination: {
+    position: 'absolute',
+    bottom: 12,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 6,
+  },
+  paginationDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+  },
+  paginationDotActive: {
+    backgroundColor: colors.white,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
   backBtn: {
     position: 'absolute', top: 48, left: 16,
     width: 48, height: 48, borderRadius: 24,
@@ -240,89 +373,113 @@ const styles = StyleSheet.create({
     shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.05, shadowRadius: 16, elevation: 4,
   },
+  bookmarkBtn: {
+    position: 'absolute', top: 48, right: 16,
+    width: 48, height: 48, borderRadius: 24,
+    backgroundColor: colors.white, alignItems: 'center', justifyContent: 'center',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05, shadowRadius: 16, elevation: 4,
+  },
   content: {
-    padding: spacing.screenMargin, paddingTop: 24, paddingBottom: 48,
+    paddingBottom: 100,
     backgroundColor: colors.bg,
-    borderTopLeftRadius: spacing.radiusLg,
-    borderTopRightRadius: spacing.radiusLg,
-    marginTop: -24, position: 'relative', zIndex: 5,
   },
-  quickActions: {
+  titleRow: {
     flexDirection: 'row',
-    gap: 8,
-    marginBottom: 20,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
   },
-  titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 },
-  title: { ...typography.h1, color: colors.secondary, flex: 1, paddingRight: 12 },
-  addressRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 },
+  title: { ...typography.h2, color: colors.secondary, flex: 1, marginRight: spacing.sm },
+  addressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
   address: { ...typography.body, color: colors.textLight, flex: 1 },
-  statusBanner: {
-    flexDirection: 'column',
-    backgroundColor: colors.primary,
-    padding: spacing.md,
-    borderRadius: spacing.radiusMd,
-    marginBottom: 8,
-    borderBottomWidth: 4, borderBottomColor: colors.secondary,
-    gap: 6,
-  },
-  statusSub: { ...typography.caption, color: colors.secondary, opacity: 0.85 },
-  disclaimer: {
-    ...typography.caption,
-    color: colors.textLight,
-    marginBottom: 16,
-    paddingHorizontal: 4,
+  infoSection: {
+    padding: spacing.screenMargin,
   },
   warnBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: spacing.sm,
     padding: 12,
     borderRadius: spacing.radiusMd,
-    marginBottom: 16,
+    marginBottom: spacing.md,
   },
   warnText: { ...typography.captionBold, flex: 1 },
-  sectionTitle: { ...typography.h3, color: colors.secondary, marginTop: 16, marginBottom: 12 },
-  rulesGrid: { flexDirection: 'row', gap: 8, marginBottom: 8 },
+  sectionTitle: { ...typography.h3, color: colors.secondary, marginBottom: spacing.md },
+  rulesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.sectionGap },
   ruleItem: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: colors.white, padding: spacing.md,
-    borderRadius: spacing.radiusMd,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.chipDefault,
+    padding: spacing.sm,
+    borderRadius: spacing.radiusSm,
   },
-  ruleText: { ...typography.bodyBold, color: colors.secondary },
-  facilityTags: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
+  ruleItemActive: {
+    backgroundColor: colors.statusPassed,
+  },
+  ruleText: { ...typography.captionBold, color: colors.textLight },
+  ruleTextActive: { color: colors.secondary },
+  facilityTags: { flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' },
+  expandBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingVertical: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  expandText: { ...typography.captionBold, color: colors.secondary },
   tagChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: spacing.sm,
     borderRadius: spacing.radiusPill,
     backgroundColor: colors.chipDefault,
   },
+  tagChipActive: {
+    backgroundColor: colors.statusPassed,
+  },
   tagText: { ...typography.captionBold, color: colors.textMain },
+  tagTextActive: { color: colors.secondary },
+  divider: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginVertical: spacing.md,
+  },
   validationSection: {
-    marginTop: 8,
-  },
-  validationHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-  },
-  validationCount: {
-    ...typography.caption,
-    color: colors.textLight,
+    backgroundColor: colors.bgLight,
+    padding: spacing.screenMargin,
+    marginTop: spacing.sectionGap,
   },
   emptyValidation: {
-    backgroundColor: colors.white,
-    borderRadius: spacing.radiusMd,
     padding: spacing.lg,
     alignItems: 'center',
   },
   emptyTitle: { ...typography.bodyBold, color: colors.textMain },
-  emptyText: { ...typography.caption, color: colors.textLight, marginTop: 4 },
+  emptyText: { ...typography.caption, color: colors.textLight, marginTop: spacing.xs },
   moreBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
+    gap: spacing.xs,
     paddingVertical: 12,
   },
   moreText: { ...typography.bodyBold, color: colors.secondary },
+  bottomBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: spacing.md,
+    paddingBottom: spacing.lg,
+    backgroundColor: colors.white,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
 });

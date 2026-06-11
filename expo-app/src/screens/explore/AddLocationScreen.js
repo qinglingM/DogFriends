@@ -5,11 +5,13 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
-  Switch,
   StyleSheet,
   Modal,
   Pressable,
   ActivityIndicator,
+  Alert,
+  Platform,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
@@ -21,21 +23,24 @@ import {
   DOG_SIZES,
   BEHAVIOR_REQUIREMENTS,
   FACILITIES,
-  DISCOVERY_REASONS,
   LOCATION_STATUS,
-  MOCK_DETECTED_LOCATION,
   MOCK_NEARBY_POIS,
   CATEGORIES,
 } from '../../data/exploreData';
 import { useExplore } from '../../contexts/ExploreContext';
+import { getCurrentAddress, requestLocationPermission } from '../../utils/location';
+import { pickImagesFromLibrary } from '../../utils/imagePicker';
 
 export default function AddLocationScreen({ navigation }) {
   const { addLocation } = useExplore();
 
   // ---- 地点定位 ----
   const [picked, setPicked] = useState(null);          // {name, category, categoryLabel, city, district, address, source}
-  const [detecting, setDetecting] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [searchKeyword, setSearchKeyword] = useState('');
+  const [nearbyPOIs, setNearbyPOIs] = useState(MOCK_NEARBY_POIS);
+  const [loadingLocation, setLoadingLocation] = useState(false);
+  const [currentAddress, setCurrentAddress] = useState(null);
 
   // ---- 宠物规则 ----
   const [entryArea, setEntryArea] = useState(null);
@@ -46,19 +51,64 @@ export default function AddLocationScreen({ navigation }) {
   // ---- 现场照片 & 补充 ----
   const [photos, setPhotos] = useState([]);
   const [note, setNote] = useState('');
-  const [discovery, setDiscovery] = useState(null);
-  const [acceptNotice, setAcceptNotice] = useState(true);
 
   const toggle = (arr, set, item) => set(arr.includes(item) ? arr.filter(x => x !== item) : [...arr, item]);
-  const addMockPhoto = () => setPhotos(p => [...p, Date.now() + Math.random()]);
+  
+  const addPhoto = async () => {
+    const selectedImages = await pickImagesFromLibrary();
+    if (selectedImages.length > 0) {
+      setPhotos(prev => [...prev, ...selectedImages]);
+    }
+  };
+  
   const removePhoto = (i) => setPhotos(p => p.filter((_, idx) => idx !== i));
 
-  const useCurrentLocation = () => {
-    setDetecting(true);
-    setTimeout(() => {
-      setPicked(MOCK_DETECTED_LOCATION);
-      setDetecting(false);
-    }, 700);
+  const openSearchModal = async () => {
+    setSearchOpen(true);
+    setLoadingLocation(true);
+    
+    try {
+      const hasPermission = await requestLocationPermission();
+      
+      if (!hasPermission) {
+        Alert.alert(
+          '位置权限',
+          '需要位置权限来查找附近的地点，请在设置中开启',
+          [
+            { text: '取消', style: 'cancel' },
+            { text: '去设置', onPress: () => {
+              if (Platform.OS === 'ios') {
+                // iOS 无法直接跳转到设置，提示用户手动操作
+              } else {
+                // Android 可以打开设置
+                import('react-native').then(({ Linking }) => {
+                  Linking.openSettings();
+                });
+              }
+            }}
+          ]
+        );
+        setLoadingLocation(false);
+        return;
+      }
+
+      const locationData = await getCurrentAddress();
+      setCurrentAddress(locationData);
+      
+      // TODO: 这里后续可以接入真实的附近地点 API
+      // 目前使用 mock 数据，但可以根据位置更新城市信息
+      const updatedPOIs = MOCK_NEARBY_POIS.map(poi => ({
+        ...poi,
+        city: locationData.city || poi.city,
+        district: locationData.district || poi.district,
+      }));
+      setNearbyPOIs(updatedPOIs);
+    } catch (error) {
+      console.log('获取位置失败:', error.message);
+      // 获取位置失败时使用 mock 数据
+    } finally {
+      setLoadingLocation(false);
+    }
   };
 
   const choosePOI = (poi) => {
@@ -91,7 +141,8 @@ export default function AddLocationScreen({ navigation }) {
       name: picked.name.trim(),
       category: picked.category,
       categoryLabel: picked.categoryLabel || '其他',
-      district: picked.district,
+      city: picked.city || '上海',
+      district: picked.district || '徐汇区',
       distanceKm: 1.0,
       address: picked.address,
       phone: '',
@@ -105,16 +156,14 @@ export default function AddLocationScreen({ navigation }) {
       verifierCount: 0,
       lastUpdatedLabel: '刚刚发布',
       description: note,
-      photos: photos.length,
-      discovery,
-      acceptNotice,
+      photos: photos,
     });
     navigation.replace('AddLocationSuccess', { locationId: id });
   };
 
   return (
     <View style={styles.screen}>
-      <NavBar title="新增我去过的地点" onBack={() => navigation.goBack()} />
+      <NavBar title="新增地点" onBack={() => navigation.goBack()} />
 
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.tipCard}>
@@ -125,60 +174,28 @@ export default function AddLocationScreen({ navigation }) {
         </View>
 
         {/* 1. 地点定位 */}
-        <Text style={styles.sectionTitle}>📍 地点定位</Text>
-
-        <View style={styles.mapBox}>
-          <View style={styles.mapGrid}>
-            {[...Array(6)].map((_, r) => (
-              <View key={r} style={styles.mapRow}>
-                {[...Array(4)].map((_, c) => (
-                  <View key={c} style={styles.mapCell} />
-                ))}
-              </View>
-            ))}
-          </View>
-          <View style={styles.mapPinWrap}>
-            <Ionicons name="location" size={44} color={colors.danger} />
-          </View>
-          <View style={styles.mapBadge}>
-            <Ionicons name="navigate-circle" size={12} color={colors.secondary} />
-            <Text style={styles.mapBadgeText}>上海 · 徐汇区</Text>
-          </View>
+        <View style={styles.sectionTitleRow}>
+          <Text style={styles.sectionTitle}>📍 地点定位</Text>
+          {picked && (
+            <TouchableOpacity onPress={openSearchModal} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={styles.switchLocationBtn}>
+              <Ionicons name="swap-horizontal" size={14} color={colors.secondary} />
+              <Text style={styles.switchLocationText}>切换地点</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
-        <View style={styles.mapActions}>
+        {!picked && (
           <Button
-            variant="secondary"
-            style={{ flex: 1 }}
-            loading={detecting}
-            onPress={useCurrentLocation}
-            icon={!detecting ? <Ionicons name="locate" size={16} color={colors.secondary} /> : null}
-          >
-            使用我当前的位置
-          </Button>
-          <Button
-            style={{ flex: 1 }}
-            onPress={() => setSearchOpen(true)}
+            onPress={openSearchModal}
             icon={<Ionicons name="search" size={16} color={colors.secondary} />}
+            fullWidth
           >
             搜附近地点
           </Button>
-        </View>
+        )}
 
-        {picked ? (
+        {picked && (
           <View style={styles.pickedCard}>
-            <View style={styles.pickedHeader}>
-              <View style={styles.pickedDot}>
-                <Ionicons name="checkmark" size={14} color={colors.white} />
-              </View>
-              <Text style={styles.pickedSource}>
-                {picked.source === 'current_location' ? '已识别当前位置' : '已选择附近地点'}
-              </Text>
-              <TouchableOpacity onPress={() => setPicked(null)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                <Text style={styles.pickedRetry}>换一个</Text>
-              </TouchableOpacity>
-            </View>
-
             <TextInput
               style={styles.pickedNameInput}
               value={picked.name}
@@ -186,7 +203,7 @@ export default function AddLocationScreen({ navigation }) {
               placeholder="这个地方叫什么？"
               placeholderTextColor={colors.textLight}
             />
-            <Text style={styles.pickedAddr}>{picked.address}</Text>
+            <Text style={styles.pickedAddr}>地址：{picked.address}</Text>
 
             <Text style={styles.pickedLabel}>类型</Text>
             <View style={styles.typeChipRow}>
@@ -204,12 +221,6 @@ export default function AddLocationScreen({ navigation }) {
                 );
               })}
             </View>
-          </View>
-        ) : (
-          <View style={styles.emptyPicked}>
-            <Text style={styles.emptyPickedText}>
-              点上方按钮，地图选点或搜索后会自动识别地点名称与地址
-            </Text>
           </View>
         )}
 
@@ -292,15 +303,15 @@ export default function AddLocationScreen({ navigation }) {
         <Text style={styles.label}>上传图片 <Text style={styles.req}>*</Text></Text>
         <Text style={styles.hint}>至少 1 张。门店入口 / 室内环境 / 户外座位 / 宠物友好标识等</Text>
         <View style={styles.photoRow}>
-          {photos.map((p, idx) => (
-            <View key={p} style={styles.photoBox}>
-              <Ionicons name="image" size={32} color={colors.secondary} style={{ opacity: 0.5 }} />
+          {photos.map((uri, idx) => (
+            <View key={uri} style={styles.photoBox}>
+              <Image source={{ uri }} style={styles.photoImage} />
               <TouchableOpacity style={styles.removePhoto} onPress={() => removePhoto(idx)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                 <Ionicons name="close-circle" size={20} color={colors.danger} />
               </TouchableOpacity>
             </View>
           ))}
-          <TouchableOpacity style={[styles.photoBox, styles.addBox]} onPress={addMockPhoto}>
+          <TouchableOpacity style={[styles.photoBox, styles.addBox]} onPress={addPhoto}>
             <Ionicons name="add" size={28} color={colors.secondary} />
             <Text style={styles.addText}>添加</Text>
           </TouchableOpacity>
@@ -315,35 +326,6 @@ export default function AddLocationScreen({ navigation }) {
           placeholderTextColor={colors.textLight}
           multiline
         />
-
-        <Text style={styles.label}>你是如何发现这个地方的？</Text>
-        <View style={styles.optionGrid}>
-          {DISCOVERY_REASONS.map(opt => {
-            const active = discovery === opt;
-            return (
-              <TouchableOpacity
-                key={opt}
-                onPress={() => setDiscovery(opt)}
-                style={[styles.optionCard, active && styles.optionCardActive]}
-              >
-                <Text style={[styles.optionText, active && styles.optionTextActive]}>{opt}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        <View style={styles.switchRow}>
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.label, { marginTop: 0 }]}>接收互动提醒</Text>
-            <Text style={styles.hint}>开启后收到多人验证、有用反馈、信息争议等提醒</Text>
-          </View>
-          <Switch
-            value={acceptNotice}
-            onValueChange={setAcceptNotice}
-            trackColor={{ true: colors.primary, false: colors.border }}
-            thumbColor={colors.white}
-          />
-        </View>
       </ScrollView>
 
       <View style={styles.bottomAction}>
@@ -358,27 +340,60 @@ export default function AddLocationScreen({ navigation }) {
         <View style={styles.sheet}>
           <View style={styles.handle} />
           <Text style={styles.sheetTitle}>搜附近地点</Text>
+          
+          {currentAddress && (
+            <View style={styles.currentLocationRow}>
+              <Ionicons name="navigate" size={14} color={colors.secondary} />
+              <Text style={styles.currentLocationText}>
+                {currentAddress.city} {currentAddress.district}
+              </Text>
+            </View>
+          )}
+          
           <Text style={styles.sheetSub}>选择一个，会自动填入地点名和地址</Text>
 
-          <ScrollView style={{ maxHeight: 400 }}>
-            {MOCK_NEARBY_POIS.map(poi => (
-              <TouchableOpacity key={poi.poiId} style={styles.poiItem} onPress={() => choosePOI(poi)} activeOpacity={0.7}>
-                <View style={styles.poiIconBox}>
-                  <Ionicons
-                    name={CATEGORIES.find(c => c.key === poi.category)?.icon || 'location'}
-                    size={20}
-                    color={colors.secondary}
-                  />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.poiName}>{poi.name}</Text>
-                  <Text style={styles.poiMeta}>{poi.categoryLabel} · {poi.distanceLabel}</Text>
-                  <Text style={styles.poiAddr}>{poi.address}</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={18} color={colors.textLight} />
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+          <View style={styles.sheetSearchRow}>
+            <Ionicons name="search" size={16} color={colors.textLight} />
+            <TextInput
+              style={styles.sheetSearchInput}
+              placeholder="搜索地点名称..."
+              placeholderTextColor={colors.textLight}
+              value={searchKeyword}
+              onChangeText={setSearchKeyword}
+              autoFocus
+            />
+          </View>
+
+          {loadingLocation ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={colors.secondary} />
+              <Text style={styles.loadingText}>正在获取附近地点...</Text>
+            </View>
+          ) : (
+            <ScrollView style={{ maxHeight: 400 }}>
+              {nearbyPOIs.filter(poi =>
+                !searchKeyword.trim() ||
+                poi.name.toLowerCase().includes(searchKeyword.toLowerCase()) ||
+                poi.address.toLowerCase().includes(searchKeyword.toLowerCase())
+              ).map(poi => (
+                <TouchableOpacity key={poi.poiId} style={styles.poiItem} onPress={() => choosePOI(poi)} activeOpacity={0.7}>
+                  <View style={styles.poiIconBox}>
+                    <Ionicons
+                      name={CATEGORIES.find(c => c.key === poi.category)?.icon || 'location'}
+                      size={20}
+                      color={colors.secondary}
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.poiName}>{poi.name}</Text>
+                    <Text style={styles.poiMeta}>{poi.categoryLabel} · {poi.distanceLabel}</Text>
+                    <Text style={styles.poiAddr}>{poi.address}</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color={colors.textLight} />
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          )}
         </View>
       </Modal>
     </View>
@@ -404,6 +419,21 @@ const styles = StyleSheet.create({
     color: colors.secondary,
     marginTop: 8,
     marginBottom: 12,
+  },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  switchLocationBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  switchLocationText: {
+    ...typography.captionBold,
+    color: colors.secondary,
   },
 
   // map
@@ -442,12 +472,6 @@ const styles = StyleSheet.create({
   },
   mapBadgeText: { ...typography.captionBold, color: colors.secondary },
 
-  mapActions: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 12,
-  },
-
   pickedCard: {
     backgroundColor: colors.white,
     borderRadius: spacing.radiusMd,
@@ -456,30 +480,12 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: colors.primary,
   },
-  pickedHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 8,
-  },
-  pickedDot: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: colors.secondary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  pickedSource: { ...typography.captionBold, color: colors.secondary, flex: 1 },
-  pickedRetry: { ...typography.captionBold, color: colors.textLight, textDecorationLine: 'underline' },
 
   pickedNameInput: {
     ...typography.h3,
     color: colors.textMain,
     paddingVertical: 4,
     paddingHorizontal: 0,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
     marginBottom: 6,
   },
   pickedAddr: { ...typography.caption, color: colors.textLight, marginBottom: 12 },
@@ -511,7 +517,6 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     marginBottom: 8,
   },
-  emptyPickedText: { ...typography.caption, color: colors.textLight, textAlign: 'center' },
 
   label: { ...typography.bodyBold, color: colors.textMain, marginTop: 16, marginBottom: 4 },
   req: { color: colors.danger },
@@ -544,6 +549,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
+    overflow: 'hidden',
+  },
+  photoImage: {
+    width: '100%',
+    height: '100%',
   },
   addBox: { borderWidth: 1.5, borderColor: colors.border, borderStyle: 'dashed' },
   addText: { ...typography.caption, color: colors.secondary, marginTop: 4 },
@@ -564,15 +574,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   textarea: { minHeight: 96, textAlignVertical: 'top' },
-
-  switchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.white,
-    borderRadius: spacing.radiusMd,
-    padding: 12,
-    marginTop: 16,
-  },
 
   bottomAction: {
     padding: spacing.md,
@@ -596,7 +597,44 @@ const styles = StyleSheet.create({
     alignSelf: 'center', marginBottom: 12,
   },
   sheetTitle: { ...typography.h3, color: colors.textMain, marginBottom: 4 },
+  currentLocationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 4,
+  },
+  currentLocationText: {
+    ...typography.caption,
+    color: colors.secondary,
+    fontWeight: '600',
+  },
   sheetSub: { ...typography.caption, color: colors.textLight, marginBottom: 12 },
+  sheetSearchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: colors.bg,
+    borderRadius: spacing.radiusPill,
+    paddingHorizontal: 16,
+    minHeight: 48,
+    marginBottom: 12,
+  },
+  sheetSearchInput: {
+    flex: 1,
+    ...typography.body,
+    color: colors.textMain,
+    padding: 0,
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+    gap: 12,
+  },
+  loadingText: {
+    ...typography.caption,
+    color: colors.textLight,
+  },
   poiItem: {
     flexDirection: 'row',
     alignItems: 'center',

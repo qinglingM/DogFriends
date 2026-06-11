@@ -1,18 +1,16 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { typography } from '../../theme/typography';
-import { StatusBadge } from '../../components';
 import { useExplore } from '../../contexts/ExploreContext';
 import {
   CATEGORIES,
   SCENE_FILTERS,
   LOCATION_STATUS,
   CITY_OPTIONS,
-  getContributionLabel,
 } from '../../data/exploreData';
 
 function matchFilter(key, loc) {
@@ -57,7 +55,13 @@ export default function ExploreHomeScreen({ navigation }) {
         activeOpacity={0.85}
       >
         <View style={styles.locImage}>
-          <Ionicons name="image-outline" size={48} color={colors.secondary} style={{ opacity: 0.3 }} />
+          {loc.photos && loc.photos.length > 0 ? (
+            <Image source={{ uri: loc.photos[0] }} style={styles.locImageInner} />
+          ) : loc.thumbnailUrl ? (
+            <Image source={{ uri: loc.thumbnailUrl }} style={styles.locImageInner} />
+          ) : (
+            <Ionicons name="image-outline" size={48} color={colors.secondary} style={{ opacity: 0.3 }} />
+          )}
         </View>
         <TouchableOpacity
           style={styles.bookmarkBtn}
@@ -68,17 +72,15 @@ export default function ExploreHomeScreen({ navigation }) {
         </TouchableOpacity>
 
         <View style={styles.locInfo}>
-          <Text style={styles.locName}>{loc.name}</Text>
+          <View style={styles.locNameRow}>
+            <Text style={styles.locName}>{loc.name}</Text>
+            <View style={styles.locVisited}>
+              <Ionicons name="paw" size={12} color={colors.textLight} />
+              <Text style={styles.locVisitedText}>{loc.lastUpdatedLabel}</Text>
+            </View>
+          </View>
           <Text style={styles.locType}>
             {loc.categoryLabel} · {loc.district} · {loc.distanceKm}km
-          </Text>
-
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6, marginBottom: 6, gap: 8 }}>
-            <StatusBadge status={loc.status} />
-          </View>
-
-          <Text style={styles.locVerified}>
-            {getContributionLabel(loc.verifierCount)} · {loc.lastUpdatedLabel}
           </Text>
 
           <View style={styles.locTags}>
@@ -198,8 +200,7 @@ export default function ExploreHomeScreen({ navigation }) {
         activeOpacity={0.85}
         onPress={() => navigation.navigate('AddLocation')}
       >
-        <Ionicons name="location" size={20} color={colors.secondary} />
-        <Text style={styles.fabLabel}>新增地点</Text>
+        <Ionicons name="map-pin" size={24} color={colors.secondary} />
       </TouchableOpacity>
     </View>
   );
@@ -212,6 +213,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 12,
     padding: spacing.screenMargin,
     paddingBottom: 4,
+    position: 'relative',
+    zIndex: 1000,
   },
   citySelectorWrap: { position: 'relative', zIndex: 10 },
   citySelector: { flexDirection: 'row', alignItems: 'center', gap: 4 },
@@ -257,13 +260,12 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 20,
     bottom: 24,
-    height: 52,
-    paddingHorizontal: 18,
-    borderRadius: 26,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: colors.primary,
-    flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    justifyContent: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.18,
@@ -272,14 +274,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 3,
     borderBottomColor: colors.secondary,
   },
-  fabLabel: {
-    ...typography.bodyBold,
-    color: colors.secondary,
-    fontSize: 15,
-  },
   categories: {
     flexDirection: 'row', gap: 16,
-    paddingHorizontal: spacing.screenMargin, marginBottom: spacing.cardGap,
+    paddingHorizontal: spacing.screenMargin, marginBottom: spacing.cardGap, marginTop: spacing.md,
   },
   catItem: { alignItems: 'center', gap: 8 },
   catIconBox: {
@@ -311,17 +308,32 @@ const styles = StyleSheet.create({
   list: { paddingHorizontal: spacing.screenMargin },
   locCard: {
     backgroundColor: colors.white, borderRadius: spacing.radiusMd,
-    padding: spacing.md, marginBottom: spacing.cardGap, position: 'relative',
+    marginBottom: spacing.cardGap, position: 'relative', overflow: 'hidden',
   },
   locImage: {
-    height: 160, borderRadius: spacing.radiusSm,
+    height: 160,
     backgroundColor: '#D3E0C8', alignItems: 'center', justifyContent: 'center',
-    marginBottom: 12,
+    marginBottom: 12, overflow: 'hidden',
   },
-  locInfo: { gap: 0 },
-  locName: { ...typography.h3, color: colors.secondary, marginBottom: 4 },
-  locType: { ...typography.caption, color: colors.textLight, marginBottom: 4 },
-  locVerified: { ...typography.caption, color: colors.textLight, marginBottom: 8 },
+  locImageInner: {
+    width: '100%',
+    height: '100%',
+  },
+  locInfo: { gap: 0, paddingHorizontal: spacing.md, paddingBottom: spacing.md },
+  locNameRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  locName: { ...typography.h3, color: colors.secondary, flex: 1, marginRight: 8 },
+  locVisited: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  locVisitedText: { ...typography.caption, color: colors.textLight },
+  locType: { ...typography.caption, color: colors.textLight, marginBottom: 8 },
   locTags: { flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
   miniChip: {
     paddingHorizontal: 8,
@@ -331,7 +343,7 @@ const styles = StyleSheet.create({
   },
   miniChipText: { ...typography.captionBold, color: colors.textMain },
   bookmarkBtn: {
-    position: 'absolute', top: spacing.md + 8, right: spacing.md + 8,
+    position: 'absolute', top: 8, right: 8,
     width: 36, height: 36, borderRadius: 18,
     backgroundColor: 'rgba(255,255,255,0.92)',
     alignItems: 'center', justifyContent: 'center',

@@ -7,6 +7,8 @@ import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { typography } from '../../theme/typography';
 import { useSquare } from '../../contexts/SquareContext';
+import { useDogs } from '../../contexts/DogContext';
+import { useBadges } from '../../contexts/BadgeContext';
 
 const PROFILE = {
   name: '小明',
@@ -22,36 +24,6 @@ const PROFILE = {
   avatar:
     'https://images.unsplash.com/photo-1601758177266-bc599de87707?auto=format&fit=crop&w=300&q=80',
 };
-
-const DOGS = [
-  {
-    id: '1',
-    name: '旺财',
-    breed: '金毛寻回犬',
-    age: '3岁',
-    gender: '男生',
-    traits: ['亲人', '爱玩'],
-    image:
-      'https://images.unsplash.com/photo-1552053831-71594a27632d?auto=format&fit=crop&w=600&q=80',
-  },
-  {
-    id: '2',
-    name: '小白',
-    breed: '萨摩耶',
-    age: '2岁',
-    gender: '女生',
-    traits: ['活泼', '亲狗'],
-    image:
-      'https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?auto=format&fit=crop&w=600&q=80',
-  },
-];
-
-const BADGES = [
-  { id: 'real_owner', name: '真实狗主', icon: 'paw', color: colors.primary, description: '已完成狗狗档案创建，并发布过公开动态。' },
-  { id: 'walk_7', name: '连续遛狗7天', icon: 'calendar', color: colors.secondary, description: '连续 7 天记录遛狗。' },
-  { id: 'explorer', name: '地点探索家', icon: 'location', color: colors.accent, description: '贡献过宠物友好地点体验。' },
-  { id: 'family', name: '金毛家长', icon: 'shield-checkmark', color: colors.primary, description: '公开展示金毛犬档案。' },
-];
 
 const PROFILE_FEED = [
   {
@@ -195,13 +167,14 @@ const USER_PROFILES = {
   },
 };
 
-function getProfile(userName) {
+function getProfile(userName, identityBadges, earnedBadges) {
   const override = USER_PROFILES[userName] || {};
+  const allBadges = earnedBadges.length > 0 ? earnedBadges : identityBadges;
   return {
     ...PROFILE,
     ...override,
-    dogs: override.dogs || DOGS,
-    badges: override.badges || BADGES,
+    dogs: override.dogs || [],
+    badges: override.badges || allBadges,
     feed: override.feed || PROFILE_FEED,
   };
 }
@@ -209,9 +182,12 @@ function getProfile(userName) {
 export default function PersonalProfileScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
   const { posts } = useSquare();
-  const profile = getProfile(route?.params?.userName || PROFILE.name);
+  const { dogs } = useDogs();
+  const { earnedBadges } = useBadges();
+  const { identityBadges } = useDogs();
+  const profile = getProfile(route?.params?.userName || PROFILE.name, identityBadges, earnedBadges);
   const isSelf = profile.name === PROFILE.name;
-  const dogs = profile.dogs;
+  const dogsList = isSelf ? dogs : profile.dogs;
   const badges = profile.badges;
   useFocusEffect(
     useCallback(() => {
@@ -322,10 +298,10 @@ export default function PersonalProfileScreen({ navigation, route }) {
           </TouchableOpacity>
         </View>
 
-        <SectionHeader title={isSelf ? '我的狗狗' : 'TA 的狗狗'} suffix={`${dogs.length}只`} />
-        {dogs.length === 1 ? (
+        <SectionHeader title={isSelf ? '我的狗狗' : 'TA 的狗狗'} suffix={`${dogsList.length}只`} />
+        {dogsList.length === 1 ? (
           <View style={styles.singleDogRow}>
-            <DogCard dog={dogs[0]} navigation={navigation} fullWidth />
+            <DogCard dog={dogsList[0]} navigation={navigation} fullWidth />
           </View>
         ) : (
           <ScrollView
@@ -333,7 +309,7 @@ export default function PersonalProfileScreen({ navigation, route }) {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.dogRow}
           >
-            {dogs.map(dog => (
+            {dogsList.map(dog => (
               <DogCard key={dog.id} dog={dog} navigation={navigation} />
             ))}
           </ScrollView>

@@ -88,18 +88,18 @@ export const SCENE_FILTERS = [
 // ---------- 规则与体型 (PRD §7.3) ----------
 
 export const ENTRY_AREAS = [
-  { key: 'indoor', label: '室内可进' },
-  { key: 'outdoor', label: '室外可进' },
-  { key: 'terrace_only', label: '仅露台 / 户外' },
-  { key: 'specific', label: '指定区域可进' },
-  { key: 'not_allowed', label: '不可进入' },
+  { key: 'indoor', label: '室内可进', icon: 'home' },
+  { key: 'outdoor', label: '室外可进', icon: 'leaf' },
+  { key: 'terrace_only', label: '仅露台 / 户外', icon: 'restaurant' },
+  { key: 'specific', label: '指定区域可进', icon: 'location' },
+  { key: 'not_allowed', label: '不可进入', icon: 'close-circle' },
 ];
 
 export const DOG_SIZES = [
-  { key: 'small', label: '小型犬友好' },
-  { key: 'medium', label: '中型犬友好' },
-  { key: 'large', label: '大型犬友好' },
-  { key: 'all', label: '所有体型' },
+  { key: 'small', label: '小型犬友好', icon: 'paw' },
+  { key: 'medium', label: '中型犬友好', icon: 'paw' },
+  { key: 'large', label: '大型犬友好', icon: 'paw' },
+  { key: 'all', label: '所有体型', icon: 'paw' },
 ];
 
 export const BEHAVIOR_REQUIREMENTS = [
@@ -111,6 +111,15 @@ export const BEHAVIOR_REQUIREMENTS = [
   '需要狗狗安静待着',
 ];
 
+export const BEHAVIOR_ICONS = {
+  '需要牵绳': 'link',
+  '需要嘴套': 'shield-checkmark',
+  '不能上椅 / 沙发': 'ban',
+  '不能吠叫': 'volume-mute',
+  '不影响其他客人': 'people',
+  '需要狗狗安静待着': 'calm',
+};
+
 export const FACILITIES = [
   '有水碗',
   '有宠物餐',
@@ -121,6 +130,17 @@ export const FACILITIES = [
   '有草坪',
   '其他',
 ];
+
+export const FACILITY_ICONS = {
+  '有水碗': 'water',
+  '有宠物餐': 'restaurant',
+  '有狗狗零食': 'ice-cream',
+  '有便袋': 'trash',
+  '有遮阳区': 'umbrella',
+  '有围栏': 'grid',
+  '有草坪': 'leaf',
+  '其他': 'ellipsis-horizontal',
+};
 
 export const DISCOVERY_REASONS = [
   '自己去过',
@@ -179,14 +199,18 @@ export const INITIAL_LOCATIONS = [
     phone: '021-1234-5678',
     hours: '10:00 - 22:00',
     entryArea: 'terrace_only',
-    dogSize: ['small'],
-    behaviors: ['需要牵绳', '不能上椅 / 沙发'],
-    facilities: ['有水碗'],
+    dogSize: ['small', 'medium'],
+    behaviors: ['需要牵绳', '不能上椅 / 沙发', '不能吠叫', '不影响其他客人'],
+    facilities: ['有水碗', '有宠物餐', '有狗狗零食', '有遮阳区'],
     tags: ['仅户外', '有水碗', '小型犬友好'],
     status: LOCATION_STATUS.RECENT_VISIT,
     verifierCount: 3,
     lastUpdatedLabel: '2 天前更新',
     thumbnailUrl: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=160&q=80',
+    photos: [
+      'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1514888282295-e11b1a6b5c5f?auto=format&fit=crop&w=800&q=80',
+    ],
     description: '位于老洋房一楼的小咖啡店，露台有几张大桌，狗狗可以安静趴在脚边。',
   },
   {
@@ -209,6 +233,11 @@ export const INITIAL_LOCATIONS = [
     verifierCount: 12,
     lastUpdatedLabel: '今天更新',
     thumbnailUrl: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=160&q=80',
+    photos: [
+      'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1504208434309-cb69f4fd5084?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?auto=format&fit=crop&w=800&q=80',
+    ],
     description: '上海老牌的法式公园，绿地宽敞，狗狗牵绳即可入园。',
   },
   {
@@ -231,6 +260,9 @@ export const INITIAL_LOCATIONS = [
     verifierCount: 0,
     lastUpdatedLabel: '刚刚发布',
     thumbnailUrl: 'https://images.unsplash.com/photo-1521017432531-fbd92d768814?auto=format&fit=crop&w=160&q=80',
+    photos: [
+      'https://images.unsplash.com/photo-1521017432531-fbd92d768814?auto=format&fit=crop&w=800&q=80',
+    ],
     description: '本店欢迎所有体型的狗狗，店里准备了水碗。',
   },
 ];
@@ -248,8 +280,11 @@ export const INITIAL_VALIDATIONS = {
       outcomeLabel: '我带狗成功去了',
       dogSize: '小型犬',
       tags: ['仅户外', '有水碗', '店员友好'],
-      note: '店员很好，给了水碗。露台位置比较宽，狗狗可以安静待着。',
-      photos: 2,
+      note: '店员很好，给了水碗。露台位置比较宽，狗狗可以安静待着。周末去的时候人有点多，但是店员很耐心，还额外给了狗狗零食。整体体验很不错，推荐大家去试试！',
+      photos: [
+        'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=400&q=80',
+        'https://images.unsplash.com/photo-1587574293340-e0011c4e8ecf?w=400&q=80',
+      ],
       helpfulCount: 12,
     },
     {
@@ -262,7 +297,10 @@ export const INITIAL_VALIDATIONS = {
       dogSize: '小型犬',
       tags: ['仅户外', '空间宽敞'],
       note: '室内有点窄，但露台位置很赞。',
-      photos: 1,
+      photos: [
+        'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=400&q=80',
+        'https://images.unsplash.com/photo-1587574293340-e0011c4e8ecf?w=400&q=80',
+      ],
       helpfulCount: 4,
     },
     {
@@ -275,7 +313,7 @@ export const INITIAL_VALIDATIONS = {
       dogSize: '中型犬',
       tags: ['店员友好', '人多拥挤'],
       note: '周末确实人多，狗狗略紧张。建议工作日去。',
-      photos: 0,
+      photos: [],
       helpfulCount: 2,
     },
   ],
@@ -290,7 +328,11 @@ export const INITIAL_VALIDATIONS = {
       dogSize: '大型犬',
       tags: ['需要牵绳', '空间宽敞'],
       note: '草坪超大，狗狗很开心。门口工作人员会提醒牵绳。',
-      photos: 3,
+      photos: [
+        'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=400&q=80',
+        'https://images.unsplash.com/photo-1504208434309-cb69f4fd5084?w=400&q=80',
+        'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=400&q=80',
+      ],
       helpfulCount: 28,
     },
   ],

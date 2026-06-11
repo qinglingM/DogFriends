@@ -48,7 +48,7 @@ export default function UpdateInfoScreen({ route, navigation }) {
   return (
     <View style={styles.screen}>
       <NavBar
-        title="我去过，更新信息"
+        title="我来反馈"
         onBack={() => navigation.goBack()}
       />
 

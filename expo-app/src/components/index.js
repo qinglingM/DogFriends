@@ -12,3 +12,5 @@ export { default as NavBar } from './NavBar';
 export { default as StatusBadge } from './StatusBadge';
 export { default as ValidationCard } from './ValidationCard';
 export { default as InaccuracySheet } from './InaccuracySheet';
+export { default as ImageViewer } from './ImageViewer';
+export { default as BadgeUnlockModal } from './BadgeUnlockModal';

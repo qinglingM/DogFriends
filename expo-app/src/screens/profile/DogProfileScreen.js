@@ -1,42 +1,62 @@
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { typography } from '../../theme/typography';
 import { NavBar, Card, Chip, DogAvatar, Button } from '../../components';
+import { useDogs } from '../../contexts/DogContext';
+
+const SIZE_LABELS = { small: '小型犬', medium: '中型犬', large: '大型犬' };
 
 export default function DogProfileScreen({ navigation, route }) {
+  const { dogs } = useDogs();
+  const dogId = route?.params?.dogId;
+  const dog = dogs.find(d => d.id === dogId) || dogs[0] || {
+    name: '旺财', breed: '金毛寻回犬', size: 'large', gender: 'male',
+    birthday: '2023-03-15', weight: 32, neutered: true,
+  };
+
+  const sizeLabel = SIZE_LABELS[dog.size] || '大型犬';
+  const genderLabel = dog.gender === 'female' ? '♀ 母' : '♂ 公';
+  const age = dog.birthday ? `${new Date().getFullYear() - new Date(dog.birthday).getFullYear()}岁` : '';
+  const weightLabel = dog.weight ? `${dog.weight} kg` : '';
+  const hasImage = dog.image && dog.image.length > 0;
+
   return (
     <View style={styles.screen}>
       <NavBar
         title="狗狗档案"
         onBack={() => navigation.goBack()}
         rightIcon="create-outline"
-        rightAction={() => navigation.navigate('DogEdit')}
+        rightAction={() => navigation.navigate('DogEdit', { dogId: dog.id })}
       />
 
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.hero}>
-          <DogAvatar size={96} />
-          <Text style={styles.heroName}>旺财</Text>
-          <Text style={styles.heroBreed}>金毛寻回犬 · ♂ 公</Text>
+          {hasImage ? (
+            <Image source={{ uri: dog.image }} style={styles.heroAvatar} />
+          ) : (
+            <DogAvatar size={96} />
+          )}
+          <Text style={styles.heroName}>{dog.name}</Text>
+          <Text style={styles.heroBreed}>{dog.breed} · {genderLabel}</Text>
           <View style={styles.heroTags}>
-            <Chip variant="verified">大型犬</Chip>
-            <Chip>3 岁</Chip>
-            <Chip>32 kg</Chip>
+            {dog.size && <Chip variant="verified">{sizeLabel}</Chip>}
+            {age && <Chip>{age}</Chip>}
+            {weightLabel && <Chip>{weightLabel}</Chip>}
           </View>
         </View>
 
         <Text style={styles.sectionTitle}>基本信息</Text>
         <Card>
           {[
-            { icon: 'paw', label: '品种', value: '金毛寻回犬' },
-            { icon: 'male', label: '性别', value: '♂ 公' },
-            { icon: 'calendar', label: '生日', value: '2023-03-15 (3岁)' },
-            { icon: 'scale', label: '体重', value: '32 kg' },
-          ].map((row, i) => (
-            <View key={i} style={[styles.infoRow, i < 3 && styles.infoRowBorder]}>
+            { icon: 'paw', label: '品种', value: dog.breed },
+            { icon: dog.gender === 'female' ? 'female' : 'male', label: '性别', value: genderLabel },
+            { icon: 'calendar', label: '生日', value: dog.birthday ? `${dog.birthday} (${age})` : '' },
+            { icon: 'scale', label: '体重', value: weightLabel },
+          ].filter(r => r.value).map((row, i, arr) => (
+            <View key={i} style={[styles.infoRow, i < arr.length - 1 && styles.infoRowBorder]}>
               <View style={styles.infoLabel}>
                 <Ionicons name={row.icon} size={16} color={colors.primary} />
                 <Text style={styles.infoLabelText}>{row.label}</Text>
@@ -110,6 +130,12 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   content: { padding: spacing.screenMargin, paddingBottom: 104 },
   hero: { alignItems: 'center', paddingVertical: 32, gap: 8 },
+  heroAvatar: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: colors.chipDefault,
+  },
   heroName: { ...typography.h1, color: colors.secondary, marginTop: 8 },
   heroBreed: { ...typography.body, color: colors.textLight },
   heroTags: { flexDirection: 'row', gap: 8, marginTop: 8 },

@@ -9,8 +9,8 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "需要使用您的位置来记录遛狗轨迹",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "需要使用您的位置来记录遛狗轨迹",
+        "NSLocationWhenInUseUsageDescription": "需要使用您的位置来查找附近的宠物友好地点",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "需要使用您的位置来查找附近的宠物友好地点",
         "io.expo.AMapAPIKey": "c958a4dca2f7602f3024ca0c139984d3"
       }
     },
@@ -21,6 +21,10 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ],
       "config": {
         "amapApiKey": "c958a4dca2f7602f3024ca0c139984d3"
       }

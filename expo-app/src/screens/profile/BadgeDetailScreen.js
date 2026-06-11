@@ -9,6 +9,7 @@ import {
   getBadgeProgress,
   getBadgeProgressLabel,
   getBadgeRemainingLabel,
+  formatEarnedDate,
 } from '../../data/profileData';
 
 export default function BadgeDetailScreen({ route, navigation }) {
@@ -28,8 +29,25 @@ export default function BadgeDetailScreen({ route, navigation }) {
       return;
     }
 
+    if (badge.actionRoute === 'walk') {
+      navigation.getParent()?.navigate('Walk');
+      return;
+    }
+
+    if (badge.actionRoute === 'square') {
+      navigation.getParent()?.navigate('Square');
+      return;
+    }
+
+    if (badge.actionRoute === 'BadgeWall') {
+      navigation.goBack();
+      return;
+    }
+
     navigation.getParent()?.navigate('Explore');
   };
+
+  const isEmoji = badge.icon && badge.icon.length <= 2;
 
   return (
     <View style={styles.screen}>
@@ -38,11 +56,15 @@ export default function BadgeDetailScreen({ route, navigation }) {
       <View style={styles.content}>
         <Card style={styles.heroCard}>
           <View style={[styles.badgeIconWrap, !badge.earned && styles.badgeIconLocked]}>
-            <Ionicons
-              name={badge.icon || 'ribbon'}
-              size={40}
-              color={badge.earned ? colors.secondary : colors.textLight}
-            />
+            {isEmoji ? (
+              <Text style={styles.emojiIcon}>{badge.icon}</Text>
+            ) : (
+              <Ionicons
+                name={badge.icon || 'ribbon'}
+                size={40}
+                color={badge.earned ? colors.secondary : colors.textLight}
+              />
+            )}
           </View>
           <Text style={styles.badgeName}>{badge.name || '徽章'}</Text>
           <Text style={styles.badgeState}>{badge.earned ? '已获得' : '继续追逐中'}</Text>
@@ -58,27 +80,35 @@ export default function BadgeDetailScreen({ route, navigation }) {
           {badge.earned ? (
             <>
               <Text style={styles.label}>获得时间</Text>
-              <Text style={styles.body}>{badge.earnedAt || '已达成'}</Text>
+              <Text style={styles.body}>{formatEarnedDate(badge.earnedAt) || '已达成'}</Text>
               <Text style={styles.label}>当前状态</Text>
               <Text style={styles.body}>已获得</Text>
             </>
           ) : (
             <>
-              <View style={styles.progressHeader}>
-                <Text style={styles.label}>当前进度</Text>
-                <Text style={styles.progressLabel}>{progressLabel}</Text>
-              </View>
-              <View style={styles.progressTrack}>
-                <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
-              </View>
-              <Text style={styles.nextHint}>{remainingLabel}</Text>
+              {badge.target ? (
+                <>
+                  <View style={styles.progressHeader}>
+                    <Text style={styles.label}>当前进度</Text>
+                    <Text style={styles.progressLabel}>{progressLabel}</Text>
+                  </View>
+                  <View style={styles.progressTrack}>
+                    <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
+                  </View>
+                  <Text style={styles.nextHint}>{remainingLabel}</Text>
+                </>
+              ) : (
+                <Text style={styles.body}>条件尚未满足，继续加油！</Text>
+              )}
             </>
           )}
         </Card>
 
-        <Button fullWidth onPress={handleAction}>
-          {badge.earned ? '继续贡献' : badge.actionLabel || '去贡献'}
-        </Button>
+        {(badge.actionRoute || !badge.earned) && (
+          <Button fullWidth onPress={handleAction}>
+            {badge.earned ? '继续贡献' : badge.actionLabel || '去贡献'}
+          </Button>
+        )}
       </View>
     </View>
   );
@@ -106,6 +136,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#EEF0EB',
     borderColor: '#D7DDD3',
   },
+  emojiIcon: { fontSize: 40 },
   badgeName: { ...typography.h2, color: colors.secondary, marginBottom: 4 },
   badgeState: { ...typography.captionBold, color: colors.textLight },
   label: { ...typography.captionBold, color: colors.secondary, marginBottom: 6, marginTop: 8 },
