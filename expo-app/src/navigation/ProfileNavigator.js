@@ -1,5 +1,6 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import ProfileTabScreen from '../screens/profile/ProfileTabScreen';
 import ProfileScreen from '../screens/profile/ProfileScreen';
 import PersonalProfileScreen from '../screens/profile/PersonalProfileScreen';
 import ProfileFeedDetailScreen from '../screens/profile/ProfileFeedDetailScreen';
@@ -23,7 +24,8 @@ const Stack = createNativeStackNavigator();
 export default function ProfileNavigator() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="ProfileHome" component={ProfileScreen} />
+      <Stack.Screen name="ProfileHome" component={ProfileTabScreen} />
+      <Stack.Screen name="ProfileLegacy" component={ProfileScreen} />
       <Stack.Screen name="PersonalProfile" component={PersonalProfileScreen} />
       <Stack.Screen name="ProfileFeedDetail" component={ProfileFeedDetailScreen} />
       <Stack.Screen name="DogProfile" component={DogProfileScreen} />

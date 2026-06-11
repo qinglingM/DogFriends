@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
@@ -16,7 +16,6 @@ export default function WalkResultScreen({ navigation }) {
   const distance = last?.distance || 0;
   const duration = last?.duration || 0;
   const pace = last?.pace || 0;
-  const photos = last?.photos || [];
   const dogs = last?.dogs || currentWalk?.dogs || [];
 
   const formatDuration = (sec) => {
@@ -90,19 +89,6 @@ export default function WalkResultScreen({ navigation }) {
         />
       </View>
 
-      {photos.length > 0 && (
-        <View style={styles.photosSection}>
-          <Text style={styles.sectionTitle}>本次照片</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.photoRow}>
-            {photos.map((p, i) => (
-              <View key={p.id || i} style={styles.photoThumb}>
-                <Ionicons name="image-outline" size={28} color={colors.textLight} />
-              </View>
-            ))}
-          </ScrollView>
-        </View>
-      )}
-
       <View style={styles.tipsSection}>
         <TipCard icon="bulb-outline" title="小贴士" description="连续遛狗超过30分钟，狗狗更容易保持好心情" tone="blue" />
       </View>
@@ -151,13 +137,6 @@ const styles = StyleSheet.create({
   statUnit: { ...typography.caption, color: colors.textLight, marginLeft: 2 },
   statLabel: { ...typography.caption, color: colors.textLight, marginTop: spacing.xs },
   mapWrap: { marginHorizontal: spacing.lg, marginTop: spacing.md, borderRadius: spacing.radiusLg, overflow: 'hidden' },
-  photosSection: { marginTop: spacing.md, paddingHorizontal: spacing.lg },
-  sectionTitle: { ...typography.bodyBold, color: colors.secondary, marginBottom: spacing.sm },
-  photoRow: { gap: 8 },
-  photoThumb: {
-    width: 100, height: 100, borderRadius: spacing.radiusMd,
-    backgroundColor: colors.surfaceLight, alignItems: 'center', justifyContent: 'center',
-  },
   tipsSection: { gap: spacing.sm, paddingHorizontal: spacing.lg, marginTop: spacing.md },
   bottomFill: { flex: 1 },
   finishBtn: {

@@ -80,7 +80,6 @@ function CompactBristol({ value, onChange, disabled }) {
 }
 
 function DogCheckinCard({ dog, data, onChange, sortedBehaviors }) {
-  const [showBehavior, setShowBehavior] = useState(true);
   const update = (field, value) => onChange({ ...data, [field]: value });
   const poopDisabled = !data.poop || data.poop === 'none';
   const behaviorCount = data.behaviors?.length || 0;
@@ -101,6 +100,11 @@ function DogCheckinCard({ dog, data, onChange, sortedBehaviors }) {
 
       <View style={styles.divider} />
 
+      <Text style={styles.fieldLabel}>精神状态</Text>
+      <EmojiSelector value={data.mood} onChange={(v) => update('mood', v)} />
+
+      <View style={styles.divider} />
+
       <Text style={styles.fieldLabel}>排尿</Text>
       <InlineOption options={PEE_OPTIONS} value={data.pee} onChange={(v) => update('pee', v)} />
 
@@ -112,35 +116,21 @@ function DogCheckinCard({ dog, data, onChange, sortedBehaviors }) {
 
       <View style={styles.divider} />
 
-      <Text style={styles.fieldLabel}>精神状态</Text>
-      <EmojiSelector value={data.mood} onChange={(v) => update('mood', v)} />
-
-      <View style={styles.divider} />
-
-      <TouchableOpacity
-        style={styles.collapseToggle}
-        onPress={() => setShowBehavior(!showBehavior)}
-      >
+      <View style={styles.behaviorHeader}>
         <Text style={styles.fieldLabel}>异常行为</Text>
-        <View style={styles.collapseRight}>
-          {behaviorCount > 0 && (
-            <View style={styles.countBadge}>
-              <Text style={styles.countBadgeText}>{behaviorCount}</Text>
-            </View>
-          )}
-          <Ionicons name={showBehavior ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textLight} />
-        </View>
-      </TouchableOpacity>
-
-      {showBehavior && (
-        <View style={styles.chipGrid}>
-          {sortedBehaviors.map(b => (
-            <Chip key={b} active={data.behaviors?.includes(b)} onPress={() => toggleBehavior(b)}>
-              {b}
-            </Chip>
-          ))}
-        </View>
-      )}
+        {behaviorCount > 0 && (
+          <View style={styles.countBadge}>
+            <Text style={styles.countBadgeText}>{behaviorCount}</Text>
+          </View>
+        )}
+      </View>
+      <View style={styles.chipGrid}>
+        {sortedBehaviors.map(b => (
+          <Chip key={b} active={data.behaviors?.includes(b)} onPress={() => toggleBehavior(b)}>
+            {b}
+          </Chip>
+        ))}
+      </View>
     </View>
   );
 }
@@ -251,6 +241,7 @@ export default function WalkCheckinScreen({ navigation }) {
               />
             </View>
           ))}
+          <View style={{ width: sidePadding }} />
         </ScrollView>
 
         {dogs.length > 1 && (
@@ -332,19 +323,13 @@ const styles = StyleSheet.create({
   bristolLevelActive: { color: colors.secondary },
   bristolDesc: { fontSize: 8, color: colors.textLight },
   bristolTextDisabled: { opacity: 0.4 },
-  collapseToggle: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingVertical: 2,
+  behaviorHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginBottom: spacing.xs,
   },
-  collapseRight: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-  },
-  countBadge: {
-    width: 20, height: 20, borderRadius: 10,
-    backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center',
-  },
-  countBadgeText: { fontSize: 10, fontWeight: '800', color: colors.secondary },
-  chipGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginTop: spacing.sm },
+  chipGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
   dotsRow: {
     flexDirection: 'row', justifyContent: 'center', gap: 6,
     paddingVertical: spacing.sm,

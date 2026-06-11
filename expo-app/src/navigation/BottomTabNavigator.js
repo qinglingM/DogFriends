@@ -16,7 +16,7 @@ const TAB_CONFIG = {
   Walk: { label: '遛狗', icon: 'location', iconActive: 'location' },
   Square: { label: '广场', icon: 'compass-outline', iconActive: 'compass' },
   Explore: { label: '去玩', icon: 'paw-outline', iconActive: 'paw' },
-  Profile: { label: '我的', icon: 'person-outline', iconActive: 'person' },
+  Profile: { label: '档案', icon: 'person-outline', iconActive: 'person' },
 };
 
 export default function BottomTabNavigator() {

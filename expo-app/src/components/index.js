@@ -14,3 +14,4 @@ export { default as ValidationCard } from './ValidationCard';
 export { default as InaccuracySheet } from './InaccuracySheet';
 export { default as ImageViewer } from './ImageViewer';
 export { default as BadgeUnlockModal } from './BadgeUnlockModal';
+export { default as SegmentedControl } from './SegmentedControl';

@@ -15,8 +15,7 @@ const MOCK_DOGS = [
 ];
 
 const MAIN_BTN_SIZE = 72;
-const SIDE_BTN_SIZE = 56;
-const BTN_GAP = 80;
+const SIDE_BTN_SIZE = 72;
 
 export default function WalkHomeScreen({ navigation }) {
   const insets = useSafeAreaInsets();
@@ -29,7 +28,6 @@ export default function WalkHomeScreen({ navigation }) {
   const [isPaused, setIsPaused] = useState(false);
   const [photos, setPhotos] = useState([]);
 
-  const fadeAnim = useRef(new Animated.Value(1)).current;
   const pauseSlide = useRef(new Animated.Value(0)).current;
   const cameraSlide = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -75,17 +73,10 @@ export default function WalkHomeScreen({ navigation }) {
     ]).start();
 
     Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
-    ]).start(() => {
-      setTimeout(() => {
-        Animated.parallel([
-          Animated.timing(fadeAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
-          Animated.spring(pauseSlide, { toValue: -BTN_GAP, tension: 120, friction: 8, useNativeDriver: true }),
-          Animated.spring(cameraSlide, { toValue: BTN_GAP, tension: 120, friction: 8, useNativeDriver: true }),
-        ]).start();
-      }, 100);
-    });
-  }, [fadeAnim, mainBtnScale, pauseSlide, cameraSlide]);
+      Animated.spring(pauseSlide, { toValue: 1, tension: 120, friction: 8, useNativeDriver: true }),
+      Animated.spring(cameraSlide, { toValue: 1, tension: 120, friction: 8, useNativeDriver: true }),
+    ]).start();
+  }, [mainBtnScale, pauseSlide, cameraSlide]);
 
   const handleGo = () => {
     const selectedDogs = dogs.filter(d => d.selected).map(d => ({ id: d.id, name: d.name }));
@@ -100,7 +91,6 @@ export default function WalkHomeScreen({ navigation }) {
     Animated.parallel([
       Animated.timing(pauseSlide, { toValue: 0, duration: 200, useNativeDriver: true }),
       Animated.timing(cameraSlide, { toValue: 0, duration: 200, useNativeDriver: true }),
-      Animated.timing(fadeAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
     ]).start(() => {
       updateWalk({ duration: seconds, distance: 0, pace: 0 });
       navigation.navigate('WalkCheckin');
@@ -130,42 +120,49 @@ export default function WalkHomeScreen({ navigation }) {
 
         <View style={[styles.locationDot, { top: '50%', left: '50%' }]} />
 
-        <Animated.View style={[styles.floatTop, { paddingTop: insets.top + 8 }, { opacity: fadeAnim }]}>
+        <View style={[styles.floatTop, { paddingTop: insets.top + 8 }]}>
           <View style={styles.statsBar}>
             <View style={styles.statItem}>
-              <Ionicons name="paw" size={14} color={colors.primary} />
-              <Text style={styles.statVal}>
-                {isWalking ? '--' : weekStats.count}
-              </Text>
-              <Text style={styles.statUnit}>{isWalking ? '次' : '次'}</Text>
+              <Text style={styles.statLabel}>{isWalking ? '平均配速' : '遛狗次数'}</Text>
+              <View style={styles.statValueRow}>
+                <Ionicons name={isWalking ? 'speedometer-outline' : 'paw'} size={16} color={colors.primary} />
+                <Text style={styles.statVal}>
+                  {isWalking ? (seconds > 0 ? ((seconds / 3600) > 0 ? '4.5' : '0.0') : '0.0') : weekStats.count}
+                </Text>
+                <Text style={styles.statUnit}>{isWalking ? 'km/h' : '次'}</Text>
+              </View>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
-              <Ionicons name="time-outline" size={14} color={colors.primary} />
-              <Text style={styles.statVal}>
-                {isWalking ? formatTime(seconds) : `${(weekStats.duration / 3600).toFixed(1)}h`}
-              </Text>
-              <Text style={styles.statUnit}>{isWalking ? '' : ''}</Text>
+              <Text style={styles.statLabel}>{isWalking ? '本次时长' : '总时长'}</Text>
+              <View style={styles.statValueRow}>
+                <Ionicons name="time-outline" size={16} color={colors.primary} />
+                <Text style={styles.statVal}>
+                  {isWalking ? formatTime(seconds) : `${(weekStats.duration / 3600).toFixed(1)}h`}
+                </Text>
+              </View>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
-              <Ionicons name="trending-up" size={14} color={colors.primary} />
-              <Text style={styles.statVal}>
-                {isWalking ? '0.0' : weekStats.distance.toFixed(1)}
-              </Text>
-              <Text style={styles.statUnit}>{isWalking ? 'km' : 'km'}</Text>
+              <Text style={styles.statLabel}>{isWalking ? '本次距离' : '总里程'}</Text>
+              <View style={styles.statValueRow}>
+                <Ionicons name="trending-up" size={16} color={colors.primary} />
+                <Text style={styles.statVal}>
+                  {isWalking ? (seconds > 0 ? (seconds * 0.0013).toFixed(1) : '0.0') : weekStats.distance.toFixed(1)}
+                </Text>
+                <Text style={styles.statUnit}>km</Text>
+              </View>
             </View>
           </View>
-        </Animated.View>
+        </View>
 
         {isWalking && (
-          <View style={[styles.trackingPill, { top: insets.top + 56 }]}>
+          <View style={[styles.trackingPill, { top: insets.top + 72 }]}>
             <Animated.View style={[styles.pulseDot, { opacity: pulseAnim }]} />
-            <Text style={styles.trackingText}>遛狗中</Text>
           </View>
         )}
 
-        <View style={[styles.recenterWrap, { bottom: 220 + insets.bottom }]}>
+        <View style={[styles.recenterWrap, { bottom: 40 + insets.bottom }]}>
           <TouchableOpacity style={styles.recenterBtn} activeOpacity={0.7}>
             <Ionicons name="locate" size={22} color={colors.secondary} />
           </TouchableOpacity>
@@ -174,7 +171,7 @@ export default function WalkHomeScreen({ navigation }) {
 
       <View style={[styles.floatBottom, { paddingBottom: 16 + insets.bottom }]}>
         <View style={styles.dogAvatarsRow}>
-          {dogs.map(dog => (
+          {(isWalking ? dogs.filter(d => d.selected) : dogs).map(dog => (
             <TouchableOpacity
               key={dog.id}
               style={styles.dogItem}
@@ -199,16 +196,9 @@ export default function WalkHomeScreen({ navigation }) {
           ))}
         </View>
 
-        {isWalking && (
-          <View style={styles.statusPillWrap}>
-            <Animated.View style={[styles.pulseDotSmall, { opacity: pulseAnim }]} />
-            <Text style={styles.statusText}>遛狗中</Text>
-          </View>
-        )}
-
         <View style={styles.controlsRow}>
           {isWalking && (
-            <Animated.View style={{ transform: [{ translateX: pauseSlide }] }}>
+            <Animated.View style={{ transform: [{ translateY: pauseSlide }], alignItems: 'center' }}>
               <TouchableOpacity style={styles.sideBtn} onPress={handlePause} activeOpacity={0.7}>
                 <Ionicons name={isPaused ? 'play' : 'pause'} size={24} color={colors.secondary} />
               </TouchableOpacity>
@@ -216,7 +206,7 @@ export default function WalkHomeScreen({ navigation }) {
             </Animated.View>
           )}
 
-          <Animated.View style={{ transform: [{ scale: mainBtnScale }] }}>
+          <Animated.View style={{ transform: [{ scale: mainBtnScale }], alignItems: 'center' }}>
             <TouchableOpacity
               style={[styles.mainBtn, isWalking && styles.mainBtnDanger]}
               activeOpacity={0.8}
@@ -228,10 +218,11 @@ export default function WalkHomeScreen({ navigation }) {
                 <Text style={styles.goText}>GO</Text>
               )}
             </TouchableOpacity>
+            {isWalking && <Text style={styles.mainBtnLabel}>结束</Text>}
           </Animated.View>
 
           {isWalking && (
-            <Animated.View style={{ transform: [{ translateX: cameraSlide }] }}>
+            <Animated.View style={{ transform: [{ translateY: cameraSlide }], alignItems: 'center' }}>
               <TouchableOpacity style={styles.sideBtn} onPress={handleCamera} activeOpacity={0.7}>
                 <Ionicons name="camera" size={24} color={colors.secondary} />
                 {photos.length > 0 && (
@@ -268,7 +259,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: colors.white,
     borderRadius: spacing.radiusPill,
-    paddingVertical: 8,
+    paddingVertical: 14,
     paddingHorizontal: 4,
     shadowColor: colors.secondary,
     shadowOffset: { width: 0, height: 4 },
@@ -278,24 +269,33 @@ const styles = StyleSheet.create({
   },
   statItem: {
     flex: 1,
+    alignItems: 'center',
+    gap: 2,
+  },
+  statValueRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
   },
+  statLabel: {
+    ...typography.caption,
+    fontSize: 10,
+    color: colors.textLight,
+  },
   statDivider: {
     width: 1,
-    height: 16,
+    height: 20,
     backgroundColor: colors.border,
     marginVertical: 4,
   },
   statVal: {
     ...typography.bodyBold,
-    fontSize: 14,
+    fontSize: 16,
     color: colors.secondary,
   },
   statUnit: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '700',
     color: colors.textLight,
   },
@@ -315,10 +315,6 @@ const styles = StyleSheet.create({
     ...typography.captionBold,
     fontSize: 12,
     color: colors.secondary,
-  },
-  pulseDotSmall: {
-    width: 6, height: 6, borderRadius: 3,
-    backgroundColor: colors.secondary,
   },
   recenterWrap: {
     position: 'absolute',
@@ -379,25 +375,12 @@ const styles = StyleSheet.create({
   dogNameWalking: {
     color: 'rgba(255,255,255,0.8)',
   },
-  statusPillWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(52, 112, 72, 0.7)',
-    borderRadius: spacing.radiusPill,
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-  },
-  statusText: {
-    ...typography.captionBold,
-    fontSize: 11,
-    color: colors.white,
-  },
   controlsRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-    height: 100,
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+    gap: 20,
+    height: 120,
   },
   sideBtn: {
     width: SIDE_BTN_SIZE, height: SIDE_BTN_SIZE,
@@ -442,6 +425,18 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: 18,
     letterSpacing: 2,
+  },
+  mainBtnLabel: {
+    ...typography.captionBold,
+    fontSize: 11,
+    color: colors.white,
+    backgroundColor: 'rgba(52, 112, 72, 0.7)',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: spacing.radiusPill,
+    overflow: 'hidden',
+    textAlign: 'center',
+    marginTop: 6,
   },
   pulseDot: {
     width: 6, height: 6, borderRadius: 3,
