@@ -470,7 +470,6 @@ export default function ProfileTabScreen({ navigation }) {
 
       {/* Fixed tab bar: appears when in-list tab reaches nav bar bottom */}
       <Animated.View style={[s.fixedTabBar, { top: navBarHeight, opacity: fixedTabOpacity }]}>
-        <View style={s.fixedTabBarBg} />
         <View style={s.fixedTabBarContent}>
           {subTabs.map(tab => {
             const isActive = tab.key === activeTab;
@@ -506,6 +505,7 @@ const s = StyleSheet.create({
 
   /* Sub-tabs row */
   subTabRow: {
+    backgroundColor: colors.white,
     borderBottomWidth: 1, borderBottomColor: colors.border,
   },
   subTabContent: {
@@ -543,10 +543,10 @@ const s = StyleSheet.create({
   subTab: { paddingVertical: 14, marginRight: 24, position: 'relative' },
   subTabAdd: { paddingVertical: 14, marginLeft: 'auto' },
   subTabText: { ...typography.bodyBold, color: colors.textLight },
-  subTabTextActive: { color: colors.secondary },
+  subTabTextActive: { ...typography.bodyBold, color: colors.textMain, fontWeight: '800' },
   subTabIndicator: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
-    height: 2.5, backgroundColor: colors.primary, borderRadius: 1.25,
+    height: 3, backgroundColor: colors.primary, borderRadius: 1.5,
   },
 
   /* Owner content */
