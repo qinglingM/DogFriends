@@ -18,7 +18,7 @@ const DOG_SIZES = [
 ];
 
 export default function DogEditScreen({ navigation, route }) {
-  const { dogs, addDog, updateDog } = useDogs();
+  const { dogs, addDog, updateDog, removeDog } = useDogs();
   const dogId = route?.params?.dogId;
   const existingDog = dogId ? dogs.find(d => d.id === dogId) : null;
   const isEdit = !!existingDog;
@@ -382,6 +382,32 @@ export default function DogEditScreen({ navigation, route }) {
           </View>
           <Ionicons name="chevron-forward" size={16} color={colors.textLight} />
         </TouchableOpacity>
+
+        {isEdit && (
+          <TouchableOpacity
+            style={styles.deleteBtn}
+            onPress={() => {
+              Alert.alert(
+                '确认删除',
+                `确定要删除「${name}」的档案吗？此操作不可撤销。`,
+                [
+                  { text: '取消', style: 'cancel' },
+                  {
+                    text: '删除',
+                    style: 'destructive',
+                    onPress: () => {
+                      removeDog(dogId);
+                      navigation.goBack();
+                    },
+                  },
+                ]
+              );
+            }}
+          >
+            <Ionicons name="trash-outline" size={18} color={colors.danger} />
+            <Text style={styles.deleteBtnText}>删除狗狗信息</Text>
+          </TouchableOpacity>
+        )}
       </ScrollView>
 
       <BreedPickerModal
@@ -537,4 +563,11 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   vaccineSub: { ...typography.caption, color: colors.textLight, marginTop: 2 },
+
+  /* Delete */
+  deleteBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
+    paddingVertical: spacing.md, marginTop: spacing.md, marginBottom: spacing.xl,
+  },
+  deleteBtnText: { ...typography.bodyBold, color: colors.danger, fontSize: 16 },
 });
