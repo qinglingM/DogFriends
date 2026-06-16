@@ -394,45 +394,51 @@ export default function ProfileTabScreen({ navigation, route }) {
           </View>
 
           <View style={s.heroOverlay}>
-            <View style={s.ownerProfileRow}>
-              <Image source={{ uri: displayProfile.avatar }} style={s.heroAvatar} />
-              <View style={s.heroNameBlock}>
-                <View style={s.heroNameRow}>
-                  <Text style={s.heroName}>{displayProfile.name}</Text>
-                  {genderIcon && <Ionicons name={genderIcon} size={16} color={colors.white} />}
+            <View style={s.heroOverlayRow}>
+              <View style={s.heroLeft}>
+                <View style={s.ownerProfileRow}>
+                  <Image source={{ uri: displayProfile.avatar }} style={s.heroAvatar} />
+                  <View style={s.heroNameBlock}>
+                    <View style={s.heroNameRow}>
+                      <Text style={s.heroName}>{displayProfile.name}</Text>
+                      {genderIcon && <Ionicons name={genderIcon} size={16} color={colors.white} />}
+                    </View>
+                    <View style={s.heroLocationRow}>
+                      <Ionicons name="location-outline" size={14} color="rgba(255,255,255,0.8)" />
+                      <Text style={s.heroLocationText}>{displayProfile.area}</Text>
+                    </View>
+                    {displayProfile.signature ? (
+                      <Text style={s.heroSignature} numberOfLines={2}>{displayProfile.signature}</Text>
+                    ) : null}
+
+                    <View style={s.heroSocialRow}>
+                      <StatBlock value={displayProfile.following} label="关注" />
+                      <View style={s.heroStatDivider} />
+                      <StatBlock value={displayProfile.followers} label="粉丝" />
+                      <View style={s.heroStatDivider} />
+                      <StatBlock value={displayProfile.likes} label="获赞" />
+                    </View>
+                  </View>
                 </View>
-                <View style={s.heroLocationRow}>
-                  <Ionicons name="location-outline" size={14} color="rgba(255,255,255,0.8)" />
-                  <Text style={s.heroLocationText}>{displayProfile.area}</Text>
-                </View>
-                {displayProfile.signature ? (
-                  <Text style={s.heroSignature} numberOfLines={2}>{displayProfile.signature}</Text>
-                ) : null}
+              </View>
+
+              <View style={s.heroRight}>
+                {isSelf ? (
+                  <TouchableOpacity
+                    style={s.heroEditBtn}
+                    activeOpacity={0.75}
+                    onPress={() => navigation.navigate('EditProfile')}
+                  >
+                    <Ionicons name="create-outline" size={16} color={colors.white} />
+                    <Text style={s.heroEditBtnText}>编辑资料</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity style={s.heroFollowBtn} activeOpacity={0.75}>
+                    <Text style={s.heroFollowBtnText}>关注</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
-
-            <View style={s.heroSocialRow}>
-              <StatBlock value={displayProfile.following} label="关注" />
-              <View style={s.heroStatDivider} />
-              <StatBlock value={displayProfile.followers} label="粉丝" />
-              <View style={s.heroStatDivider} />
-              <StatBlock value={displayProfile.likes} label="获赞" />
-            </View>
-
-            {isSelf ? (
-              <TouchableOpacity
-                style={s.heroEditBtn}
-                activeOpacity={0.75}
-                onPress={() => navigation.navigate('EditProfile')}
-              >
-                <Ionicons name="create-outline" size={14} color={colors.white} />
-                <Text style={s.heroEditBtnText}>编辑资料</Text>
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity style={s.heroFollowBtn} activeOpacity={0.75}>
-                <Text style={s.heroFollowBtnText}>关注</Text>
-              </TouchableOpacity>
-            )}
           </View>
         </ImageBackground>
 
@@ -543,8 +549,15 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.35)',
     paddingHorizontal: spacing.md,
     paddingTop: spacing.md,
-    paddingBottom: spacing.lg,
-    gap: spacing.sm,
+    paddingBottom: spacing.md,
+  },
+  heroOverlayRow: {
+    flexDirection: 'row', alignItems: 'center',
+  },
+  heroLeft: { flex: 1 },
+  heroRight: {
+    justifyContent: 'center', alignItems: 'center',
+    paddingLeft: spacing.md,
   },
   ownerProfileRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
@@ -560,19 +573,18 @@ const s = StyleSheet.create({
   heroLocationText: { ...typography.caption, color: 'rgba(255,255,255,0.8)' },
   heroSignature: { ...typography.caption, color: 'rgba(255,255,255,0.7)', lineHeight: 18 },
   heroSocialRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    paddingVertical: spacing.sm, gap: spacing.lg,
+    flexDirection: 'row', alignItems: 'center',
+    paddingTop: spacing.xs, gap: spacing.md,
   },
-  statBlock: { alignItems: 'center' },
-  statValue: { ...typography.statValue, color: colors.white },
-  statLabel: { ...typography.caption, color: 'rgba(255,255,255,0.8)' },
+  statBlock: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
+  statValue: { ...typography.captionBold, color: colors.white, fontSize: 12 },
+  statLabel: { ...typography.caption, color: 'rgba(255,255,255,0.7)' },
   heroStatDivider: { width: 1, height: 16, backgroundColor: 'rgba(255,255,255,0.3)' },
   heroEditBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs,
     minHeight: spacing.touchTarget, paddingHorizontal: spacing.md,
     borderRadius: spacing.radiusPill,
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.6)',
-    alignSelf: 'flex-start',
   },
   heroEditBtnText: { ...typography.captionBold, color: colors.white, fontSize: 12 },
   heroFollowBtn: {
@@ -580,7 +592,6 @@ const s = StyleSheet.create({
     borderRadius: spacing.radiusPill,
     backgroundColor: colors.secondary,
     alignItems: 'center', justifyContent: 'center',
-    alignSelf: 'flex-start',
   },
   heroFollowBtnText: { ...typography.captionBold, color: colors.white, fontSize: 12 },
 
