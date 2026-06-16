@@ -546,7 +546,6 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   heroOverlay: {
-    backgroundColor: 'rgba(0,0,0,0.35)',
     paddingHorizontal: spacing.md,
     paddingTop: spacing.md,
     paddingBottom: spacing.md,
