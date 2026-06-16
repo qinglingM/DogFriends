@@ -274,7 +274,6 @@ export default function ProfileTabScreen({ navigation, route }) {
                     <View style={s.heroNameRow}>
                       <Text style={s.heroName}>{displayProfile.name}</Text>
                       {genderIcon && <Ionicons name={genderIcon} size={16} color={colors.white} />}
-                      <View style={s.spacer} />
                       <TouchableOpacity
                         style={s.heroEditBtn}
                         activeOpacity={0.75}
@@ -313,7 +312,6 @@ export default function ProfileTabScreen({ navigation, route }) {
                   <View style={s.heroNameRow}>
                     <Text style={s.heroName}>{displayProfile.name}</Text>
                     {genderIcon && <Ionicons name={genderIcon} size={16} color={colors.white} />}
-                    <View style={s.spacer} />
                     <TouchableOpacity style={s.heroFollowBtn} activeOpacity={0.75}>
                       <Text style={s.heroFollowBtnText}>关注</Text>
                     </TouchableOpacity>
@@ -440,7 +438,6 @@ const s = StyleSheet.create({
   },
   heroNameBlock: { flex: 1 },
   heroNameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  spacer: { flex: 1 },
   heroName: { ...typography.h2, color: colors.white },
   heroSignature: { ...typography.caption, color: 'rgba(255,255,255,0.7)', lineHeight: 18 },
   heroSocialRow: {
@@ -453,13 +450,13 @@ const s = StyleSheet.create({
   heroStatDivider: { width: 1, height: 16, backgroundColor: 'rgba(255,255,255,0.3)' },
   heroEditBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs,
-    height: 32, paddingHorizontal: spacing.sm,
+    height: 24, paddingHorizontal: spacing.sm,
     borderRadius: spacing.radiusPill,
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.6)',
   },
   heroEditBtnText: { ...typography.captionBold, color: colors.white, fontSize: 12 },
   heroFollowBtn: {
-    minHeight: 32, paddingHorizontal: spacing.md,
+    height: 24, paddingHorizontal: spacing.sm,
     borderRadius: spacing.radiusPill,
     backgroundColor: colors.secondary,
     alignItems: 'center', justifyContent: 'center',
