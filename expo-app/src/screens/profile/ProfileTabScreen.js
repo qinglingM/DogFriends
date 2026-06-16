@@ -566,17 +566,18 @@ const s = StyleSheet.create({
   heroStatDivider: { width: 1, height: 16, backgroundColor: 'rgba(255,255,255,0.3)' },
   heroEditBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4,
-    height: 32, borderRadius: spacing.radiusPill,
+    minHeight: spacing.touchTarget, paddingHorizontal: spacing.md,
+    borderRadius: spacing.radiusPill,
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.6)',
     alignSelf: 'flex-start',
   },
   heroEditBtnText: { ...typography.captionBold, color: colors.white, fontSize: 12 },
   heroFollowBtn: {
-    height: 32, borderRadius: spacing.radiusPill,
+    minHeight: spacing.touchTarget, paddingHorizontal: spacing.lg,
+    borderRadius: spacing.radiusPill,
     backgroundColor: colors.secondary,
     alignItems: 'center', justifyContent: 'center',
     alignSelf: 'flex-start',
-    paddingHorizontal: spacing.lg,
   },
   heroFollowBtnText: { ...typography.captionBold, color: colors.white, fontSize: 12 },
 
@@ -587,7 +588,7 @@ const s = StyleSheet.create({
     paddingHorizontal: spacing.md, marginBottom: spacing.sm,
   },
   sectionTitle: { ...typography.h3, color: colors.secondary },
-  sectionAction: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  sectionAction: { flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: spacing.touchTarget },
   sectionActionText: { ...typography.caption, color: colors.secondary },
 
   /* Dog card grid */
@@ -618,7 +619,7 @@ const s = StyleSheet.create({
   dogCardName: { ...typography.bodyBold, fontSize: 14, color: colors.secondary },
   dogCardBreed: { ...typography.caption, color: colors.textLight, marginTop: 1 },
   dogCardEditBtn: {
-    paddingHorizontal: 8, height: 22,
+    paddingHorizontal: spacing.sm, minHeight: spacing.touchTarget / 2,
     borderRadius: spacing.radiusPill, borderWidth: 1, borderColor: colors.border,
     alignItems: 'center', justifyContent: 'center',
   },
@@ -627,7 +628,7 @@ const s = StyleSheet.create({
     flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: spacing.sm,
   },
   dogCardTag: {
-    paddingHorizontal: 8, paddingVertical: 3,
+    paddingHorizontal: spacing.sm, paddingVertical: spacing.xs,
     borderRadius: spacing.radiusPill, backgroundColor: colors.chipDefault,
   },
   dogCardTagText: { ...typography.caption, color: colors.secondary, fontSize: 11 },
