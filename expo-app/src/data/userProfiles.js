@@ -25,7 +25,7 @@ export const USER_PROFILES = {
     cover: 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1000&q=80',
     dogs: [
       {
-        id: 'doudou', name: '豆豆', breed: '柴犬', age: '2岁', gender: '男生', traits: ['亲人', '慢热'],
+        id: 'doudou', name: '豆豆', breed: '柴犬', size: 'medium', age: '2岁', gender: '男生', traits: ['亲人', '慢热'],
         image: 'https://images.unsplash.com/photo-1507146426996-ef05306b995a?auto=format&fit=crop&w=600&q=80',
         publicProfile: true,
         birthday: '2024-03-15', weight: 10, neutered: true,
@@ -46,7 +46,7 @@ export const USER_PROFILES = {
     cover: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1000&q=80',
     dogs: [
       {
-        id: 'kele', name: '可乐', breed: '柯基', age: '3岁', gender: '女生', traits: ['活泼', '贪吃'],
+        id: 'kele', name: '可乐', breed: '柯基', size: 'medium', age: '3岁', gender: '女生', traits: ['活泼', '贪吃'],
         image: 'https://images.unsplash.com/photo-1612536057832-2ff7ead58194?auto=format&fit=crop&w=600&q=80',
         publicProfile: true,
         birthday: '2023-06-20', weight: 12, neutered: true,
@@ -67,7 +67,7 @@ export const USER_PROFILES = {
     cover: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=1000&q=80',
     dogs: [
       {
-        id: 'buding', name: '布丁', breed: '比熊', age: '4岁', gender: '男生', traits: ['胆小', '亲人'],
+        id: 'buding', name: '布丁', breed: '比熊', size: 'small', age: '4岁', gender: '男生', traits: ['胆小', '亲人'],
         image: 'https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?auto=format&fit=crop&w=600&q=80',
         publicProfile: false,
         birthday: '2022-01-10', weight: 5, neutered: false,
@@ -88,7 +88,7 @@ export const USER_PROFILES = {
     cover: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1000&q=80',
     dogs: [
       {
-        id: 'lizi', name: '栗子', breed: '柯基', age: '2岁', gender: '男生', traits: ['稳定', '亲人'],
+        id: 'lizi', name: '栗子', breed: '柯基', size: 'medium', age: '2岁', gender: '男生', traits: ['稳定', '亲人'],
         image: 'https://images.unsplash.com/photo-1557973557-ddfa9ee8c9c3?auto=format&fit=crop&w=600&q=80',
         publicProfile: true,
         birthday: '2024-05-08', weight: 11, neutered: true,
@@ -109,7 +109,7 @@ export const USER_PROFILES = {
     cover: 'https://images.unsplash.com/photo-1472214103451-9374bd1c798e?auto=format&fit=crop&w=1000&q=80',
     dogs: [
       {
-        id: 'ahuang', name: '阿黄', breed: '拉布拉多', age: '5岁', gender: '男生', traits: ['温顺', '大型犬'],
+        id: 'ahuang', name: '阿黄', breed: '拉布拉多', size: 'large', age: '5岁', gender: '男生', traits: ['温顺', '大型犬'],
         image: 'https://images.unsplash.com/photo-1537151625747-768eb6cf92b2?auto=format&fit=crop&w=600&q=80',
         publicProfile: true,
         birthday: '2021-09-22', weight: 30, neutered: true,
@@ -130,7 +130,7 @@ export const USER_PROFILES = {
     cover: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=1000&q=80',
     dogs: [
       {
-        id: 'laoda', name: '老大', breed: '金毛寻回犬', age: '3岁', gender: '男生', traits: ['温顺', '友好'],
+        id: 'laoda', name: '老大', breed: '金毛寻回犬', size: 'large', age: '3岁', gender: '男生', traits: ['温顺', '友好'],
         image: 'https://images.unsplash.com/photo-1552053831-71594a27632d?auto=format&fit=crop&w=600&q=80',
         publicProfile: false,
         publicWalkStats: true,
@@ -139,7 +139,7 @@ export const USER_PROFILES = {
         vaccine: { done: 3, pending: 0, daysUntilReminder: 30, nextName: '狂犬疫苗', nextDate: '2026-07-15' },
       },
       {
-        id: 'laoer', name: '老二', breed: '柯基犬', age: '2岁', gender: '女生', traits: ['活泼', '爱玩'],
+        id: 'laoer', name: '老二', breed: '柯基犬', size: 'medium', age: '2岁', gender: '女生', traits: ['活泼', '爱玩'],
         image: 'https://images.unsplash.com/photo-1612536057832-2ff7ead58194?auto=format&fit=crop&w=600&q=80',
         publicProfile: true,
         publicWalkStats: true,
@@ -148,7 +148,7 @@ export const USER_PROFILES = {
         vaccine: { done: 3, pending: 1, daysUntilReminder: 15, nextName: '六联疫苗', nextDate: '2026-07-01' },
       },
       {
-        id: 'laosan', name: '老三', breed: '法国斗牛犬', age: '1岁', gender: '男生', traits: ['粘人', '贪吃'],
+        id: 'laosan', name: '老三', breed: '法国斗牛犬', size: 'small', age: '1岁', gender: '男生', traits: ['粘人', '贪吃'],
         image: 'https://images.unsplash.com/photo-1583337130417-13104dec14a6?auto=format&fit=crop&w=600&q=80',
         publicProfile: true,
         publicWalkStats: false,

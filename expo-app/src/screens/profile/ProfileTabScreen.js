@@ -113,11 +113,13 @@ function DogCard({ dog, navigation, isSelf, isExpanded, onToggleExpand, totalCou
       <View style={s.dogCard}>
         <View style={s.dogCardHeader}>
           <View style={[s.dogCardAvatar, { borderColor: genderBorderColor }]}>
-            <Ionicons name="lock-closed-outline" size={20} color={colors.textLight} />
+            <Ionicons name="lock-closed-outline" size={16} color={colors.textLight} />
           </View>
-          <View style={s.dogCardInfo}>
-            <Text style={s.dogCardName}>{dog.name || '小狗'}</Text>
+          <View style={s.dogCardInfoRow}>
+            <Text style={s.dogCardName}>狗狗</Text>
+            <View style={{ width: 22 }} />
             <Text style={s.dogCardBreed}>未公开档案</Text>
+            <View style={{ flex: 1 }} />
           </View>
         </View>
       </View>
@@ -132,53 +134,59 @@ function DogCard({ dog, navigation, isSelf, isExpanded, onToggleExpand, totalCou
     >
       <View style={s.dogCardHeader}>
         <Image source={{ uri: dog.image }} style={[s.dogCardAvatar, { borderColor: genderBorderColor }]} />
-        <View style={s.dogCardInfo}>
+        <View style={s.dogCardInfoRow}>
           <Text style={s.dogCardName}>{dog.name}</Text>
-          <Text style={s.dogCardBreed}>
-            {dog.breed} · {dog.gender === 'male' ? '♂ 公' : '♀ 母'} · {calcAge(dog.birthday)}
-          </Text>
-          <View style={s.dogCardTags}>
-            {dog.traits && dog.traits.slice(0, 2).map((t, i) => (
-              <View key={i} style={s.dogCardTag}>
-                <Text style={s.dogCardTagText}>{t}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-        {isSelf && (
-          <TouchableOpacity
-            style={s.dogCardEditBtn}
-            activeOpacity={0.7}
-            onPress={(e) => { e.stopPropagation(); navigation.navigate('DogEdit', { dogId: dog.id }); }}
-          >
-            <Ionicons name="create-outline" size={16} color={colors.textLight} />
-          </TouchableOpacity>
-        )}
-      </View>
-
-      {isExpanded && (
-        <View style={s.dogCardBody}>
-          <View style={s.dogCardDivider} />
-          {dog.size && (
-            <View style={s.dogCardDetailRow}>
-              <Ionicons name="resize-outline" size={14} color={colors.textLight} />
-              <Text style={s.dogCardDetailText}>{dog.size === 'small' ? '小型犬' : dog.size === 'medium' ? '中型犬' : '大型犬'}</Text>
-            </View>
-          )}
-          {dog.traits && dog.traits.length > 2 && (
-            <View style={s.dogCardTags}>
-              {dog.traits.slice(2).map((t, i) => (
+          <Ionicons name={dog.gender === 'male' ? 'male' : 'female'} size={14} color={colors.textLight} />
+          {dog.traits && dog.traits.length > 0 && (
+            <View style={s.dogCardTagsInline}>
+              {dog.traits.slice(0, 2).map((t, i) => (
                 <View key={i} style={s.dogCardTag}>
                   <Text style={s.dogCardTagText}>{t}</Text>
                 </View>
               ))}
             </View>
           )}
+          <View style={{ flex: 1 }} />
+          <Text style={s.dogCardBreed}>{dog.breed}</Text>
+        </View>
+        <TouchableOpacity
+          style={s.dogCardChevron}
+          activeOpacity={0.7}
+          onPress={onToggleExpand}
+        >
+          <Ionicons name={isExpanded ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textLight} />
+        </TouchableOpacity>
+      </View>
+
+      {isExpanded && (
+        <View style={s.dogCardBody}>
+          <View style={s.dogCardDivider} />
+          <View style={{
+            flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
+            minHeight: spacing.touchTarget,
+            paddingLeft: spacing.touchTarget + spacing.sm,
+          }}>
+            {dog.size ? (
+              <Text style={s.dogCardDetailText}>
+                {dog.size === 'small' ? '小型犬' : dog.size === 'medium' ? '中型犬' : '大型犬'}
+              </Text>
+            ) : null}
+            {dog.size ? <View style={{ width: 14 }} /> : null}
+            <Text style={s.dogCardDetailText}>{dog.birthday || ''}</Text>
+            <View style={{ flex: 1 }} />
+            <Text style={s.dogCardDetailText}>{dog.birthday ? calcAge(dog.birthday) : ''}</Text>
+            {isSelf && (
+              <TouchableOpacity
+                style={s.dogCardEditBtn}
+                activeOpacity={0.7}
+                onPress={(e) => { e.stopPropagation(); navigation.navigate('DogEdit', { dogId: dog.id }); }}
+              >
+                <Ionicons name="create-outline" size={16} color={colors.textLight} />
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
       )}
-      <View style={s.dogCardExpandHint}>
-        <Ionicons name={isExpanded ? 'chevron-up' : 'chevron-down'} size={14} color={colors.textLight} />
-      </View>
     </TouchableOpacity>
   );
 }
@@ -438,15 +446,15 @@ const s = StyleSheet.create({
   },
   heroNameBlock: { flex: 1 },
   heroNameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  heroName: { ...typography.h2, color: colors.white },
-  heroSignature: { ...typography.caption, color: 'rgba(255,255,255,0.7)', lineHeight: 18 },
+  heroName: { ...typography.h2, color: colors.white, fontSize: 24 },
+  heroSignature: { ...typography.caption, color: 'rgba(255,255,255,0.7)', fontSize: 14, lineHeight: 22 },
   heroSocialRow: {
     flexDirection: 'row', alignItems: 'center',
     paddingTop: spacing.xs, gap: spacing.md,
   },
   statBlock: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
-  statValue: { ...typography.captionBold, color: colors.white, fontSize: 12 },
-  statLabel: { ...typography.caption, color: 'rgba(255,255,255,0.7)' },
+  statValue: { ...typography.captionBold, color: colors.white, fontSize: 14 },
+  statLabel: { ...typography.caption, color: 'rgba(255,255,255,0.7)', fontSize: 14 },
   heroStatDivider: { width: 1, height: 16, backgroundColor: 'rgba(255,255,255,0.3)' },
   heroEditBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs,
@@ -454,14 +462,14 @@ const s = StyleSheet.create({
     borderRadius: spacing.radiusPill,
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.6)',
   },
-  heroEditBtnText: { ...typography.captionBold, color: colors.white, fontSize: 12 },
+  heroEditBtnText: { ...typography.captionBold, color: colors.white, fontSize: 14 },
   heroFollowBtn: {
     height: 24, paddingHorizontal: spacing.sm,
     borderRadius: spacing.radiusPill,
     backgroundColor: colors.secondary,
     alignItems: 'center', justifyContent: 'center',
   },
-  heroFollowBtnText: { ...typography.caption, color: colors.white, fontWeight: 600 },
+  heroFollowBtnText: { ...typography.caption, color: colors.white, fontWeight: 600, fontSize: 14 },
 
   /* Section */
   section: { marginTop: 12 },
@@ -479,18 +487,21 @@ const s = StyleSheet.create({
   dogCard: {
     backgroundColor: colors.white,
     borderRadius: spacing.radiusMd,
-    padding: spacing.sm,
+    paddingVertical: spacing.xs, paddingHorizontal: spacing.sm,
   },
   dogCardHeader: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
   },
   dogCardAvatar: {
-    width: 48, height: 48, borderRadius: 24,
+    width: 44, height: 44, borderRadius: 22,
     borderWidth: 2, backgroundColor: colors.chipDefault,
+    alignItems: 'center', justifyContent: 'center',
   },
-  dogCardInfo: { flex: 1, gap: 2 },
+  dogCardInfoRow: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
+  },
   dogCardName: { ...typography.bodyBold, fontSize: 14, color: colors.secondary },
-  dogCardBreed: { ...typography.caption, color: colors.textLight },
+  dogCardBreed: { ...typography.caption, color: colors.textLight, fontSize: 12 },
   dogCardEditBtn: {
     width: spacing.touchTarget, height: spacing.touchTarget,
     alignItems: 'center', justifyContent: 'center',
@@ -499,25 +510,26 @@ const s = StyleSheet.create({
   dogCardTags: {
     flexDirection: 'row', flexWrap: 'wrap', gap: spacing.tightGap, marginTop: 2,
   },
+  dogCardTagsInline: {
+    flexDirection: 'row', flexWrap: 'nowrap', gap: spacing.tightGap,
+  },
   dogCardTag: {
     paddingHorizontal: spacing.sm, paddingVertical: 2,
     borderRadius: spacing.radiusPill, backgroundColor: colors.chipDefault,
   },
   dogCardTagText: { ...typography.caption, color: colors.secondary, fontSize: 10 },
-  dogCardBody: { marginTop: spacing.sm, paddingLeft: 0 },
-  dogCardDivider: { height: 1, backgroundColor: colors.border, marginBottom: spacing.sm },
+  dogCardBody: { marginTop: spacing.sm },
+  dogCardDivider: { height: 1, backgroundColor: colors.border, marginBottom: spacing.xs },
   dogCardWalkStats: {
     flexDirection: 'row', justifyContent: 'space-around', marginBottom: spacing.sm,
   },
   dogCardWalkStat: { alignItems: 'center' },
   dogCardWalkValue: { ...typography.bodyBold, fontSize: 16, color: colors.secondary },
   dogCardWalkLabel: { ...typography.caption, color: colors.textLight },
-  dogCardDetailRow: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.tightGap, marginBottom: spacing.xs,
-  },
-  dogCardDetailText: { ...typography.caption, color: colors.textLight, fontSize: 12 },
-  dogCardExpandHint: {
-    alignItems: 'center', paddingTop: spacing.xs,
+  dogCardDetailText: { ...typography.caption, color: colors.textLight, fontSize: 13 },
+  dogCardChevron: {
+    width: spacing.touchTarget, height: spacing.touchTarget,
+    alignItems: 'center', justifyContent: 'center',
   },
 
   /* Feed */
