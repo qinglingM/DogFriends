@@ -478,7 +478,7 @@ const s = StyleSheet.create({
   },
   heroEditBtnText: { ...typography.captionBold, color: colors.white, fontSize: 12 },
   heroFollowBtn: {
-    minHeight: spacing.touchTarget, paddingHorizontal: spacing.lg,
+    minHeight: 32, paddingHorizontal: spacing.md,
     borderRadius: spacing.radiusPill,
     backgroundColor: colors.secondary,
     alignItems: 'center', justifyContent: 'center',
@@ -486,7 +486,7 @@ const s = StyleSheet.create({
   heroFollowBtnText: { ...typography.caption, color: colors.white, fontWeight: 600 },
 
   /* Section */
-  section: { marginTop: spacing.lg },
+  section: { marginTop: 12 },
   sectionHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: spacing.md, marginBottom: spacing.sm,
