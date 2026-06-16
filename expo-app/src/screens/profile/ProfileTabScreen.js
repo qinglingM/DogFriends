@@ -114,17 +114,20 @@ function CircleButton({ icon, onPress }) {
   );
 }
 
-function DogCard({ dog, navigation, isSelf, isExpanded, onToggleExpand }) {
+function DogCard({ dog, navigation, isSelf, isExpanded, onToggleExpand, totalCount }) {
   if (!dog) return null;
   const ws = dog.walkStats;
   const genderBorderColor = dog.gender === 'male' ? '#4A90D9' : '#E88BA4';
 
+  const cardStyle = getCardStyle(totalCount);
+  const avatarStyle = getAvatarStyle(totalCount);
+
   if (dog.publicProfile === false) {
     return (
-      <View style={s.dogCard}>
+      <View style={[s.dogCard, cardStyle]}>
         <View style={s.dogCardHeader}>
-          <View style={[s.dogCardAvatar, { borderColor: genderBorderColor }]}>
-            <Ionicons name="lock-closed-outline" size={24} color={colors.textLight} />
+          <View style={[s.dogCardAvatar, avatarStyle, { borderColor: genderBorderColor }]}>
+            <Ionicons name="lock-closed-outline" size={totalCount === 1 ? 28 : 18} color={colors.textLight} />
           </View>
           <View style={s.dogCardInfo}>
             <Text style={s.dogCardName}>{dog.name || '小狗'}</Text>
@@ -135,21 +138,124 @@ function DogCard({ dog, navigation, isSelf, isExpanded, onToggleExpand }) {
     );
   }
 
+  if (totalCount === 1) {
+    return (
+      <TouchableOpacity
+        style={[s.dogCard, cardStyle]}
+        activeOpacity={0.85}
+        onPress={onToggleExpand}
+      >
+        <View style={s.dogCardHeader}>
+          <Image source={{ uri: dog.image }} style={[s.dogCardAvatarImg, avatarStyle]} />
+          <View style={s.dogCardInfo}>
+            <Text style={s.dogCardName}>{dog.name}</Text>
+            <Text style={s.dogCardBreed}>{dog.breed}</Text>
+            <Text style={s.dogCardBreed}>{dog.gender === 'male' ? '♂ 公' : '♀ 母'} · {calcAge(dog.birthday)}</Text>
+          </View>
+          {isSelf && (
+            <TouchableOpacity
+              style={s.dogCardEditBtn}
+              activeOpacity={0.7}
+              onPress={(e) => { e.stopPropagation(); navigation.navigate('DogEdit', { dogId: dog.id }); }}
+            >
+              <Text style={s.dogCardEditText}>编辑</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+        {isExpanded && (
+          <View style={s.dogCardBody}>
+            <View style={s.dogCardDivider} />
+            <View style={s.dogCardTags}>
+              {dog.size && (
+                <View style={s.dogCardTag}>
+                  <Text style={s.dogCardTagText}>{SIZE_LABELS[dog.size] || ''}</Text>
+                </View>
+              )}
+              {dog.traits && dog.traits.slice(0, 5).map((t, i) => (
+                <View key={i} style={s.dogCardTag}>
+                  <Text style={s.dogCardTagText}>{t}</Text>
+                </View>
+              ))}
+            </View>
+            {(isSelf || dog.publicWalkStats !== false) && ws && (
+              <View style={s.dogCardWalkStats}>
+                <View style={s.dogCardWalkStat}>
+                  <Text style={s.dogCardWalkValue}>{ws.walks}</Text>
+                  <Text style={s.dogCardWalkLabel}>次</Text>
+                </View>
+                <View style={s.dogCardWalkStat}>
+                  <Text style={s.dogCardWalkValue}>{ws.distance}</Text>
+                  <Text style={s.dogCardWalkLabel}>km</Text>
+                </View>
+                <View style={s.dogCardWalkStat}>
+                  <Text style={s.dogCardWalkValue}>{ws.duration}</Text>
+                  <Text style={s.dogCardWalkLabel}>h</Text>
+                </View>
+              </View>
+            )}
+          </View>
+        )}
+        <View style={s.dogCardExpandHint}>
+          <Ionicons name={isExpanded ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textLight} />
+        </View>
+      </TouchableOpacity>
+    );
+  }
+
+  if (totalCount === 2) {
+    return (
+      <TouchableOpacity
+        style={[s.dogCard, cardStyle]}
+        activeOpacity={0.85}
+        onPress={onToggleExpand}
+      >
+        <View style={s.dogCardHeader}>
+          <Image source={{ uri: dog.image }} style={[s.dogCardAvatarImg, avatarStyle]} />
+          <View style={s.dogCardInfo}>
+            <Text style={s.dogCardName}>{dog.name}</Text>
+            <Text style={s.dogCardBreed}>{dog.breed}</Text>
+            <Text style={s.dogCardBreed}>{calcAge(dog.birthday)}</Text>
+          </View>
+          {isSelf && (
+            <TouchableOpacity
+              style={s.dogCardEditBtn}
+              activeOpacity={0.7}
+              onPress={(e) => { e.stopPropagation(); navigation.navigate('DogEdit', { dogId: dog.id }); }}
+            >
+              <Text style={s.dogCardEditText}>编辑</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+        {isExpanded && (
+          <View style={s.dogCardBody}>
+            <View style={s.dogCardDivider} />
+            <View style={s.dogCardTags}>
+              {dog.traits && dog.traits.slice(0, 3).map((t, i) => (
+                <View key={i} style={s.dogCardTag}>
+                  <Text style={s.dogCardTagText}>{t}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+        <View style={s.dogCardExpandHint}>
+          <Ionicons name={isExpanded ? 'chevron-up' : 'chevron-down'} size={14} color={colors.textLight} />
+        </View>
+      </TouchableOpacity>
+    );
+  }
+
   return (
     <TouchableOpacity
-      style={s.dogCard}
+      style={[s.dogCard, cardStyle]}
       activeOpacity={0.85}
       onPress={onToggleExpand}
     >
       <View style={s.dogCardHeader}>
-        <View style={[s.dogCardAvatar, { borderColor: genderBorderColor }]}>
-          <Image source={{ uri: dog.image }} style={s.dogCardAvatarImg} />
-        </View>
+        <Image source={{ uri: dog.image }} style={[s.dogCardAvatarImg, avatarStyle]} />
         <View style={s.dogCardInfo}>
           <Text style={s.dogCardName}>{dog.name}</Text>
-          <Text style={s.dogCardBreed}>
-            {dog.breed} · {dog.gender === 'male' ? '♂ 公' : '♀ 母'}
-          </Text>
+          <Text style={s.dogCardBreed}>{calcAge(dog.birthday)}</Text>
         </View>
         {isSelf && (
           <TouchableOpacity
@@ -161,58 +267,33 @@ function DogCard({ dog, navigation, isSelf, isExpanded, onToggleExpand }) {
           </TouchableOpacity>
         )}
       </View>
-
-      <View style={s.dogCardTags}>
-        {dog.size && (
-          <View style={s.dogCardTag}>
-            <Text style={s.dogCardTagText}>{SIZE_LABELS[dog.size] || ''}</Text>
-          </View>
-        )}
-        {calcAge(dog.birthday) && (
-          <View style={s.dogCardTag}>
-            <Text style={s.dogCardTagText}>{calcAge(dog.birthday)}</Text>
-          </View>
-        )}
-        {dog.traits && dog.traits.slice(0, 3).map((t, i) => (
-          <View key={i} style={s.dogCardTag}>
-            <Text style={s.dogCardTagText}>{t}</Text>
-          </View>
-        ))}
-      </View>
-
       {isExpanded && (
         <View style={s.dogCardBody}>
           <View style={s.dogCardDivider} />
-          {(isSelf || dog.publicWalkStats !== false) && ws && (
-            <View style={s.dogCardWalkStats}>
-              <View style={s.dogCardWalkStat}>
-                <Text style={s.dogCardWalkValue}>{ws.walks}</Text>
-                <Text style={s.dogCardWalkLabel}>次遛狗</Text>
+          <View style={s.dogCardTags}>
+            {dog.traits && dog.traits.slice(0, 2).map((t, i) => (
+              <View key={i} style={s.dogCardTag}>
+                <Text style={s.dogCardTagText}>{t}</Text>
               </View>
-              <View style={s.dogCardWalkStat}>
-                <Text style={s.dogCardWalkValue}>{ws.distance}</Text>
-                <Text style={s.dogCardWalkLabel}>km</Text>
-              </View>
-              <View style={s.dogCardWalkStat}>
-                <Text style={s.dogCardWalkValue}>{ws.duration}</Text>
-                <Text style={s.dogCardWalkLabel}>h</Text>
-              </View>
-            </View>
-          )}
-          {dog.birthday && (
-            <View style={s.dogCardDetailRow}>
-              <Ionicons name="calendar-outline" size={14} color={colors.textLight} />
-              <Text style={s.dogCardDetailText}>生日 {dog.birthday}</Text>
-            </View>
-          )}
+            ))}
+          </View>
         </View>
       )}
-
-      <View style={s.dogCardExpandHint}>
-        <Ionicons name={isExpanded ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textLight} />
-      </View>
     </TouchableOpacity>
   );
+}
+
+function getCardStyle(totalCount) {
+  if (totalCount === 1) {
+    return { width: Dimensions.get('window').width - spacing.md * 2, padding: spacing.md };
+  }
+  return {};
+}
+
+function getAvatarStyle(totalCount) {
+  if (totalCount === 1) return { width: 80, height: 80, borderRadius: 40 };
+  if (totalCount === 2) return { width: 56, height: 56, borderRadius: 28 };
+  return { width: 40, height: 40, borderRadius: 20 };
 }
 
 export default function ProfileTabScreen({ navigation, route }) {
@@ -371,7 +452,7 @@ export default function ProfileTabScreen({ navigation, route }) {
                 </TouchableOpacity>
               )}
             </View>
-            <View style={s.dogCardGrid}>
+            <View style={[s.dogCardGrid, dogsList.length === 1 && s.dogCardGridSingle]}>
               {dogsList.map(dog => (
                 <DogCard
                   key={dog.id}
@@ -380,6 +461,7 @@ export default function ProfileTabScreen({ navigation, route }) {
                   isSelf={isSelf}
                   isExpanded={expandedDogId === dog.id}
                   onToggleExpand={() => setExpandedDogId(expandedDogId === dog.id ? null : dog.id)}
+                  totalCount={dogsList.length}
                 />
               ))}
             </View>
@@ -512,6 +594,9 @@ const s = StyleSheet.create({
   dogCardGrid: {
     flexDirection: 'row', flexWrap: 'wrap',
     paddingHorizontal: spacing.md, gap: spacing.sm,
+  },
+  dogCardGridSingle: {
+    paddingHorizontal: spacing.md, gap: 0,
   },
   dogCard: {
     width: Dimensions.get('window').width / 2 - spacing.md - spacing.sm / 2,
