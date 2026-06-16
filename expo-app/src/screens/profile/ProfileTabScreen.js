@@ -277,7 +277,6 @@ export default function ProfileTabScreen({ navigation, route }) {
               <View style={s.heroNav}>
                 <View style={s.spacer} />
                 <View style={s.heroActions}>
-                  <CircleButton icon="share-social-outline" />
                   <CircleButton icon="ellipsis-horizontal" />
                 </View>
               </View>
@@ -329,7 +328,6 @@ export default function ProfileTabScreen({ navigation, route }) {
             <View style={s.heroNav}>
               <View style={s.spacer} />
               <View style={s.heroActions}>
-                <CircleButton icon="share-social-outline" />
                 <CircleButton icon="ellipsis-horizontal" />
               </View>
             </View>
