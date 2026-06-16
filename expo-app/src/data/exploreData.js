@@ -53,18 +53,18 @@ export function getStatusBanner(status) {
 // ---------- 城市列表 ----------
 
 export const CITY_OPTIONS = [
-  { name: '北京', districts: ['朝阳区', '海淀区', '东城区', '西城区', '丰台区', '通州区', '大兴区', '昌平区'] },
-  { name: '上海', districts: ['徐汇区', '黄浦区', '静安区', '长宁区', '浦东新区', '虹口区', '杨浦区', '普陀区'] },
-  { name: '广州', districts: ['天河区', '越秀区', '海珠区', '荔湾区', '白云区', '番禺区', '黄埔区', '花都区'] },
-  { name: '深圳', districts: ['南山区', '福田区', '罗湖区', '宝安区', '龙岗区', '龙华区', '光明区', '盐田区'] },
-  { name: '杭州', districts: ['西湖区', '上城区', '拱墅区', '滨江区', '余杭区', '萧山区', '临平区', '钱塘区'] },
-  { name: '成都', districts: ['锦江区', '青羊区', '武侯区', '成华区', '高新区', '天府新区', '双流区', '龙泉驿区'] },
-  { name: '武汉', districts: ['武昌区', '江汉区', '洪山区', '汉阳区', '江岸区', '硚口区', '东湖高新区', '经开区'] },
-  { name: '南京', districts: ['玄武区', '秦淮区', '建邺区', '鼓楼区', '栖霞区', '江宁区', '浦口区', '雨花台区'] },
-  { name: '苏州', districts: ['姑苏区', '吴中区', '相城区', '工业园区', '高新区', '吴江区', '昆山市', '太仓市'] },
-  { name: '西安', districts: ['雁塔区', '碑林区', '未央区', '莲湖区', '灞桥区', '长安区', '高新区', '曲江新区'] },
-  { name: '重庆', districts: ['渝中区', '江北区', '南岸区', '沙坪坝区', '九龙坡区', '渝北区', '巴南区', '北碚区'] },
-  { name: '长沙', districts: ['岳麓区', '天心区', '芙蓉区', '开福区', '雨花区', '望城区', '长沙县', '浏阳市'] },
+  { name: '北京' },
+  { name: '上海' },
+  { name: '广州' },
+  { name: '深圳' },
+  { name: '杭州' },
+  { name: '成都' },
+  { name: '武汉' },
+  { name: '南京' },
+  { name: '苏州' },
+  { name: '西安' },
+  { name: '重庆' },
+  { name: '长沙' },
 ];
 
 // ---------- 分类与筛选 (PRD §5.6 / §5.7) ----------
@@ -193,9 +193,7 @@ export const INITIAL_LOCATIONS = [
     category: 'cafe',
     categoryLabel: '咖啡店',
     city: '上海',
-    district: '徐汇区',
     distanceKm: 1.8,
-    address: '徐汇区某某路 123 号',
     phone: '021-1234-5678',
     hours: '10:00 - 22:00',
     entryArea: 'terrace_only',
@@ -219,9 +217,7 @@ export const INITIAL_LOCATIONS = [
     category: 'park',
     categoryLabel: '公园',
     city: '上海',
-    district: '黄浦区',
     distanceKm: 3.2,
-    address: '黄浦区复兴中路 105 号',
     phone: '',
     hours: '06:00 - 22:00',
     entryArea: 'outdoor',
@@ -246,9 +242,7 @@ export const INITIAL_LOCATIONS = [
     category: 'cafe',
     categoryLabel: '咖啡店',
     city: '上海',
-    district: '徐汇区',
     distanceKm: 1.2,
-    address: '徐汇区某某路 88 号',
     phone: '021-8888-8888',
     hours: '11:00 - 21:00',
     entryArea: 'indoor',
@@ -342,12 +336,10 @@ export const INITIAL_VALIDATIONS = {
 // ---------- 地图选点 Mock：附近 POI / 当前位置 ----------
 
 export const MOCK_DETECTED_LOCATION = {
-  name: '徐汇区某某路 1 号',
+  name: '附近',
   category: 'other',
   categoryLabel: '其他',
   city: '上海',
-  district: '徐汇区',
-  address: '徐汇区某某路 1 号',
   source: 'current_location',
 };
 
@@ -358,8 +350,6 @@ export const MOCK_NEARBY_POIS = [
     category: 'cafe',
     categoryLabel: '咖啡店',
     city: '上海',
-    district: '徐汇区',
-    address: '徐汇区永康路 200 号',
     distanceLabel: '约 120 米',
   },
   {
@@ -368,8 +358,6 @@ export const MOCK_NEARBY_POIS = [
     category: 'cafe',
     categoryLabel: '咖啡店',
     city: '上海',
-    district: '徐汇区',
-    address: '徐汇区永康路 50 号',
     distanceLabel: '约 240 米',
   },
   {
@@ -378,8 +366,6 @@ export const MOCK_NEARBY_POIS = [
     category: 'park',
     categoryLabel: '公园',
     city: '上海',
-    district: '徐汇区',
-    address: '徐汇区肇嘉浜路 889 号',
     distanceLabel: '约 380 米',
   },
   {
@@ -388,8 +374,6 @@ export const MOCK_NEARBY_POIS = [
     category: 'restaurant',
     categoryLabel: '餐厅',
     city: '上海',
-    district: '徐汇区',
-    address: '徐汇区淮海中路 999 号',
     distanceLabel: '约 520 米',
   },
   {
@@ -398,8 +382,6 @@ export const MOCK_NEARBY_POIS = [
     category: 'cafe',
     categoryLabel: '咖啡店',
     city: '上海',
-    district: '徐汇区',
-    address: '徐汇区肇嘉浜路 1111 号',
     distanceLabel: '约 640 米',
   },
   {
@@ -408,8 +390,6 @@ export const MOCK_NEARBY_POIS = [
     category: 'park',
     categoryLabel: '公园',
     city: '上海',
-    district: '徐汇区',
-    address: '徐汇区南丹路 17 号',
     distanceLabel: '约 880 米',
   },
 ];
@@ -421,7 +401,7 @@ export const INITIAL_CONTRIBUTIONS = [
     id: 'c_1',
     locationId: 'loc_paw_cafe',
     locationName: '爪爪咖啡 Paw Cafe',
-    locationLabel: '咖啡店 · 徐汇区',
+    locationLabel: '咖啡店',
     type: '新增地点',
     time: '2026-06-08',
     status: LOCATION_STATUS.USER_SUBMITTED,
@@ -431,7 +411,7 @@ export const INITIAL_CONTRIBUTIONS = [
     id: 'c_2',
     locationId: 'loc_bloom',
     locationName: 'BLOOM Coffee',
-    locationLabel: '咖啡店 · 徐汇区',
+    locationLabel: '咖啡店',
     type: '更新信息',
     time: '2026-06-06',
     status: LOCATION_STATUS.RECENT_VISIT,

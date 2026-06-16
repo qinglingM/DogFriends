@@ -42,7 +42,7 @@ function reducer(state, action) {
             id: `c_${Date.now()}`,
             locationId: newLoc.id,
             locationName: newLoc.name,
-            locationLabel: `${newLoc.categoryLabel} · ${newLoc.district}`,
+            locationLabel: `${newLoc.categoryLabel}`,
             type: '新增地点',
             time: new Date().toISOString().slice(0, 10),
             status: LOCATION_STATUS.USER_SUBMITTED,
@@ -88,7 +88,7 @@ function reducer(state, action) {
             locationId,
             locationName: state.locations.find(l => l.id === locationId)?.name || '',
             locationLabel: state.locations.find(l => l.id === locationId)
-              ? `${state.locations.find(l => l.id === locationId).categoryLabel} · ${state.locations.find(l => l.id === locationId).district}`
+              ? `${state.locations.find(l => l.id === locationId).categoryLabel}`
               : '',
             type: '更新信息',
             time: new Date().toISOString().slice(0, 10),

@@ -56,7 +56,7 @@ export default function UpdateInfoScreen({ route, navigation }) {
         {location && (
           <View style={styles.locationCard}>
             <Text style={styles.locName}>{location.name}</Text>
-            <Text style={styles.locType}>{location.categoryLabel} · {location.district}</Text>
+            <Text style={styles.locType}>{location.categoryLabel} · {location.city}</Text>
           </View>
         )}
 

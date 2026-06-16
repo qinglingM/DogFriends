@@ -6,6 +6,8 @@ import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { typography } from '../../theme/typography';
 import { useExplore } from '../../contexts/ExploreContext';
+import { useProfile } from '../../contexts/ProfileContext';
+import CityPickerModal from '../../components/CityPickerModal';
 import {
   CATEGORIES,
   SCENE_FILTERS,
@@ -31,7 +33,8 @@ function matchFilter(key, loc) {
 export default function ExploreHomeScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const { locations, favorites, toggleFavorite } = useExplore();
-  const [selectedCity, setSelectedCity] = useState('上海');
+  const { profile } = useProfile();
+  const [selectedCity, setSelectedCity] = useState(profile.city || '上海');
   const [cityPickerOpen, setCityPickerOpen] = useState(false);
   const [category, setCategory] = useState('all');
   const [selectedFilter, setSelectedFilter] = useState(null);
@@ -80,7 +83,7 @@ export default function ExploreHomeScreen({ navigation }) {
             </View>
           </View>
           <Text style={styles.locType}>
-            {loc.categoryLabel} · {loc.district} · {loc.distanceKm}km
+            {loc.categoryLabel} · {loc.city} · {loc.distanceKm}km
           </Text>
 
           <View style={styles.locTags}>
@@ -101,36 +104,11 @@ export default function ExploreHomeScreen({ navigation }) {
         <View style={styles.citySelectorWrap}>
           <TouchableOpacity
             style={styles.citySelector}
-            onPress={() => setCityPickerOpen(!cityPickerOpen)}
+            onPress={() => setCityPickerOpen(true)}
           >
             <Text style={styles.cityText}>{selectedCity}</Text>
-            <Ionicons name={cityPickerOpen ? "chevron-up" : "chevron-down"} size={12} color={colors.secondary} />
+            <Ionicons name="chevron-down" size={12} color={colors.secondary} />
           </TouchableOpacity>
-          {cityPickerOpen && (
-            <View style={styles.cityPickerDropdown}>
-              <ScrollView showsVerticalScrollIndicator={false}>
-                {CITY_OPTIONS.map(city => {
-                  const active = city.name === selectedCity;
-                  return (
-                    <TouchableOpacity
-                      key={city.name}
-                      style={[styles.cityPickerRow, active && styles.cityPickerRowActive]}
-                      activeOpacity={0.7}
-                      onPress={() => {
-                        setSelectedCity(city.name);
-                        setCityPickerOpen(false);
-                      }}
-                    >
-                      <Text style={[styles.cityPickerText, active && styles.cityPickerTextActive]}>
-                        {city.name}
-                      </Text>
-                      {active && <Ionicons name="checkmark" size={18} color={colors.secondary} />}
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
-            </View>
-          )}
         </View>
         <TouchableOpacity style={styles.searchBar}>
           <Ionicons name="search" size={18} color={colors.textLight} />
@@ -202,6 +180,17 @@ export default function ExploreHomeScreen({ navigation }) {
       >
         <Ionicons name="map-pin" size={24} color={colors.secondary} />
       </TouchableOpacity>
+
+      <CityPickerModal
+        visible={cityPickerOpen}
+        province={null}
+        city={selectedCity}
+        onConfirm={({ city }) => {
+          if (city) setSelectedCity(city);
+          setCityPickerOpen(false);
+        }}
+        onCancel={() => setCityPickerOpen(false)}
+      />
     </View>
   );
 }

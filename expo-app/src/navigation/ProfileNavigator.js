@@ -1,8 +1,7 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import ProfileTabScreen from '../screens/profile/ProfileTabScreen';
-import ProfileScreen from '../screens/profile/ProfileScreen';
-import PersonalProfileScreen from '../screens/profile/PersonalProfileScreen';
+import EditProfileScreen from '../screens/profile/EditProfileScreen';
 import ProfileFeedDetailScreen from '../screens/profile/ProfileFeedDetailScreen';
 import DogProfileScreen from '../screens/profile/DogProfileScreen';
 import DogEditScreen from '../screens/profile/DogEditScreen';
@@ -10,9 +9,6 @@ import DogSwitchScreen from '../screens/profile/DogSwitchScreen';
 import VaccineScreen from '../screens/profile/VaccineScreen';
 import FavoriteLocationsScreen from '../screens/profile/FavoriteLocationsScreen';
 import ContributionHistoryScreen from '../screens/profile/ContributionHistoryScreen';
-import BadgeWallScreen from '../screens/profile/BadgeWallScreen';
-import BadgeDetailScreen from '../screens/profile/BadgeDetailScreen';
-import EarnedBadgesScreen from '../screens/profile/EarnedBadgesScreen';
 import WalkHistoryScreen from '../screens/walk/WalkHistoryScreen';
 import WalkDetailScreen from '../screens/walk/WalkDetailScreen';
 import LocationDetailScreen from '../screens/explore/LocationDetailScreen';
@@ -25,8 +21,8 @@ export default function ProfileNavigator() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="ProfileHome" component={ProfileTabScreen} />
-      <Stack.Screen name="ProfileLegacy" component={ProfileScreen} />
-      <Stack.Screen name="PersonalProfile" component={PersonalProfileScreen} />
+      <Stack.Screen name="PersonalProfile" component={ProfileTabScreen} />
+      <Stack.Screen name="EditProfile" component={EditProfileScreen} />
       <Stack.Screen name="ProfileFeedDetail" component={ProfileFeedDetailScreen} />
       <Stack.Screen name="DogProfile" component={DogProfileScreen} />
       <Stack.Screen name="DogEdit" component={DogEditScreen} />
@@ -34,11 +30,8 @@ export default function ProfileNavigator() {
       <Stack.Screen name="Vaccine" component={VaccineScreen} />
       <Stack.Screen name="FavoriteLocations" component={FavoriteLocationsScreen} />
       <Stack.Screen name="ContributionHistory" component={ContributionHistoryScreen} />
-      <Stack.Screen name="BadgeWall" component={BadgeWallScreen} />
-      <Stack.Screen name="EarnedBadges" component={EarnedBadgesScreen} />
       <Stack.Screen name="LocationDetail" component={LocationDetailScreen} />
       <Stack.Screen name="UpdateInfo" component={UpdateInfoScreen} />
-      <Stack.Screen name="BadgeDetail" component={BadgeDetailScreen} />
       <Stack.Screen name="WalkHistory" component={WalkHistoryScreen} />
       <Stack.Screen name="WalkDetail" component={WalkDetailScreen} />
       <Stack.Screen name="Settings" component={SettingsScreen} />

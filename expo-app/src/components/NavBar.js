@@ -6,7 +6,7 @@ import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { typography } from '../theme/typography';
 
-export default function NavBar({ title, onBack, rightAction, rightIcon, rightLabel, bgColor }) {
+export default function NavBar({ title, onBack, rightAction, rightIcon, rightLabel, rightOnPress, bgColor }) {
   const insets = useSafeAreaInsets();
 
   return (
@@ -21,7 +21,11 @@ export default function NavBar({ title, onBack, rightAction, rightIcon, rightLab
         </View>
         <Text style={styles.title} numberOfLines={1}>{title}</Text>
         <View style={styles.right}>
-          {rightLabel ? (
+          {rightLabel && rightOnPress ? (
+            <TouchableOpacity onPress={rightOnPress} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <Text style={styles.progressText}>{rightLabel}</Text>
+            </TouchableOpacity>
+          ) : rightLabel ? (
             <Text style={styles.progressText}>{rightLabel}</Text>
           ) : rightAction && rightIcon ? (
             <TouchableOpacity onPress={rightAction} style={styles.backBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
@@ -74,6 +78,7 @@ const styles = StyleSheet.create({
   },
   progressText: {
     ...typography.bodyBold,
+    fontSize: 18,
     color: colors.textLight,
   },
 });

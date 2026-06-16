@@ -77,6 +77,7 @@ export default function VaccineScreen({ navigation }) {
           fullWidth
           icon={<Ionicons name="add" size={20} color={colors.secondary} />}
           style={{ marginTop: 16 }}
+          onPress={() => {}}
         >
           添加疫苗记录
         </Button>

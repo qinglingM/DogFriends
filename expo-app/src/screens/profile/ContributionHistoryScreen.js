@@ -74,47 +74,55 @@ export default function ContributionHistoryScreen({ navigation }) {
       <NavBar title="我分享过" onBack={() => navigation.goBack()} />
 
       <ScrollView contentContainerStyle={styles.content}>
-        {sharedLocations.map(item => (
-          <TouchableOpacity
-            key={item.location.id}
-            style={styles.shareCard}
-            activeOpacity={0.78}
-            onPress={() => navigation.navigate('LocationDetail', { id: item.location.id })}
-          >
-            <View style={styles.cardTop}>
-              <LocationThumbnail location={item.location} />
-              <View style={styles.titleBlock}>
-                <Text style={styles.locationName} numberOfLines={1}>{item.location.name}</Text>
-                <Text style={styles.locationMeta} numberOfLines={1}>
-                  {item.location.categoryLabel} · {item.location.district}
-                </Text>
-              </View>
-              <TouchableOpacity
-                style={styles.supplementLink}
-                activeOpacity={0.75}
-                onPress={(event) => {
-                  event.stopPropagation();
-                  navigation.navigate('UpdateInfo', { id: item.location.id });
-                }}
-              >
-                <Text style={styles.supplementText}>补充</Text>
-                <Ionicons name="add-circle-outline" size={16} color={colors.secondary} />
-              </TouchableOpacity>
-            </View>
-
-            <Text style={styles.summaryText}>{getContributionSummary(item.types)}</Text>
-
-            <View style={styles.tagRow}>
-              {item.tags.map(tag => (
-                <View key={tag} style={styles.tagChip}>
-                  <Text style={styles.tagText}>{tag}</Text>
+        {sharedLocations.length === 0 ? (
+          <View style={styles.emptyBlock}>
+            <Ionicons name="clipboard-outline" size={32} color={colors.textLight} />
+            <Text style={styles.emptyTitle}>还没有分享记录</Text>
+            <Text style={styles.emptyText}>去探索宠物友好地点，分享你的体验吧！</Text>
+          </View>
+        ) : (
+          sharedLocations.map(item => (
+            <TouchableOpacity
+              key={item.location.id}
+              style={styles.shareCard}
+              activeOpacity={0.78}
+              onPress={() => navigation.navigate('LocationDetail', { id: item.location.id })}
+            >
+              <View style={styles.cardTop}>
+                <LocationThumbnail location={item.location} />
+                <View style={styles.titleBlock}>
+                  <Text style={styles.locationName} numberOfLines={1}>{item.location.name}</Text>
+                  <Text style={styles.locationMeta} numberOfLines={1}>
+                    {item.location.categoryLabel} · {item.location.city}
+                  </Text>
                 </View>
-              ))}
-            </View>
+                <TouchableOpacity
+                  style={styles.supplementLink}
+                  activeOpacity={0.75}
+                  onPress={(event) => {
+                    event.stopPropagation();
+                    navigation.navigate('UpdateInfo', { id: item.location.id });
+                  }}
+                >
+                  <Text style={styles.supplementText}>补充</Text>
+                  <Ionicons name="add-circle-outline" size={16} color={colors.secondary} />
+                </TouchableOpacity>
+              </View>
 
-            <Text style={styles.helpfulText}>{item.helpfulCount} 人觉得有用</Text>
-          </TouchableOpacity>
-        ))}
+              <Text style={styles.summaryText}>{getContributionSummary(item.types)}</Text>
+
+              <View style={styles.tagRow}>
+                {item.tags.map(tag => (
+                  <View key={tag} style={styles.tagChip}>
+                    <Text style={styles.tagText}>{tag}</Text>
+                  </View>
+                ))}
+              </View>
+
+              <Text style={styles.helpfulText}>{item.helpfulCount} 人觉得有用</Text>
+            </TouchableOpacity>
+          ))
+        )}
       </ScrollView>
     </View>
   );
@@ -175,4 +183,11 @@ const styles = StyleSheet.create({
   },
   tagText: { ...typography.captionBold, color: colors.textMain },
   helpfulText: { ...typography.captionBold, color: colors.secondary },
+  emptyBlock: {
+    alignItems: 'center',
+    padding: spacing.xxl,
+    gap: 8,
+  },
+  emptyTitle: { ...typography.bodyBold, color: colors.textMain },
+  emptyText: { ...typography.caption, color: colors.textLight, textAlign: 'center' },
 });

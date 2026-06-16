@@ -35,7 +35,7 @@ export default function AddLocationScreen({ navigation }) {
   const { addLocation } = useExplore();
 
   // ---- 地点定位 ----
-  const [picked, setPicked] = useState(null);          // {name, category, categoryLabel, city, district, address, source}
+  const [picked, setPicked] = useState(null);          // {name, category, categoryLabel, city, source}
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchKeyword, setSearchKeyword] = useState('');
   const [nearbyPOIs, setNearbyPOIs] = useState(MOCK_NEARBY_POIS);
@@ -100,7 +100,6 @@ export default function AddLocationScreen({ navigation }) {
       const updatedPOIs = MOCK_NEARBY_POIS.map(poi => ({
         ...poi,
         city: locationData.city || poi.city,
-        district: locationData.district || poi.district,
       }));
       setNearbyPOIs(updatedPOIs);
     } catch (error) {
@@ -142,9 +141,7 @@ export default function AddLocationScreen({ navigation }) {
       category: picked.category,
       categoryLabel: picked.categoryLabel || '其他',
       city: picked.city || '上海',
-      district: picked.district || '徐汇区',
       distanceKm: 1.0,
-      address: picked.address,
       phone: '',
       hours: '',
       entryArea,
@@ -203,7 +200,7 @@ export default function AddLocationScreen({ navigation }) {
               placeholder="这个地方叫什么？"
               placeholderTextColor={colors.textLight}
             />
-            <Text style={styles.pickedAddr}>地址：{picked.address}</Text>
+            <Text style={styles.pickedAddr}>城市：{picked.city}</Text>
 
             <Text style={styles.pickedLabel}>类型</Text>
             <View style={styles.typeChipRow}>
@@ -345,12 +342,12 @@ export default function AddLocationScreen({ navigation }) {
             <View style={styles.currentLocationRow}>
               <Ionicons name="navigate" size={14} color={colors.secondary} />
               <Text style={styles.currentLocationText}>
-                {currentAddress.city} {currentAddress.district}
+                {currentAddress.city}
               </Text>
             </View>
           )}
           
-          <Text style={styles.sheetSub}>选择一个，会自动填入地点名和地址</Text>
+            <Text style={styles.sheetSub}>选择一个，会自动填入地点名和城市</Text>
 
           <View style={styles.sheetSearchRow}>
             <Ionicons name="search" size={16} color={colors.textLight} />
@@ -374,7 +371,7 @@ export default function AddLocationScreen({ navigation }) {
               {nearbyPOIs.filter(poi =>
                 !searchKeyword.trim() ||
                 poi.name.toLowerCase().includes(searchKeyword.toLowerCase()) ||
-                poi.address.toLowerCase().includes(searchKeyword.toLowerCase())
+                poi.city.toLowerCase().includes(searchKeyword.toLowerCase())
               ).map(poi => (
                 <TouchableOpacity key={poi.poiId} style={styles.poiItem} onPress={() => choosePOI(poi)} activeOpacity={0.7}>
                   <View style={styles.poiIconBox}>
@@ -387,7 +384,7 @@ export default function AddLocationScreen({ navigation }) {
                   <View style={{ flex: 1 }}>
                     <Text style={styles.poiName}>{poi.name}</Text>
                     <Text style={styles.poiMeta}>{poi.categoryLabel} · {poi.distanceLabel}</Text>
-                    <Text style={styles.poiAddr}>{poi.address}</Text>
+                    <Text style={styles.poiAddr}>{poi.city}</Text>
                   </View>
                   <Ionicons name="chevron-forward" size={18} color={colors.textLight} />
                 </TouchableOpacity>

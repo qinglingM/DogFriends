@@ -19,8 +19,24 @@ export default function DogProfileScreen({ navigation, route }) {
 
   const sizeLabel = SIZE_LABELS[dog.size] || '大型犬';
   const genderLabel = dog.gender === 'female' ? '♀ 母' : '♂ 公';
-  const age = dog.birthday ? `${new Date().getFullYear() - new Date(dog.birthday).getFullYear()}岁` : '';
   const weightLabel = dog.weight ? `${dog.weight} kg` : '';
+
+  let age = '';
+  if (dog.birthday) {
+    const birth = new Date(dog.birthday);
+    const now = new Date();
+    let years = now.getFullYear() - birth.getFullYear();
+    let months = now.getMonth() - birth.getMonth();
+    if (now.getDate() < birth.getDate()) months--;
+    if (months < 0) { years--; months += 12; }
+    if (years > 0) {
+      age = months > 0 ? `${years}岁${months}个月` : `${years}岁`;
+    } else if (months > 0) {
+      age = `${months}个月`;
+    } else {
+      age = '不到1个月';
+    }
+  }
   const hasImage = dog.image && dog.image.length > 0;
 
   return (

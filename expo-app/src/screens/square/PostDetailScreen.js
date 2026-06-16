@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState, useCallback } from 'react';
 import {
   Image,
   KeyboardAvoidingView,
@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
@@ -50,6 +51,25 @@ export default function PostDetailScreen({ route, navigation }) {
   const inputRef = useRef(null);
   const [commentText, setCommentText] = useState('');
   const [replyTarget, setReplyTarget] = useState(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      const parent = navigation.getParent();
+      parent?.setOptions({ tabBarStyle: { display: 'none' } });
+      return () => {
+        parent?.setOptions({
+          tabBarStyle: {
+            backgroundColor: colors.white,
+            borderTopWidth: 1,
+            borderTopColor: colors.border,
+            height: spacing.bottomTabHeight,
+            paddingBottom: 8,
+            paddingTop: 8,
+          },
+        });
+      };
+    }, [navigation])
+  );
 
   const post = getPost(id) || getPost('post_1');
   const comments = post?.comments || [];

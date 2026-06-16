@@ -1,12 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { typography } from '../../theme/typography';
-import { NavBar, Card, DogAvatar, BadgeUnlockModal } from '../../components';
+import { NavBar, Card, DogAvatar } from '../../components';
 import { useDogs } from '../../contexts/DogContext';
-import { useBadges } from '../../contexts/BadgeContext';
 
 const PROFILE_ENTRIES = [
   {
@@ -23,34 +22,11 @@ const PROFILE_ENTRIES = [
     color: colors.secondary,
     route: 'ContributionHistory',
   },
-  {
-    label: '我的徽章',
-    icon: 'ribbon-outline',
-    bg: 'rgba(146, 102, 153, 0.15)',
-    color: colors.accent,
-    route: 'BadgeWall',
-  },
 ];
 
 export default function ProfileScreen({ navigation }) {
   const { dogs } = useDogs();
-  const { allBadges, unlockedNotifications, dismissUnlock } = useBadges();
-  const [unlockBadge, setUnlockBadge] = useState(null);
-
-  useEffect(() => {
-    if (unlockedNotifications.length > 0 && !unlockBadge) {
-      setUnlockBadge(unlockedNotifications[0]);
-      dismissUnlock(unlockedNotifications[0].id);
-    }
-  }, [unlockedNotifications]);
-
-  const earnedBadges = allBadges.filter(b => b.earned);
   const openPersonalProfile = () => navigation.navigate('PersonalProfile');
-
-  const handleViewDetail = (badge) => {
-    setUnlockBadge(null);
-    navigation.navigate('BadgeDetail', { badge });
-  };
 
   return (
     <View style={styles.screen}>
@@ -74,36 +50,6 @@ export default function ProfileScreen({ navigation }) {
             <Text style={styles.userId}>ID: 10086 · 上海</Text>
           </View>
         </TouchableOpacity>
-
-        {earnedBadges.length > 0 && (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.badgeStrip}>
-            {earnedBadges.slice(0, 5).map(badge => (
-              <View key={badge.id} style={styles.badgeChip}>
-                <View style={[styles.badgeChipIcon, { backgroundColor: badge.color }]}>
-                  {badge.icon.length <= 2 ? (
-                    <Text style={styles.badgeEmoji}>{badge.icon}</Text>
-                  ) : (
-                    <Ionicons name={badge.icon} size={14} color={colors.white} />
-                  )}
-                </View>
-                <Text style={styles.badgeChipText}>{badge.name}</Text>
-              </View>
-            ))}
-            {earnedBadges.length > 5 && (
-              <TouchableOpacity style={styles.badgeChipMore} onPress={() => navigation.navigate('BadgeWall')}>
-                <Text style={styles.badgeChipMoreText}>+{earnedBadges.length - 5}</Text>
-              </TouchableOpacity>
-            )}
-          </ScrollView>
-        )}
-
-        {earnedBadges.length === 0 && (
-          <TouchableOpacity style={styles.badgeHint} onPress={() => navigation.navigate('BadgeWall')}>
-            <Ionicons name="ribbon-outline" size={16} color={colors.textLight} />
-            <Text style={styles.badgeHintText}>完善狗狗档案后，可以获得徽章</Text>
-            <Ionicons name="chevron-forward" size={14} color={colors.textLight} />
-          </TouchableOpacity>
-        )}
 
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>我的狗狗</Text>
@@ -188,13 +134,6 @@ export default function ProfileScreen({ navigation }) {
           ))}
         </Card>
       </ScrollView>
-
-      <BadgeUnlockModal
-        visible={!!unlockBadge}
-        badge={unlockBadge}
-        onViewDetail={() => handleViewDetail(unlockBadge)}
-        onDismiss={() => setUnlockBadge(null)}
-      />
     </View>
   );
 }
@@ -221,50 +160,6 @@ const styles = StyleSheet.create({
   userInfo: { flex: 1 },
   userName: { ...typography.h2, color: colors.secondary, marginBottom: 4 },
   userId: { ...typography.caption, color: colors.textLight },
-  badgeStrip: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    paddingVertical: spacing.sm,
-    marginBottom: spacing.md,
-  },
-  badgeChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 6,
-    borderRadius: spacing.radiusPill,
-    backgroundColor: colors.chipDefault,
-  },
-  badgeChipIcon: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  badgeEmoji: { fontSize: 12 },
-  badgeChipText: { ...typography.captionBold, color: colors.secondary },
-  badgeChipMore: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 6,
-    borderRadius: spacing.radiusPill,
-    backgroundColor: colors.chipDefault,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  badgeChipMoreText: { ...typography.captionBold, color: colors.secondary },
-  badgeHint: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    marginBottom: spacing.md,
-    borderRadius: spacing.radiusMd,
-    backgroundColor: colors.chipDefault,
-  },
-  badgeHintText: { ...typography.caption, color: colors.textLight },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',

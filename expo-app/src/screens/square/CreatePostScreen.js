@@ -20,9 +20,10 @@ import { typography } from '../../theme/typography';
 import { Card, Button } from '../../components';
 import { SQUARE_TAGS } from '../../data/squareData';
 import { useSquare } from '../../contexts/SquareContext';
+import { useProfile } from '../../contexts/ProfileContext';
 
 const MOCK_IMAGE = 'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?auto=format&fit=crop&w=600&q=80';
-const LOCATION_OPTIONS = ['上海 徐汇', '复兴公园', '世纪公园', '徐汇滨江'];
+const LOCATION_OPTIONS = ['上海', '复兴公园', '世纪公园', '滨江步道'];
 const VISIBILITY_OPTIONS = [
   { key: 'public', label: '公开', icon: 'earth' },
   { key: 'private', label: '仅自己可见', icon: 'lock-closed-outline' },
@@ -31,11 +32,12 @@ const VISIBILITY_OPTIONS = [
 export default function CreatePostScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const { addPost } = useSquare();
+  const { profile } = useProfile();
   const [title, setTitle] = useState('');
   const [text, setText] = useState('');
   const [media, setMedia] = useState([]);
   const [tag, setTag] = useState(null);
-  const [location, setLocation] = useState('上海 徐汇');
+  const [location, setLocation] = useState(profile.area || '上海');
   const [visibility, setVisibility] = useState('public');
   const [openPicker, setOpenPicker] = useState(null);
 

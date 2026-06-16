@@ -9,6 +9,7 @@ import { useExplore } from '../../contexts/ExploreContext';
 import { useSquare } from '../../contexts/SquareContext';
 import { CATEGORIES } from '../../data/exploreData';
 import { getCategoryIcon } from '../../data/profileData';
+import CityPickerModal from '../../components/CityPickerModal';
 
 function LocationThumbnail({ location }) {
   const [imageFailed, setImageFailed] = useState(false);
@@ -47,6 +48,7 @@ export default function FavoriteLocationsScreen({ navigation }) {
   const [city, setCity] = useState('all');
   const [category, setCategory] = useState('all');
   const [openFilter, setOpenFilter] = useState(null);
+  const [cityPickerOpen, setCityPickerOpen] = useState(false);
   const favoriteLocations = locations.filter(loc => favorites[loc.id]);
   const favoritePosts = posts.filter(post => post.favorited);
   const postColumns = splitColumns(favoritePosts);
@@ -112,13 +114,13 @@ export default function FavoriteLocationsScreen({ navigation }) {
         {contentType === 'locations' && (
           <View style={styles.filterBar}>
             <TouchableOpacity
-              style={[styles.filterBox, openFilter === 'city' && styles.filterBoxActive]}
+              style={[styles.filterBox, styles.filterBoxActive]}
               activeOpacity={0.75}
-              onPress={() => setOpenFilter(openFilter === 'city' ? null : 'city')}
+              onPress={() => setCityPickerOpen(true)}
             >
               <Ionicons name="location" size={16} color={colors.secondary} />
               <Text style={styles.filterBoxText} numberOfLines={1}>{selectedCityLabel}</Text>
-              <Ionicons name={openFilter === 'city' ? 'chevron-up' : 'chevron-down'} size={14} color={colors.textLight} />
+              <Ionicons name="chevron-down" size={14} color={colors.textLight} />
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -135,23 +137,18 @@ export default function FavoriteLocationsScreen({ navigation }) {
 
         {contentType === 'locations' && openFilter && (
           <Card noPadding style={styles.filterMenu}>
-            {(openFilter === 'city' ? visibleCities : visibleCategories).map(option => {
-              const key = openFilter === 'city' ? option : option.key;
-              const label = openFilter === 'city'
-                ? option === 'all' ? '全部城市' : option
-                : option.label;
-              const icon = openFilter === 'city' ? 'location' : option.icon;
-              const active = openFilter === 'city' ? key === city : key === category;
+            {visibleCategories.map(option => {
+              const key = option.key;
+              const label = option.label;
+              const icon = option.icon;
+              const active = key === category;
 
               return (
                 <TouchableOpacity
                   key={key}
                   style={styles.filterMenuItem}
                   activeOpacity={0.75}
-                  onPress={() => {
-                    if (openFilter === 'city') selectCity(key);
-                    else selectCategory(key);
-                  }}
+                  onPress={() => selectCategory(key)}
                 >
                   <Ionicons name={icon} size={16} color={colors.secondary} />
                   <Text style={styles.filterMenuText}>{label}</Text>
@@ -185,7 +182,7 @@ export default function FavoriteLocationsScreen({ navigation }) {
                   <View style={styles.listMain}>
                     <Text style={styles.listTitle} numberOfLines={1}>{location.name}</Text>
                     <Text style={styles.listMeta} numberOfLines={1}>
-                      {location.categoryLabel} · {location.city || '上海'} {location.district}
+                      {location.categoryLabel} · {location.city || '上海'}
                     </Text>
                     <Text style={styles.listSub} numberOfLines={1}>{location.lastUpdatedLabel}</Text>
                   </View>
@@ -238,6 +235,17 @@ export default function FavoriteLocationsScreen({ navigation }) {
           </View>
         )}
       </ScrollView>
+
+      <CityPickerModal
+        visible={cityPickerOpen}
+        province={null}
+        city={city === 'all' ? null : city}
+        onConfirm={({ city: pickedCity }) => {
+          selectCity(pickedCity || 'all');
+          setCityPickerOpen(false);
+        }}
+        onCancel={() => setCityPickerOpen(false)}
+      />
     </View>
   );
 }

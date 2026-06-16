@@ -159,7 +159,7 @@ export default function LocationDetailScreen({ route, navigation }) {
 
           <TouchableOpacity style={styles.addressRow}>
             <Ionicons name="location" size={14} color={colors.textLight} />
-            <Text style={styles.address}>{location.categoryLabel} · {location.address}</Text>
+            <Text style={styles.address}>{location.categoryLabel} · {location.city}</Text>
             <TouchableOpacity>
               <Ionicons name="call" size={16} color={colors.secondary} />
             </TouchableOpacity>
