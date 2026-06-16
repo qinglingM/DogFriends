@@ -373,80 +373,112 @@ export default function ProfileTabScreen({ navigation, route }) {
     <View style={s.screen}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scrollContent}>
         {/* Hero: Cover image + owner profile overlay */}
-        <ImageBackground
-          source={{ uri: displayProfile.cover }}
-          style={[s.hero, { paddingTop: insets.top + 12 }]}
-        >
-          <View style={s.heroNav}>
-            {!isSelf && <CircleButton icon="chevron-back" onPress={() => navigation.goBack()} />}
-            <View style={[s.heroActions, isSelf && { marginLeft: 'auto' }]}>
-              {isSelf ? (
-                <>
-                  <CircleButton icon="camera-outline" onPress={pickCover} />
-                </>
-              ) : (
-                <>
+        {isSelf ? (
+          <TouchableOpacity activeOpacity={0.85} onPress={pickCover}>
+            <ImageBackground
+              source={{ uri: displayProfile.cover }}
+              style={[s.hero, { paddingTop: insets.top }]}
+            >
+              <View style={s.heroNav}>
+                <View style={s.spacer} />
+                <View style={s.heroActions}>
                   <CircleButton icon="share-social-outline" />
                   <CircleButton icon="ellipsis-horizontal" />
-                </>
-              )}
-            </View>
-          </View>
-
-          <View style={s.heroOverlay}>
-            <View style={s.heroOverlayRow}>
-              <View style={s.heroLeft}>
-                <View style={s.ownerProfileRow}>
-                  <Image source={{ uri: displayProfile.avatar }} style={s.heroAvatar} />
-                  <View style={s.heroNameBlock}>
-                    <View style={s.heroNameRow}>
-                      <Text style={s.heroName}>{displayProfile.name}</Text>
-                      {genderIcon && <Ionicons name={genderIcon} size={16} color={colors.white} />}
-                    </View>
-                    <View style={s.heroLocationRow}>
-                      <Ionicons name="location-outline" size={14} color="rgba(255,255,255,0.8)" />
-                      <Text style={s.heroLocationText}>{displayProfile.area}</Text>
-                    </View>
-                    {displayProfile.signature ? (
-                      <Text style={s.heroSignature} numberOfLines={2}>{displayProfile.signature}</Text>
-                    ) : null}
-
-                    <View style={s.heroSocialRow}>
-                      <StatBlock value={displayProfile.following} label="关注" />
-                      <View style={s.heroStatDivider} />
-                      <StatBlock value={displayProfile.followers} label="粉丝" />
-                      <View style={s.heroStatDivider} />
-                      <StatBlock value={displayProfile.likes} label="获赞" />
-                    </View>
-                  </View>
                 </View>
               </View>
 
-              <View style={s.heroRight}>
-                {isSelf ? (
-                  <TouchableOpacity
-                    style={s.heroEditBtn}
-                    activeOpacity={0.75}
-                    onPress={() => navigation.navigate('EditProfile')}
-                  >
-                    <Ionicons name="create-outline" size={16} color={colors.white} />
-                    <Text style={s.heroEditBtnText}>编辑资料</Text>
-                  </TouchableOpacity>
-                ) : (
+              <View style={s.heroOverlay}>
+                <View style={s.heroOverlayRow}>
+                  <View style={s.heroLeft}>
+                    <View style={s.ownerProfileRow}>
+                      <Image source={{ uri: displayProfile.avatar }} style={s.heroAvatar} />
+                      <View style={s.heroNameBlock}>
+                        <View style={s.heroNameRow}>
+                          <Text style={s.heroName}>{displayProfile.name}</Text>
+                          {genderIcon && <Ionicons name={genderIcon} size={16} color={colors.white} />}
+                        </View>
+                        {displayProfile.signature ? (
+                          <Text style={s.heroSignature} numberOfLines={2}>{displayProfile.signature}</Text>
+                        ) : null}
+
+                        <View style={s.heroSocialRow}>
+                          <StatBlock value={displayProfile.following} label="关注" />
+                          <View style={s.heroStatDivider} />
+                          <StatBlock value={displayProfile.followers} label="粉丝" />
+                          <View style={s.heroStatDivider} />
+                          <StatBlock value={displayProfile.likes} label="获赞" />
+                        </View>
+                      </View>
+                    </View>
+                  </View>
+
+                  <View style={s.heroRight}>
+                    <TouchableOpacity
+                      style={s.heroEditBtn}
+                      activeOpacity={0.75}
+                      onPress={() => navigation.navigate('EditProfile')}
+                    >
+                      <Ionicons name="create-outline" size={16} color={colors.white} />
+                      <Text style={s.heroEditBtnText}>编辑资料</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+            </ImageBackground>
+          </TouchableOpacity>
+        ) : (
+          <ImageBackground
+            source={{ uri: displayProfile.cover }}
+            style={[s.hero, { paddingTop: insets.top }]}
+          >
+            <View style={s.heroNav}>
+              <View style={s.spacer} />
+              <View style={s.heroActions}>
+                <CircleButton icon="share-social-outline" />
+                <CircleButton icon="ellipsis-horizontal" />
+              </View>
+            </View>
+
+            <View style={s.heroOverlay}>
+              <View style={s.heroOverlayRow}>
+                <View style={s.heroLeft}>
+                  <View style={s.ownerProfileRow}>
+                    <Image source={{ uri: displayProfile.avatar }} style={s.heroAvatar} />
+                    <View style={s.heroNameBlock}>
+                      <View style={s.heroNameRow}>
+                        <Text style={s.heroName}>{displayProfile.name}</Text>
+                        {genderIcon && <Ionicons name={genderIcon} size={16} color={colors.white} />}
+                      </View>
+                      {displayProfile.signature ? (
+                        <Text style={s.heroSignature} numberOfLines={2}>{displayProfile.signature}</Text>
+                      ) : null}
+
+                      <View style={s.heroSocialRow}>
+                        <StatBlock value={displayProfile.following} label="关注" />
+                        <View style={s.heroStatDivider} />
+                        <StatBlock value={displayProfile.followers} label="粉丝" />
+                        <View style={s.heroStatDivider} />
+                        <StatBlock value={displayProfile.likes} label="获赞" />
+                      </View>
+                    </View>
+                  </View>
+                </View>
+
+                <View style={s.heroRight}>
                   <TouchableOpacity style={s.heroFollowBtn} activeOpacity={0.75}>
                     <Text style={s.heroFollowBtnText}>关注</Text>
                   </TouchableOpacity>
-                )}
+                </View>
               </View>
             </View>
-          </View>
-        </ImageBackground>
+          </ImageBackground>
+        )}
 
         {/* Dog cards section */}
         {dogsList.length > 0 && (
           <View style={s.section}>
             <View style={s.sectionHeader}>
-              <Text style={s.sectionTitle}>我的狗狗</Text>
+              <Text style={s.sectionTitle}>{isSelf ? '我的狗狗' : 'TA的狗狗'} {dogsList.length}只</Text>
               {isSelf && (
                 <TouchableOpacity
                   style={s.sectionAction}
@@ -535,9 +567,10 @@ const s = StyleSheet.create({
   /* Hero */
   hero: { height: 360, justifyContent: 'flex-end' },
   heroNav: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center',
     paddingHorizontal: spacing.md,
   },
+  spacer: { flex: 1 },
   heroActions: { flexDirection: 'row', gap: spacing.sm },
   circleButton: {
     width: spacing.touchTarget, height: spacing.touchTarget,
@@ -568,8 +601,6 @@ const s = StyleSheet.create({
   heroNameBlock: { flex: 1 },
   heroNameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.xs },
   heroName: { ...typography.h2, color: colors.white },
-  heroLocationRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.xs },
-  heroLocationText: { ...typography.caption, color: 'rgba(255,255,255,0.8)' },
   heroSignature: { ...typography.caption, color: 'rgba(255,255,255,0.7)', lineHeight: 18 },
   heroSocialRow: {
     flexDirection: 'row', alignItems: 'center',
@@ -592,7 +623,7 @@ const s = StyleSheet.create({
     backgroundColor: colors.secondary,
     alignItems: 'center', justifyContent: 'center',
   },
-  heroFollowBtnText: { ...typography.captionBold, color: colors.white, fontSize: 12 },
+  heroFollowBtnText: { ...typography.caption, color: colors.white, fontWeight: 600 },
 
   /* Section */
   section: { marginTop: spacing.lg },
