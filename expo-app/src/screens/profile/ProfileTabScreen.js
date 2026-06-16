@@ -103,14 +103,6 @@ function StatBlock({ value, label }) {
   );
 }
 
-function CircleButton({ icon, onPress }) {
-  return (
-    <TouchableOpacity style={s.circleButton} activeOpacity={0.75} onPress={onPress}>
-      <Ionicons name={icon} size={23} color={colors.white} />
-    </TouchableOpacity>
-  );
-}
-
 function DogCard({ dog, navigation, isSelf, isExpanded, onToggleExpand, totalCount }) {
   if (!dog) return null;
   const ws = dog.walkStats;
@@ -274,12 +266,6 @@ export default function ProfileTabScreen({ navigation, route }) {
               source={{ uri: displayProfile.cover }}
               style={[s.hero, { paddingTop: insets.top }]}
             >
-              <View style={s.heroNav}>
-                <View style={s.spacer} />
-                <View style={s.heroActions}>
-                  <CircleButton icon="ellipsis-horizontal" />
-                </View>
-              </View>
 
               <View style={s.heroOverlay}>
                 <View style={s.heroOverlayRow}>
@@ -325,12 +311,6 @@ export default function ProfileTabScreen({ navigation, route }) {
             source={{ uri: displayProfile.cover }}
             style={[s.hero, { paddingTop: insets.top }]}
           >
-            <View style={s.heroNav}>
-              <View style={s.spacer} />
-              <View style={s.heroActions}>
-                <CircleButton icon="ellipsis-horizontal" />
-              </View>
-            </View>
 
             <View style={s.heroOverlay}>
               <View style={s.heroOverlayRow}>
@@ -458,18 +438,6 @@ const s = StyleSheet.create({
 
   /* Hero */
   hero: { height: 360, justifyContent: 'flex-end' },
-  heroNav: {
-    flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center',
-    paddingHorizontal: spacing.md,
-  },
-  spacer: { flex: 1 },
-  heroActions: { flexDirection: 'row', gap: spacing.sm },
-  circleButton: {
-    width: spacing.touchTarget, height: spacing.touchTarget,
-    borderRadius: spacing.radiusPill,
-    backgroundColor: 'rgba(52, 112, 72, 0.86)',
-    alignItems: 'center', justifyContent: 'center',
-  },
   heroOverlay: {
     paddingHorizontal: spacing.md,
     paddingTop: spacing.md,
