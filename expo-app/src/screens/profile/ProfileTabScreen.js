@@ -268,39 +268,33 @@ export default function ProfileTabScreen({ navigation, route }) {
             >
 
               <View style={s.heroOverlay}>
-                <View style={s.heroOverlayRow}>
-                  <View style={s.heroLeft}>
-                    <View style={s.ownerProfileRow}>
-                      <Image source={{ uri: displayProfile.avatar }} style={s.heroAvatar} />
-                      <View style={s.heroNameBlock}>
-                        <View style={s.heroNameRow}>
-                          <Text style={s.heroName}>{displayProfile.name}</Text>
-                          {genderIcon && <Ionicons name={genderIcon} size={16} color={colors.white} />}
-                        </View>
-                        {displayProfile.signature ? (
-                          <Text style={s.heroSignature} numberOfLines={2}>{displayProfile.signature}</Text>
-                        ) : null}
-
-                        <View style={s.heroSocialRow}>
-                          <StatBlock value={displayProfile.following} label="关注" />
-                          <View style={s.heroStatDivider} />
-                          <StatBlock value={displayProfile.followers} label="粉丝" />
-                          <View style={s.heroStatDivider} />
-                          <StatBlock value={displayProfile.likes} label="获赞" />
-                        </View>
-                      </View>
+                <View style={s.ownerProfileRow}>
+                  <Image source={{ uri: displayProfile.avatar }} style={s.heroAvatar} />
+                  <View style={s.heroNameBlock}>
+                    <View style={s.heroNameRow}>
+                      <Text style={s.heroName}>{displayProfile.name}</Text>
+                      {genderIcon && <Ionicons name={genderIcon} size={16} color={colors.white} />}
+                      <View style={s.spacer} />
+                      <TouchableOpacity
+                        style={s.heroEditBtn}
+                        activeOpacity={0.75}
+                        onPress={() => navigation.navigate('EditProfile')}
+                      >
+                        <Ionicons name="create-outline" size={16} color={colors.white} />
+                        <Text style={s.heroEditBtnText}>编辑资料</Text>
+                      </TouchableOpacity>
                     </View>
-                  </View>
+                    {displayProfile.signature ? (
+                      <Text style={s.heroSignature} numberOfLines={2}>{displayProfile.signature}</Text>
+                    ) : null}
 
-                  <View style={s.heroRight}>
-                    <TouchableOpacity
-                      style={s.heroEditBtn}
-                      activeOpacity={0.75}
-                      onPress={() => navigation.navigate('EditProfile')}
-                    >
-                      <Ionicons name="create-outline" size={16} color={colors.white} />
-                      <Text style={s.heroEditBtnText}>编辑资料</Text>
-                    </TouchableOpacity>
+                    <View style={s.heroSocialRow}>
+                      <StatBlock value={displayProfile.following} label="关注" />
+                      <View style={s.heroStatDivider} />
+                      <StatBlock value={displayProfile.followers} label="粉丝" />
+                      <View style={s.heroStatDivider} />
+                      <StatBlock value={displayProfile.likes} label="获赞" />
+                    </View>
                   </View>
                 </View>
               </View>
@@ -313,34 +307,28 @@ export default function ProfileTabScreen({ navigation, route }) {
           >
 
             <View style={s.heroOverlay}>
-              <View style={s.heroOverlayRow}>
-                <View style={s.heroLeft}>
-                  <View style={s.ownerProfileRow}>
-                    <Image source={{ uri: displayProfile.avatar }} style={s.heroAvatar} />
-                    <View style={s.heroNameBlock}>
-                      <View style={s.heroNameRow}>
-                        <Text style={s.heroName}>{displayProfile.name}</Text>
-                        {genderIcon && <Ionicons name={genderIcon} size={16} color={colors.white} />}
-                      </View>
-                      {displayProfile.signature ? (
-                        <Text style={s.heroSignature} numberOfLines={2}>{displayProfile.signature}</Text>
-                      ) : null}
-
-                      <View style={s.heroSocialRow}>
-                        <StatBlock value={displayProfile.following} label="关注" />
-                        <View style={s.heroStatDivider} />
-                        <StatBlock value={displayProfile.followers} label="粉丝" />
-                        <View style={s.heroStatDivider} />
-                        <StatBlock value={displayProfile.likes} label="获赞" />
-                      </View>
-                    </View>
+              <View style={s.ownerProfileRow}>
+                <Image source={{ uri: displayProfile.avatar }} style={s.heroAvatar} />
+                <View style={s.heroNameBlock}>
+                  <View style={s.heroNameRow}>
+                    <Text style={s.heroName}>{displayProfile.name}</Text>
+                    {genderIcon && <Ionicons name={genderIcon} size={16} color={colors.white} />}
+                    <View style={s.spacer} />
+                    <TouchableOpacity style={s.heroFollowBtn} activeOpacity={0.75}>
+                      <Text style={s.heroFollowBtnText}>关注</Text>
+                    </TouchableOpacity>
                   </View>
-                </View>
+                  {displayProfile.signature ? (
+                    <Text style={s.heroSignature} numberOfLines={2}>{displayProfile.signature}</Text>
+                  ) : null}
 
-                <View style={s.heroRight}>
-                  <TouchableOpacity style={s.heroFollowBtn} activeOpacity={0.75}>
-                    <Text style={s.heroFollowBtnText}>关注</Text>
-                  </TouchableOpacity>
+                  <View style={s.heroSocialRow}>
+                    <StatBlock value={displayProfile.following} label="关注" />
+                    <View style={s.heroStatDivider} />
+                    <StatBlock value={displayProfile.followers} label="粉丝" />
+                    <View style={s.heroStatDivider} />
+                    <StatBlock value={displayProfile.likes} label="获赞" />
+                  </View>
                 </View>
               </View>
             </View>
@@ -443,14 +431,6 @@ const s = StyleSheet.create({
     paddingTop: spacing.md,
     paddingBottom: spacing.md,
   },
-  heroOverlayRow: {
-    flexDirection: 'row', alignItems: 'center',
-  },
-  heroLeft: { flex: 1 },
-  heroRight: {
-    justifyContent: 'center', alignItems: 'center',
-    paddingLeft: spacing.md,
-  },
   ownerProfileRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
   },
@@ -459,7 +439,8 @@ const s = StyleSheet.create({
     borderWidth: 2, borderColor: colors.white, backgroundColor: colors.chipDefault,
   },
   heroNameBlock: { flex: 1 },
-  heroNameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.xs },
+  heroNameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  spacer: { flex: 1 },
   heroName: { ...typography.h2, color: colors.white },
   heroSignature: { ...typography.caption, color: 'rgba(255,255,255,0.7)', lineHeight: 18 },
   heroSocialRow: {
@@ -472,7 +453,7 @@ const s = StyleSheet.create({
   heroStatDivider: { width: 1, height: 16, backgroundColor: 'rgba(255,255,255,0.3)' },
   heroEditBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs,
-    minHeight: spacing.touchTarget, paddingHorizontal: spacing.md,
+    height: 32, paddingHorizontal: spacing.sm,
     borderRadius: spacing.radiusPill,
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.6)',
   },
