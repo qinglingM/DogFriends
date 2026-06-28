@@ -7,7 +7,7 @@ import React, {
   useState,
 } from 'react';
 import { AppState, Platform } from 'react-native';
-import { supabase } from '../lib/supabase';
+import { isSupabaseConfigured, supabase } from '../services/supabase';
 
 const AuthContext = createContext(null);
 
@@ -16,6 +16,11 @@ export function AuthProvider({ children }) {
   const [isInitializing, setIsInitializing] = useState(true);
 
   useEffect(() => {
+    if (!isSupabaseConfigured) {
+      setIsInitializing(false);
+      return undefined;
+    }
+
     let mounted = true;
 
     supabase.auth.getSession()
@@ -62,6 +67,7 @@ export function AuthProvider({ children }) {
     user: session?.user ?? null,
     isAuthenticated: Boolean(session),
     isInitializing,
+    isConfigured: isSupabaseConfigured,
     signOut,
   }), [isInitializing, session, signOut]);
 

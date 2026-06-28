@@ -1,4 +1,4 @@
-export default {
+module.exports = {
   expo: {
     name: "expo-app",
     slug: "expo-app",

@@ -1,0 +1,4 @@
+project_id = "dogfriends"
+
+[functions.sms-otp]
+verify_jwt = false
