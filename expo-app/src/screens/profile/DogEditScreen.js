@@ -8,8 +8,11 @@ import { spacing } from '../../theme/spacing';
 import { typography } from '../../theme/typography';
 import { NavBar } from '../../components';
 import { useDogs } from '../../contexts/DogContext';
+import { useAuth } from '../../contexts/AuthContext';
 import BreedPickerModal from '../../components/BreedPickerModal';
-import { TRAIT_PRESETS } from '../../data/breedData';
+import { uploadImage } from '../../utils/uploadService';
+import { imageUrl } from '../../utils/imageUrl';
+import { TRAIT_PRESETS, getBreedSize } from '../../data/breedData';
 
 const DOG_SIZES = [
   { key: 'small', label: '小型犬', range: '< 10kg' },
@@ -19,6 +22,7 @@ const DOG_SIZES = [
 
 export default function DogEditScreen({ navigation, route }) {
   const { dogs, addDog, updateDog, removeDog } = useDogs();
+  const { user } = useAuth();
   const dogId = route?.params?.dogId;
   const existingDog = dogId ? dogs.find(d => d.id === dogId) : null;
   const isEdit = !!existingDog;
@@ -28,7 +32,7 @@ export default function DogEditScreen({ navigation, route }) {
   const [gender, setGender] = useState('male');
   const [size, setSize] = useState('large');
   const [birthday, setBirthday] = useState('');
-  const [weight, setWeight] = useState('');
+  const [weightText, setWeightText] = useState('');
   const [traits, setTraits] = useState([]);
   const [image, setImage] = useState('');
   const [publicProfile, setPublicProfile] = useState(true);
@@ -44,7 +48,7 @@ export default function DogEditScreen({ navigation, route }) {
       setGender(existingDog.gender || 'male');
       setSize(existingDog.size || 'large');
       setBirthday(existingDog.birthday || '');
-      setWeight(existingDog.weight ? String(existingDog.weight) : '');
+      setWeightText(existingDog.weight ? existingDog.weight.toFixed(1) : '');
       setTraits(existingDog.traits || []);
       setImage(existingDog.image || '');
       setPublicProfile(existingDog.publicProfile !== false);
@@ -68,24 +72,51 @@ export default function DogEditScreen({ navigation, route }) {
   const toggleTrait = (trait) => {
     setTraits(prev => {
       if (prev.includes(trait)) return prev.filter(t => t !== trait);
-      if (prev.length >= 5) {
-        Alert.alert('提示', '性格标签最多选择5个');
+      if (prev.length >= 3) {
+        Alert.alert('提示', '性格标签最多选择3个');
         return prev;
       }
       return [...prev, trait];
     });
   };
 
-  const birthdayDate = birthday ? birthday : '';
+  const SIZE_WEIGHT_DEFAULTS = { small: '5.0', medium: '15.0', large: '30.0' };
 
-  const formatWeight = (w) => {
-    if (!w) return '';
-    const num = Number(w);
-    return num % 1 === 0 ? num.toFixed(1) : String(w);
+  const handleSizeChange = (s) => {
+    setSize(s);
+    if (!weightText || weightText === '0' || weightText === '0.0') {
+      setWeightText(SIZE_WEIGHT_DEFAULTS[s] || '');
+    }
   };
 
-  const handleSave = () => {
-    if (!name.trim()) return;
+  const handleWeightBlur = () => {
+    if (weightText) {
+      const num = parseFloat(weightText);
+      if (!isNaN(num)) setWeightText(num.toFixed(1));
+    }
+  };
+
+  const birthdayDate = birthday ? birthday : '';
+
+  const handleSave = async () => {
+    if (!name.trim()) {
+      Alert.alert('请填写狗狗名字');
+      return;
+    }
+    if (!breed) {
+      Alert.alert('请选择品种');
+      return;
+    }
+
+    let imageUrl_ = image;
+    if (image && image !== (existingDog?.image || '') && !image.startsWith('http')) {
+      try {
+        imageUrl_ = await uploadImage(image, `${user.id}/dogs`, `dog_${Date.now()}`);
+      } catch (e) {
+        Alert.alert('上传失败', '狗狗头像上传失败，请重试');
+        return;
+      }
+    }
 
     const dogData = {
       name: name.trim(),
@@ -93,18 +124,27 @@ export default function DogEditScreen({ navigation, route }) {
       gender,
       size,
       birthday: birthday.trim(),
-      weight: Number(weight) || 0,
+      weight: parseFloat(weightText) || 0,
       traits,
-      image,
+      image: imageUrl_,
       publicProfile,
       publicWalkStats,
       neutered,
+      walkStats: existingDog?.walkStats || { walks: 0, distance: 0, duration: 0 },
     };
 
     if (isEdit) {
-      updateDog({ id: dogId, ...dogData });
+      const { error } = await updateDog({ id: dogId, ...dogData });
+      if (error) {
+        Alert.alert('保存失败', error.message || '请稍后再试');
+        return;
+      }
     } else {
-      addDog(dogData);
+      const { error } = await addDog(dogData);
+      if (error) {
+        Alert.alert('保存失败', error.message || '请稍后再试');
+        return;
+      }
     }
     navigation.goBack();
   };
@@ -133,7 +173,7 @@ export default function DogEditScreen({ navigation, route }) {
             activeOpacity={0.7}
           >
             {image ? (
-              <Image source={{ uri: image }} style={styles.avatarImg} />
+              <Image source={{ uri: imageUrl(image) }} style={styles.avatarImg} />
             ) : (
               <View style={styles.avatarPlaceholder}>
                 <Ionicons name="camera" size={32} color={colors.border} />
@@ -155,7 +195,28 @@ export default function DogEditScreen({ navigation, route }) {
             onChangeText={setName}
             placeholder="给狗狗起个名字"
             placeholderTextColor="#A0B3A2"
+            returnKeyType="done"
+            blurOnSubmit
           />
+        </View>
+
+        {/* Gender */}
+        <View style={styles.field}>
+          <Text style={styles.label}>性别 <Text style={styles.required}>*</Text></Text>
+          <View style={styles.genderRow}>
+            <TouchableOpacity
+              style={[styles.genderBtn, gender === 'male' && styles.genderBtnMale]}
+              onPress={() => setGender('male')}
+            >
+              <Text style={[styles.genderText, gender === 'male' && styles.genderTextActive]}>♂ boy</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.genderBtn, gender === 'female' && styles.genderBtnFemale]}
+              onPress={() => setGender('female')}
+            >
+              <Text style={[styles.genderText, gender === 'female' && styles.genderTextActive]}>♀ girl</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Breed */}
@@ -173,39 +234,24 @@ export default function DogEditScreen({ navigation, route }) {
           </TouchableOpacity>
         </View>
 
-        {/* Gender */}
-        <View style={styles.field}>
-          <Text style={styles.label}>性别 <Text style={styles.required}>*</Text></Text>
-          <View style={styles.genderRow}>
-            <TouchableOpacity
-              style={[styles.genderBtn, gender === 'male' && styles.genderBtnMale]}
-              onPress={() => setGender('male')}
-            >
-              <Text style={[styles.genderText, gender === 'male' && styles.genderTextActive]}>♂ 公</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.genderBtn, gender === 'female' && styles.genderBtnFemale]}
-              onPress={() => setGender('female')}
-            >
-              <Text style={[styles.genderText, gender === 'female' && styles.genderTextActive]}>♀ 母</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
         {/* Size */}
         <View style={styles.field}>
           <Text style={styles.label}>犬型</Text>
           <View style={styles.sizeRow}>
-            {DOG_SIZES.map(s => (
-              <TouchableOpacity
-                key={s.key}
-                style={[styles.sizeBtn, size === s.key && styles.sizeBtnActive]}
-                onPress={() => setSize(s.key)}
-              >
-                <Text style={[styles.sizeLabel, size === s.key && styles.sizeLabelActive]}>{s.label}</Text>
-                <Text style={[styles.sizeRange, size === s.key && styles.sizeRangeActive]}>{s.range}</Text>
-              </TouchableOpacity>
-            ))}
+            {DOG_SIZES.map(s => {
+              const isAuto = !!breed;
+              return (
+                <TouchableOpacity
+                  key={s.key}
+                  style={[styles.sizeBtn, size === s.key && styles.sizeBtnActive, isAuto && styles.sizeBtnAuto]}
+                  activeOpacity={isAuto ? 1 : 0.7}
+                  onPress={isAuto ? undefined : () => handleSizeChange(s.key)}
+                >
+                  <Text style={[styles.sizeLabel, size === s.key && styles.sizeLabelActive]}>{s.label}</Text>
+                  <Text style={[styles.sizeRange, size === s.key && styles.sizeRangeActive]}>{s.range}</Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </View>
 
@@ -227,6 +273,7 @@ export default function DogEditScreen({ navigation, route }) {
         <DatePickerModal
           visible={showDatePicker}
           date={birthdayDate}
+          maxDate={new Date().toISOString().slice(0, 10)}
           onConfirm={(d) => { setBirthday(d); setShowDatePicker(false); }}
           onCancel={() => setShowDatePicker(false)}
         />
@@ -327,20 +374,29 @@ export default function DogEditScreen({ navigation, route }) {
           <View style={styles.weightRow}>
             <TouchableOpacity
               style={styles.weightBtn}
-              onPress={() => setWeight(String(Math.max(0, Math.round((Number(weight || 0) - 0.5) * 10) / 10)))}
+              onPress={() => {
+                const current = parseFloat(weightText) || 0;
+                setWeightText(Math.max(0, Math.round((current - 0.5) * 10) / 10).toFixed(1));
+              }}
             >
               <Ionicons name="remove" size={24} color={colors.secondary} />
             </TouchableOpacity>
             <TextInput
               style={styles.weightInput}
-              value={formatWeight(weight)}
-              onChangeText={setWeight}
-              keyboardType="numeric"
+              value={weightText}
+              onChangeText={setWeightText}
+              onBlur={handleWeightBlur}
+              keyboardType="decimal-pad"
+              returnKeyType="done"
+              blurOnSubmit
             />
             <Text style={styles.weightUnit}>kg</Text>
             <TouchableOpacity
               style={styles.weightBtn}
-              onPress={() => setWeight(String(Math.round((Number(weight || 0) + 0.5) * 10) / 10))}
+              onPress={() => {
+                const current = parseFloat(weightText) || 0;
+                setWeightText((Math.round((current + 0.5) * 10) / 10).toFixed(1));
+              }}
             >
               <Ionicons name="add" size={24} color={colors.secondary} />
             </TouchableOpacity>
@@ -364,23 +420,6 @@ export default function DogEditScreen({ navigation, route }) {
           <View style={[styles.toggle, !neutered && styles.toggleOff]}>
             <View style={[styles.toggleKnob, !neutered && styles.toggleKnobOff]} />
           </View>
-        </TouchableOpacity>
-
-        {/* Vaccine link */}
-        <TouchableOpacity
-          style={styles.vaccineLink}
-          onPress={() => navigation.navigate('Vaccine')}
-        >
-          <View style={styles.toggleLeft}>
-            <View style={[styles.toggleIcon, { backgroundColor: 'rgba(146, 102, 153, 0.15)' }]}>
-              <Ionicons name="medkit-outline" size={20} color={colors.accent} />
-            </View>
-            <View>
-              <Text style={styles.toggleText}>疫苗记录</Text>
-              <Text style={styles.vaccineSub}>点击查看</Text>
-            </View>
-          </View>
-          <Ionicons name="chevron-forward" size={16} color={colors.textLight} />
         </TouchableOpacity>
 
         {isEdit && (
@@ -413,7 +452,12 @@ export default function DogEditScreen({ navigation, route }) {
       <BreedPickerModal
         visible={showBreedPicker}
         breed={breed}
-        onConfirm={(b) => { setBreed(b); setShowBreedPicker(false); }}
+        onConfirm={(b) => {
+          setBreed(b);
+          const s = getBreedSize(b);
+          if (s) setSize(s);
+          setShowBreedPicker(false);
+        }}
         onCancel={() => setShowBreedPicker(false)}
       />
     </View>
@@ -484,6 +528,7 @@ const styles = StyleSheet.create({
     borderWidth: 2, borderColor: 'transparent',
   },
   sizeBtnActive: { borderColor: colors.primary, backgroundColor: 'rgba(185, 207, 50, 0.1)' },
+  sizeBtnAuto: { opacity: 0.65 },
   sizeLabel: { ...typography.bodyBold, color: colors.textLight },
   sizeLabelActive: { color: colors.secondary, fontWeight: '800' },
   sizeRange: { ...typography.caption, color: colors.textLight },
@@ -555,14 +600,6 @@ const styles = StyleSheet.create({
 
   /* Divider */
   divider: { height: 1, backgroundColor: colors.border, marginVertical: 16 },
-
-  /* Vaccine */
-  vaccineLink: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    backgroundColor: colors.white, borderRadius: spacing.radiusMd, padding: spacing.md,
-    marginBottom: 16,
-  },
-  vaccineSub: { ...typography.caption, color: colors.textLight, marginTop: 2 },
 
   /* Delete */
   deleteBtn: {

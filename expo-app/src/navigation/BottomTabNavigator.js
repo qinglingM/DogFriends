@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
@@ -20,6 +21,8 @@ const TAB_CONFIG = {
 };
 
 export default function BottomTabNavigator() {
+  const insets = useSafeAreaInsets();
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -39,27 +42,26 @@ export default function BottomTabNavigator() {
         },
         tabBarActiveTintColor: colors.secondary,
         tabBarInactiveTintColor: colors.textLight,
-        tabBarStyle: styles.tabBar,
+        tabBarStyle: {
+          backgroundColor: colors.white,
+          borderTopWidth: 1,
+          borderTopColor: colors.border,
+          height: spacing.bottomTabHeight + Math.max(insets.bottom + 8, 10) - 14,
+          paddingTop: 4,
+          paddingBottom: Math.max(insets.bottom + 8, 10),
+        },
         tabBarItemStyle: styles.tabItem,
       })}
     >
       <Tab.Screen name="Walk" component={WalkNavigator} />
       <Tab.Screen name="Square" component={SquareNavigator} />
       <Tab.Screen name="Explore" component={ExploreNavigator} />
-      <Tab.Screen name="Profile" component={ProfileNavigator} />
+      <Tab.Screen name="Profile" component={ProfileNavigator} options={{ unmountOnBlur: true }} />
     </Tab.Navigator>
   );
 }
 
 const styles = StyleSheet.create({
-  tabBar: {
-    backgroundColor: colors.white,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    height: spacing.bottomTabHeight,
-    paddingBottom: 14,
-    paddingTop: 4,
-  },
   tabItem: {
     paddingVertical: 2,
   },

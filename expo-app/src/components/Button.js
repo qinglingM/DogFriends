@@ -77,8 +77,6 @@ const styles = StyleSheet.create({
   },
   primary: {
     backgroundColor: colors.primary,
-    borderBottomWidth: 3,
-    borderBottomColor: colors.secondary,
   },
   secondary: {
     backgroundColor: colors.white,

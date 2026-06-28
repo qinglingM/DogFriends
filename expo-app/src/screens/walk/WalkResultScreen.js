@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { typography } from '../../theme/typography';
-import { MapPlaceholder, TipCard, DogAvatar } from '../../components';
+import { TipCard, DogAvatar } from '../../components';
 import { useWalk } from '../../contexts/WalkContext';
 
 export default function WalkResultScreen({ navigation }) {
@@ -17,6 +17,8 @@ export default function WalkResultScreen({ navigation }) {
   const duration = last?.duration || 0;
   const pace = last?.pace || 0;
   const dogs = last?.dogs || currentWalk?.dogs || [];
+  const trackPoints = last?.trackPoints || [];
+  const pointCount = trackPoints.length;
 
   const formatDuration = (sec) => {
     if (sec < 60) return `${sec}秒`;
@@ -36,7 +38,7 @@ export default function WalkResultScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+      <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
         <View style={styles.checkIcon}>
           <Ionicons name="checkmark-circle" size={56} color={colors.primary} />
         </View>
@@ -82,11 +84,28 @@ export default function WalkResultScreen({ navigation }) {
       </View>
 
       <View style={styles.mapWrap}>
-        <MapPlaceholder
-          height={160}
-          label="轨迹地图"
-          sublabel="完成后展示本次路线"
-        />
+        <View style={styles.routeCard}>
+          <View style={styles.routeHeader}>
+            <Ionicons name="git-network-outline" size={20} color={colors.primary} />
+            <Text style={styles.routeTitle}>路线轨迹</Text>
+          </View>
+          <View style={styles.routeStats}>
+            <View style={styles.routeStat}>
+              <Text style={styles.routeStatValue}>{pointCount}</Text>
+              <Text style={styles.routeStatLabel}>记录点数</Text>
+            </View>
+            <View style={styles.routeStatDivider} />
+            <View style={styles.routeStat}>
+              <Text style={styles.routeStatValue}>{distance.toFixed(1)}</Text>
+              <Text style={styles.routeStatLabel}>总距离 (km)</Text>
+            </View>
+            <View style={styles.routeStatDivider} />
+            <View style={styles.routeStat}>
+              <Text style={styles.routeStatValue}>{formatDuration(duration)}</Text>
+              <Text style={styles.routeStatLabel}>总时长</Text>
+            </View>
+          </View>
+        </View>
       </View>
 
       <View style={styles.tipsSection}>
@@ -107,7 +126,7 @@ export default function WalkResultScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  header: { alignItems: 'center', paddingVertical: spacing.lg },
+  header: { alignItems: 'center', paddingVertical: spacing.md },
   checkIcon: { marginBottom: spacing.sm },
   title: { ...typography.h1, color: colors.secondary },
   time: { ...typography.body, color: colors.textLight, marginTop: spacing.xs },
@@ -115,7 +134,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     gap: spacing.lg,
-    marginTop: spacing.md,
+    marginTop: spacing.xs,
     marginBottom: spacing.sm,
   },
   dogItem: {
@@ -137,6 +156,26 @@ const styles = StyleSheet.create({
   statUnit: { ...typography.caption, color: colors.textLight, marginLeft: 2 },
   statLabel: { ...typography.caption, color: colors.textLight, marginTop: spacing.xs },
   mapWrap: { marginHorizontal: spacing.lg, marginTop: spacing.md, borderRadius: spacing.radiusLg, overflow: 'hidden' },
+  routeCard: {
+    backgroundColor: colors.white, borderRadius: spacing.radiusLg,
+    padding: spacing.md,
+  },
+  routeHeader: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  routeTitle: { ...typography.bodyBold, color: colors.secondary },
+  routeStats: {
+    flexDirection: 'row', backgroundColor: colors.bgLight,
+    borderRadius: spacing.radiusMd, padding: spacing.md,
+  },
+  routeStat: { flex: 1, alignItems: 'center', gap: 4 },
+  routeStatDivider: {
+    width: 1, backgroundColor: colors.border,
+    marginVertical: 4,
+  },
+  routeStatValue: { ...typography.h3, color: colors.secondary },
+  routeStatLabel: { ...typography.caption, color: colors.textLight },
   tipsSection: { gap: spacing.sm, paddingHorizontal: spacing.lg, marginTop: spacing.md },
   bottomFill: { flex: 1 },
   finishBtn: {

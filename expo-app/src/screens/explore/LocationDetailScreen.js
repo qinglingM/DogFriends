@@ -1,12 +1,10 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image, Dimensions } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { typography } from '../../theme/typography';
 import {
-  Button,
   MapPlaceholder,
   StatusBadge,
   ValidationCard,
@@ -14,13 +12,15 @@ import {
   ImageViewer,
 } from '../../components';
 import { useExplore } from '../../contexts/ExploreContext';
+import { useAuth } from '../../contexts/AuthContext';
+import ErrorState from '../../components/ErrorState';
 import {
   getStatusBanner,
   ENTRY_AREAS,
   DOG_SIZES,
-  BEHAVIOR_ICONS,
-  FACILITY_ICONS,
+  FACILITIES,
 } from '../../data/exploreData';
+import { imageUrl } from '../../utils/imageUrl';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -36,18 +36,47 @@ export default function LocationDetailScreen({ route, navigation }) {
     reportInaccuracy,
   } = useExplore();
 
-  const location = getLocation(id) || getLocation('loc_bloom');
+  const { user } = useAuth();
+  const location = getLocation(id);
+  if (!location) {
+    return (
+      <View style={styles.screen}>
+        <View style={styles.topBar}>
+          <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={24} color={colors.secondary} />
+          </TouchableOpacity>
+        </View>
+        <ErrorState message="地点不存在" onBack={() => navigation.goBack()} />
+      </View>
+    );
+  }
   const validations = getValidations(location.id);
+  const isPoster = user && location.submittedBy && user.id === location.submittedBy;
+
+  const facilityPercentages = useMemo(() => {
+    if (validations.length === 0) return null;
+    const counts = {};
+    validations.forEach(v => {
+      (v.tags || []).forEach(t => { counts[t] = (counts[t] || 0) + 1; });
+    });
+    const result = {};
+    FACILITIES.forEach(f => {
+      if (counts[f]) result[f] = Math.round((counts[f] / validations.length) * 100);
+    });
+    return result;
+  }, [validations]);
 
   const [sheetVisible, setSheetVisible] = useState(false);
   const [targetValidationId, setTargetValidationId] = useState(null);
-  const [showAllFacilities, setShowAllFacilities] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [viewerVisible, setViewerVisible] = useState(false);
   const [viewerIndex, setViewerIndex] = useState(0);
+  const [showAllValidations, setShowAllValidations] = useState(false);
+  const [scrollY, setScrollY] = useState(0);
   const banner = getStatusBanner(location.status);
   const isFav = !!favorites[location.id];
 
+  const showActionBar = scrollY > SCREEN_WIDTH * 0.45;
   // 收集所有图片（用户上传的照片 + 缩略图）
   const allImages = [
     ...(location.photos || []),
@@ -56,34 +85,21 @@ export default function LocationDetailScreen({ route, navigation }) {
 
   const matchedEntryArea = ENTRY_AREAS.find(e => e.key === location.entryArea);
   const matchedDogSizes = DOG_SIZES.filter(s => (location.dogSize || []).includes(s.key));
-  const matchedFacilityItems = [
-    ...(location.behaviors || []).map(t => ({ label: t, icon: BEHAVIOR_ICONS[t] || 'help-circle' })),
-    ...(location.facilities || []).map(t => ({ label: t, icon: FACILITY_ICONS[t] || 'help-circle' })),
-  ];
-  const displayedFacilityItems = showAllFacilities ? matchedFacilityItems : matchedFacilityItems.slice(0, 4);
-  const hasMoreFacilities = matchedFacilityItems.length > 4;
 
-  const visible = validations.slice(0, 3);
+  const visible = showAllValidations ? validations : validations.slice(0, 3);
   const hasMore = validations.length > 3;
 
-  useFocusEffect(
-    useCallback(() => {
-      const parent = navigation.getParent();
-      parent?.setOptions({ tabBarStyle: { display: 'none' } });
-      return () => {
-        parent?.setOptions({
-          tabBarStyle: {
-            backgroundColor: colors.white,
-            borderTopWidth: 1,
-            borderTopColor: colors.border,
-            height: spacing.bottomTabHeight,
-            paddingBottom: 8,
-            paddingTop: 8,
-          },
-        });
-      };
-    }, [navigation])
-  );
+  const handleScroll = useCallback((e) => {
+    setScrollY(e.nativeEvent.contentOffset.y);
+  }, []);
+
+  const handleAction = useCallback(() => {
+    if (isPoster) {
+      navigation.navigate('AddLocation', { editLocation: location });
+    } else {
+      navigation.navigate('UpdateInfo', { id: location.id });
+    }
+  }, [isPoster, navigation, location]);
 
   return (
     <View style={styles.screen}>
@@ -102,7 +118,10 @@ export default function LocationDetailScreen({ route, navigation }) {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView
+        onScroll={handleScroll}
+        scrollEventThrottle={100}
+        contentContainerStyle={styles.content}>
         <View style={styles.hero}>
           {allImages.length > 0 ? (
             <>
@@ -128,7 +147,7 @@ export default function LocationDetailScreen({ route, navigation }) {
                       setViewerVisible(true);
                     }}
                   >
-                    <Image source={{ uri }} style={styles.heroImage} />
+                    <Image source={{ uri: imageUrl(uri) }} style={styles.heroImage} />
                   </TouchableOpacity>
                 ))}
               </ScrollView>
@@ -147,7 +166,7 @@ export default function LocationDetailScreen({ route, navigation }) {
               )}
             </>
           ) : (
-            <MapPlaceholder height={200} label="地点照片" style={{ borderRadius: 0 }} />
+            <MapPlaceholder height={SCREEN_WIDTH * 3 / 4} label="地点照片" style={{ borderRadius: 0 }} />
           )}
         </View>
 
@@ -157,13 +176,10 @@ export default function LocationDetailScreen({ route, navigation }) {
             <StatusBadge status={location.status} size="sm" />
           </View>
 
-          <TouchableOpacity style={styles.addressRow}>
+          <View style={styles.addressRow}>
             <Ionicons name="location" size={14} color={colors.textLight} />
-            <Text style={styles.address}>{location.categoryLabel} · {location.city}</Text>
-            <TouchableOpacity>
-              <Ionicons name="call" size={16} color={colors.secondary} />
-            </TouchableOpacity>
-          </TouchableOpacity>
+            <Text style={styles.address}>{location.city} · {location.categoryLabel}</Text>
+          </View>
 
           {banner && (
             <View style={[styles.warnBanner, bannerToneStyle(banner.tone)]}>
@@ -180,7 +196,7 @@ export default function LocationDetailScreen({ route, navigation }) {
 
           <View style={styles.divider} />
 
-          <Text style={styles.sectionTitle}>宠物规则</Text>
+          <Text style={styles.sectionTitle}>可进入区域</Text>
           <View style={styles.rulesGrid}>
             {matchedEntryArea && (
               <View style={styles.ruleItem}>
@@ -196,60 +212,31 @@ export default function LocationDetailScreen({ route, navigation }) {
             ))}
           </View>
 
-          {matchedFacilityItems.length > 0 && (
+          {facilityPercentages && Object.keys(facilityPercentages).length > 0 && (
             <>
-              <Text style={styles.sectionTitle}>设施与要求</Text>
-              <View style={styles.facilityTags}>
-                {showAllFacilities ? (
-                  matchedFacilityItems.map((item, i) => (
-                    <View key={`f-${i}`} style={[styles.tagChip, styles.tagChipActive]}>
-                      <Ionicons name={item.icon} size={12} color={colors.secondary} style={{ marginRight: 4 }} />
-                      <Text style={styles.tagTextActive}>{item.label}</Text>
-                    </View>
-                  ))
-                ) : (
-                  <>
-                    {matchedFacilityItems.slice(0, 4).map((item, i) => (
-                      <View key={`f-${i}`} style={[styles.tagChip, styles.tagChipActive]}>
-                        <Ionicons name={item.icon} size={12} color={colors.secondary} style={{ marginRight: 4 }} />
-                        <Text style={styles.tagTextActive}>{item.label}</Text>
-                      </View>
-                    ))}
-                    {matchedFacilityItems.length > 4 && (
-                      <TouchableOpacity style={styles.tagChip} onPress={() => setShowAllFacilities(true)}>
-                        <Text style={styles.expandChipText}>查看全部</Text>
-                        <Ionicons name="chevron-forward" size={12} color={colors.secondary} />
-                      </TouchableOpacity>
-                    )}
-                  </>
-                )}
+              <Text style={styles.sectionTitle}>配套设施</Text>
+              <View style={styles.facilityGrid}>
+                {Object.entries(facilityPercentages).map(([name, pct], i) => (
+                  <View key={`f-${i}`} style={[styles.facilityItem, pct >= 50 && styles.facilityItemKnown]}>
+                    <Ionicons name="checkbox" size={16} color={pct >= 50 ? colors.secondary : colors.textLight} />
+                    <Text style={[styles.facilityLabel, pct >= 50 && styles.facilityLabelKnown]}>{name}</Text>
+                    <Text style={[styles.facilityPct, pct >= 50 && styles.facilityPctKnown]}>{pct}%</Text>
+                  </View>
+                ))}
               </View>
-              {showAllFacilities && matchedFacilityItems.length > 4 && (
-                <TouchableOpacity style={styles.collapseBtn} onPress={() => setShowAllFacilities(false)}>
-                  <Text style={styles.expandText}>收起</Text>
-                  <Ionicons name="chevron-up" size={12} color={colors.secondary} />
-                </TouchableOpacity>
-              )}
             </>
           )}
         </View>
 
         <View style={styles.validationSection}>
           <Text style={styles.sectionTitle}>
-            狗主人验证{validations.length > 0 ? `（${validations.length}）` : ''}
+            用户验证{validations.length > 0 ? `（${validations.length}）` : ''}
           </Text>
 
           {validations.length === 0 ? (
             <View style={styles.emptyValidation}>
-              <Text style={styles.emptyTitle}>还没有狗主人验证过这个地点</Text>
-              <Text style={styles.emptyText}>如果你去过，可以帮大家补充信息</Text>
-              <Button
-                variant="secondary"
-                onPress={() => navigation.navigate('UpdateInfo', { id: location.id })}
-                style={{ marginTop: 16 }}
-              >
-                我来反馈
-              </Button>
+              <Text style={styles.emptyTitle}>还没有用户验证过这个地点</Text>
+              {!isPoster && <Text style={styles.emptyText}>如果你去过，可以帮大家补充信息</Text>}
             </View>
           ) : (
             <>
@@ -263,12 +250,19 @@ export default function LocationDetailScreen({ route, navigation }) {
                     setTargetValidationId(v.id);
                     setSheetVisible(true);
                   }}
+                  onPressUser={(userName) => navigation.navigate('Profile', { screen: 'PersonalProfile', params: { userName } })}
                 />
               ))}
-              {hasMore && (
-                <TouchableOpacity style={styles.moreBtn}>
+              {hasMore && !showAllValidations && (
+                <TouchableOpacity style={styles.moreBtn} onPress={() => setShowAllValidations(true)}>
                   <Text style={styles.moreText}>查看全部 {validations.length} 条验证</Text>
                   <Ionicons name="chevron-forward" size={16} color={colors.secondary} />
+                </TouchableOpacity>
+              )}
+              {showAllValidations && (
+                <TouchableOpacity style={styles.moreBtn} onPress={() => setShowAllValidations(false)}>
+                  <Text style={styles.moreText}>收起</Text>
+                  <Ionicons name="chevron-up" size={16} color={colors.secondary} />
                 </TouchableOpacity>
               )}
             </>
@@ -276,14 +270,16 @@ export default function LocationDetailScreen({ route, navigation }) {
         </View>
       </ScrollView>
 
-      <View style={styles.bottomBar}>
-        <Button
-          icon={<Ionicons name="create-outline" size={18} color={colors.secondary} />}
-          onPress={() => navigation.navigate('UpdateInfo', { id: location.id })}
-        >
-          我来反馈
-        </Button>
-      </View>
+      {showActionBar && (
+        <TouchableOpacity style={styles.actionBar} onPress={handleAction} activeOpacity={0.85}>
+          <Ionicons
+            name={isPoster ? 'create-outline' : 'chatbubble-ellipses-outline'}
+            size={18}
+            color={colors.white}
+          />
+          <Text style={styles.actionBarText}>{isPoster ? '修改内容' : '我来反馈'}</Text>
+        </TouchableOpacity>
+      )}
 
       <InaccuracySheet
         visible={sheetVisible}
@@ -342,7 +338,7 @@ const styles = StyleSheet.create({
   },
   heroImage: {
     width: SCREEN_WIDTH,
-    height: 200,
+    height: SCREEN_WIDTH * 3 / 4,
   },
   pagination: {
     position: 'absolute',
@@ -381,7 +377,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05, shadowRadius: 16, elevation: 4,
   },
   content: {
-    paddingBottom: 100,
+    paddingBottom: spacing.lg,
     backgroundColor: colors.bg,
   },
   titleRow: {
@@ -410,8 +406,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   warnText: { ...typography.captionBold, flex: 1 },
-  sectionTitle: { ...typography.h3, color: colors.secondary, marginBottom: spacing.md },
-  rulesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.sectionGap },
+  sectionTitle: { ...typography.h3, color: colors.secondary, marginBottom: spacing.sm },
+  rulesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.sm },
   ruleItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -425,28 +421,29 @@ const styles = StyleSheet.create({
   },
   ruleText: { ...typography.captionBold, color: colors.textLight },
   ruleTextActive: { color: colors.secondary },
-  facilityTags: { flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' },
-  expandBtn: {
+  facilityGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginBottom: spacing.sm,
+  },
+  facilityItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
-    paddingVertical: spacing.sm,
-    marginTop: spacing.sm,
+    gap: 4,
+    width: '48%',
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: spacing.radiusSm,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  expandText: { ...typography.captionBold, color: colors.secondary },
-  tagChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: spacing.sm,
-    borderRadius: spacing.radiusPill,
-    backgroundColor: colors.chipDefault,
-  },
-  tagChipActive: {
-    backgroundColor: colors.statusPassed,
-  },
-  tagText: { ...typography.captionBold, color: colors.textMain },
-  tagTextActive: { color: colors.secondary },
+  facilityItemKnown: { borderColor: colors.secondary },
+  facilityLabel: { ...typography.body, color: colors.textLight, fontSize: 13 },
+  facilityLabelKnown: { color: colors.secondary },
+  facilityPct: { marginLeft: 'auto', fontSize: 12, color: colors.textLight },
+  facilityPctKnown: { color: colors.secondary },
   divider: {
     height: 1,
     backgroundColor: colors.border,
@@ -471,15 +468,27 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   moreText: { ...typography.bodyBold, color: colors.secondary },
-  bottomBar: {
+  actionBar: {
     position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: spacing.md,
-    paddingBottom: spacing.lg,
-    backgroundColor: colors.white,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
+    bottom: 24,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: colors.secondary,
+    paddingVertical: 12,
+    paddingHorizontal: 28,
+    borderRadius: spacing.radiusPill,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  actionBarText: {
+    ...typography.bodyBold,
+    color: colors.white,
+    fontSize: 15,
   },
 });

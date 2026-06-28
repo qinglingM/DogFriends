@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image, RefreshControl } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
@@ -7,6 +7,9 @@ import { spacing } from '../../theme/spacing';
 import { typography } from '../../theme/typography';
 import { useSquare } from '../../contexts/SquareContext';
 import { SQUARE_TAGS } from '../../data/squareData';
+import { getPostImages } from '../../utils/postHelpers';
+import { imageUrl } from '../../utils/imageUrl';
+import { formatLocation } from '../../utils/location';
 
 function splitColumns(posts) {
   return posts.reduce(
@@ -20,10 +23,10 @@ function splitColumns(posts) {
 
 export default function SquareScreen({ navigation }) {
   const insets = useSafeAreaInsets();
-  const { posts, toggleLike, toggleFavorite } = useSquare();
+  const { posts, 加载完成, refresh, toggleLike, toggleFavorite } = useSquare();
   const [activeTag, setActiveTag] = useState('all');
   const openAuthorProfile = (post) => {
-    navigation.navigate('UserProfile', { userName: post.authorName });
+    navigation.navigate('UserProfile', { userName: post.userName });
   };
   const filteredPosts = useMemo(() => {
     return posts.filter(post => {
@@ -43,7 +46,13 @@ export default function SquareScreen({ navigation }) {
       onPress={() => navigation.navigate('PostDetail', { id: post.id })}
     >
       <View style={styles.mediaWrap}>
-        <Image source={{ uri: post.mediaUrl }} style={styles.media} resizeMode="cover" />
+        <Image source={{ uri: imageUrl(getPostImages(post)[0]) }} style={styles.media} resizeMode="cover" />
+        {!!post.location && post.visibility === 'public' && (
+          <View style={styles.locationOverlay}>
+            <Ionicons name="location" size={10} color={colors.white} />
+            <Text style={styles.locationOverlayText} numberOfLines={1}>{post.location ? formatLocation(post.location) : ''}</Text>
+          </View>
+        )}
       </View>
 
       <View style={styles.cardBody}>
@@ -58,22 +67,11 @@ export default function SquareScreen({ navigation }) {
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>{post.authorAvatar}</Text>
           </View>
-          <Text style={styles.authorName} numberOfLines={1}>{post.authorName}</Text>
+          <Text style={styles.userName} numberOfLines={1}>{post.userName}</Text>
         </TouchableOpacity>
 
-        {!!post.tag && (
-          <View style={styles.tag}>
-            <Text style={styles.tagText}>{post.tag}</Text>
-          </View>
-        )}
-
-        <Text style={styles.postText} numberOfLines={3}>{post.text}</Text>
-
-        {!!post.location && post.visibility === 'public' && (
-          <View style={styles.locationRow}>
-            <Ionicons name="location" size={12} color={colors.textLight} />
-            <Text style={styles.locationText} numberOfLines={1}>{post.location}</Text>
-          </View>
+        {!!post.title && (
+          <Text style={styles.postTitle} numberOfLines={2}>{post.title}</Text>
         )}
 
         <View style={styles.actionRow}>
@@ -108,7 +106,7 @@ export default function SquareScreen({ navigation }) {
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={!加载完成} onRefresh={refresh} />}>
         <View style={styles.topRow}>
           <View style={styles.tagTabs}>
             {['all', ...SQUARE_TAGS].map(tag => {
@@ -134,6 +132,14 @@ export default function SquareScreen({ navigation }) {
           <View style={styles.column}>{columns[0].map(renderPostCard)}</View>
           <View style={styles.column}>{columns[1].map(renderPostCard)}</View>
         </View>
+
+        {filteredPosts.length === 0 && (
+          <View style={styles.emptyWrap}>
+            <Ionicons name="images-outline" size={48} color={colors.textLight} />
+            <Text style={styles.emptyText}>还没有帖子</Text>
+            <Text style={styles.emptySub}>点击右下角按钮发布第一条</Text>
+          </View>
+        )}
       </ScrollView>
 
       <TouchableOpacity
@@ -141,7 +147,7 @@ export default function SquareScreen({ navigation }) {
         activeOpacity={0.85}
         onPress={() => navigation.navigate('CreatePost')}
       >
-        <Ionicons name="pencil" size={24} color={colors.secondary} />
+        <Ionicons name="add" size={28} color={colors.secondary} />
       </TouchableOpacity>
     </View>
   );
@@ -179,8 +185,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.18,
     shadowRadius: 10,
     elevation: 6,
-    borderBottomWidth: 3,
-    borderBottomColor: colors.secondary,
   },
   tagTab: {
     flex: 1,
@@ -221,6 +225,7 @@ const styles = StyleSheet.create({
     width: '100%',
     aspectRatio: 3 / 4,
     backgroundColor: '#D3E0C8',
+    position: 'relative',
   },
   media: {
     width: '100%',
@@ -244,7 +249,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   avatarText: { ...typography.captionBold, color: colors.secondary },
-  authorName: { flex: 1, ...typography.captionBold, color: colors.textMain },
+  userName: { flex: 1, ...typography.captionBold, color: colors.textMain },
   tag: {
     alignSelf: 'flex-start',
     paddingHorizontal: 8,
@@ -253,23 +258,45 @@ const styles = StyleSheet.create({
     backgroundColor: colors.chipDefault,
   },
   tagText: { ...typography.captionBold, color: colors.secondary },
-  postText: { ...typography.caption, color: colors.textMain },
-  locationRow: {
+  postTitle: { ...typography.bodyBold, color: colors.textMain },
+  locationOverlay: {
+    position: 'absolute',
+    bottom: 6,
+    right: 6,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
+    backgroundColor: 'rgba(0,0,0,0.15)',
+    borderRadius: 18,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
   },
-  locationText: { flex: 1, ...typography.caption, color: colors.textLight },
+  locationOverlayText: { ...typography.caption, color: colors.white, fontSize: 11 },
   actionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingTop: 2,
   },
   action: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 3,
   },
   actionText: { ...typography.caption, color: colors.textLight },
+  emptyWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 80,
+    gap: 8,
+  },
+  emptyText: {
+    ...typography.bodyBold,
+    color: colors.textLight,
+  },
+  emptySub: {
+    ...typography.caption,
+    color: colors.textLight,
+  },
 });

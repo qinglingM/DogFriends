@@ -5,3 +5,4 @@ app/.vite/
 .DS_Store
 dist/
 .expo/
+.env

@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState, useCallback } from 'react';
+import React, { useMemo, useRef, useState, useCallback, useEffect } from 'react';
 import {
   Image,
   KeyboardAvoidingView,
@@ -10,13 +10,18 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { formatPostTime } from '../../utils/time';
+import { imageUrl } from '../../utils/imageUrl';
+import { formatLocation } from '../../utils/location';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { typography } from '../../theme/typography';
-import { NavBar, Button } from '../../components';
+import { NavBar } from '../../components';
 import { useSquare } from '../../contexts/SquareContext';
+import ErrorState from '../../components/ErrorState';
 
 function countCommentNodes(comments = []) {
   return comments.reduce(
@@ -49,6 +54,7 @@ export default function PostDetailScreen({ route, navigation }) {
     toggleCommentLike,
   } = useSquare();
   const inputRef = useRef(null);
+  const insets = useSafeAreaInsets();
   const [commentText, setCommentText] = useState('');
   const [replyTarget, setReplyTarget] = useState(null);
 
@@ -62,30 +68,44 @@ export default function PostDetailScreen({ route, navigation }) {
             backgroundColor: colors.white,
             borderTopWidth: 1,
             borderTopColor: colors.border,
-            height: spacing.bottomTabHeight,
-            paddingBottom: 8,
-            paddingTop: 8,
+            height: spacing.bottomTabHeight + Math.max(insets.bottom + 8, 10) - 14,
+            paddingTop: 4,
+            paddingBottom: Math.max(insets.bottom + 8, 10),
           },
         });
       };
     }, [navigation])
   );
 
-  const post = getPost(id) || getPost('post_1');
-  const comments = post?.comments || [];
+  const post = getPost(id);
+  if (!post) {
+    return <ErrorState message="帖子不存在" onBack={() => navigation.goBack()} />;
+  }
+  const comments = post.comments || [];
   const commentCount = useMemo(
     () => countCommentNodes(comments),
     [comments]
   );
 
-  if (!post) return null;
+  const images = post.images?.length > 0 ? post.images : (post.mediaUrl ? [post.mediaUrl] : []);
+  const [imageRatios, setImageRatios] = useState({});
+
+  useEffect(() => {
+    images.forEach(url => {
+      Image.getSize(url, (w, h) => {
+        setImageRatios(prev => ({ ...prev, [url]: w / h }));
+      }, () => {
+        setImageRatios(prev => ({ ...prev, [url]: 4 / 3 }));
+      });
+    });
+  }, []);
 
   const submitComment = () => {
     const text = commentText.trim();
     if (!text) return;
 
     if (replyTarget) {
-      addCommentReply(post.id, replyTarget.id, replyTarget.authorName, text);
+      addCommentReply(post.id, replyTarget.id, replyTarget.userName, text);
       setReplyTarget(null);
     } else {
       addComment(post.id, text);
@@ -94,11 +114,11 @@ export default function PostDetailScreen({ route, navigation }) {
   };
 
   const openAuthorProfile = () => {
-    navigation.navigate('UserProfile', { userName: post.authorName });
+    navigation.navigate('UserProfile', { userName: post.userName });
   };
 
   const startReply = (comment) => {
-    setReplyTarget({ id: comment.id, authorName: comment.authorName });
+    setReplyTarget({ id: comment.id, userName: comment.userName });
     inputRef.current?.focus();
   };
 
@@ -115,12 +135,12 @@ export default function PostDetailScreen({ route, navigation }) {
         ]}
       >
         <View style={[styles.commentAvatar, depth > 0 && styles.replyAvatar]}>
-          <Text style={styles.commentAvatarText}>{comment.authorName.slice(0, 1)}</Text>
+          <Text style={styles.commentAvatarText}>{(comment.userName || '').slice(0, 1)}</Text>
         </View>
         <View style={styles.commentMain}>
           <View style={styles.commentTop}>
             <Text style={styles.commentAuthor}>
-              {comment.authorName}
+              {comment.userName}
               {!!comment.replyTo && (
                 <Text style={styles.replyToText}> 回复 {comment.replyTo}</Text>
               )}
@@ -139,10 +159,13 @@ export default function PostDetailScreen({ route, navigation }) {
           </View>
           <Text style={styles.commentBody}>{comment.text}</Text>
 
-          <TouchableOpacity style={styles.replyButton} onPress={() => startReply(comment)}>
-            <Ionicons name="chatbubble-ellipses-outline" size={14} color={colors.secondary} />
-            <Text style={styles.replyButtonText}>回复</Text>
-          </TouchableOpacity>
+          <View style={styles.commentFooter}>
+            <Text style={styles.commentTime}>{formatPostTime(comment.createdAt)}</Text>
+            <TouchableOpacity style={styles.replyButton} onPress={() => startReply(comment)}>
+              <Ionicons name="chatbubble-ellipses-outline" size={14} color={colors.secondary} />
+              <Text style={styles.replyButtonText}>回复</Text>
+            </TouchableOpacity>
+          </View>
 
           {flatReplies.length > 0 && (
             <View style={styles.replyList}>
@@ -171,8 +194,8 @@ export default function PostDetailScreen({ route, navigation }) {
               <Text style={styles.avatarText}>{post.authorAvatar}</Text>
             </View>
             <View style={styles.authorMain}>
-              <Text style={styles.authorName}>{post.authorName}</Text>
-              <Text style={styles.postMeta}>{post.createdAt}{post.location ? ` · ${post.location}` : ''}</Text>
+              <Text style={styles.userName}>{post.userName}</Text>
+              <Text style={styles.postMeta}>{formatPostTime(post.createdAt)}{post.location ? ` · ${formatLocation(post.location)}` : ''}</Text>
             </View>
             {!!post.tag && (
               <View style={styles.tag}>
@@ -181,50 +204,34 @@ export default function PostDetailScreen({ route, navigation }) {
             )}
           </TouchableOpacity>
 
+          {!!post.title && (
+            <Text style={styles.postTitle}>{post.title}</Text>
+          )}
+
           <Text style={styles.postText}>{post.text}</Text>
 
-          <View style={styles.mediaWrap}>
-            <Image source={{ uri: post.mediaUrl }} style={styles.media} resizeMode="cover" />
-            {post.mediaType === 'video' && (
-              <View style={styles.videoBadge}>
-                <Ionicons name="play" size={22} color={colors.white} />
-              </View>
-            )}
-          </View>
-
-          <View style={styles.metaRow}>
-            {!!post.location && post.visibility === 'public' ? (
-              <View style={styles.locationInline}>
-                <Ionicons name="location" size={14} color={colors.secondary} />
-                <Text style={styles.locationText} numberOfLines={1}>{post.location}</Text>
-              </View>
-            ) : (
-              <View style={{ flex: 1 }} />
-            )}
-
-            <View style={styles.actionsInline}>
-              <TouchableOpacity style={styles.actionMini} onPress={() => toggleLike(post.id)}>
-                <Ionicons
-                  name={post.liked ? 'heart' : 'heart-outline'}
-                  size={18}
-                  color={post.liked ? colors.danger : colors.textLight}
+          {images.length > 1 ? (
+            <View style={styles.imageGrid}>
+              {images.map((url, i) => (
+                <Image
+                  key={i}
+                  source={{ uri: imageUrl(url) }}
+                  style={[styles.detailImage, { aspectRatio: imageRatios[url] || 4 / 3 }]}
+                  resizeMode="cover"
                 />
-                <Text style={[styles.actionMiniText, post.liked && styles.actionTextActive]}>{post.likes}</Text>
-              </TouchableOpacity>
-              <View style={styles.actionMini}>
-                <Ionicons name="chatbubble-outline" size={17} color={colors.textLight} />
-                <Text style={styles.actionMiniText}>{commentCount}</Text>
-              </View>
-              <TouchableOpacity style={styles.actionMini} onPress={() => toggleFavorite(post.id)}>
-                <Ionicons
-                  name={post.favorited ? 'bookmark' : 'bookmark-outline'}
-                  size={17}
-                  color={post.favorited ? colors.secondary : colors.textLight}
-                />
-                <Text style={[styles.actionMiniText, post.favorited && styles.actionTextActive]}>{post.favorites}</Text>
-              </TouchableOpacity>
+              ))}
             </View>
-          </View>
+          ) : (
+            <View style={[styles.mediaWrap, { aspectRatio: imageRatios[images[0]] || 4 / 3 }]}>
+              <Image source={{ uri: imageUrl(images[0]) }} style={styles.media} resizeMode="cover" />
+              {post.mediaType === 'video' && (
+                <View style={styles.videoBadge}>
+                  <Ionicons name="play" size={22} color={colors.white} />
+                </View>
+              )}
+            </View>
+          )}
+
         </View>
 
         <View style={styles.commentHeader}>
@@ -242,28 +249,49 @@ export default function PostDetailScreen({ route, navigation }) {
         )}
       </ScrollView>
 
-      <View style={styles.inputWrap}>
+      <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 12 }]}>
         {replyTarget && (
           <View style={styles.replyingBar}>
-            <Text style={styles.replyingText}>回复 {replyTarget.authorName}</Text>
+            <Text style={styles.replyingText}>回复 {replyTarget.userName}</Text>
             <TouchableOpacity onPress={() => setReplyTarget(null)} hitSlop={8}>
               <Ionicons name="close" size={18} color={colors.textLight} />
             </TouchableOpacity>
           </View>
         )}
-        <View style={styles.commentInputRow}>
+        <View style={styles.bottomRow}>
           <TextInput
             ref={inputRef}
             value={commentText}
             onChangeText={setCommentText}
-            placeholder={replyTarget ? `回复 ${replyTarget.authorName}...` : '写下你的评论...'}
+            placeholder={replyTarget ? `回复 ${replyTarget.userName}...` : '写下你的评论...'}
             placeholderTextColor={colors.textLight}
             style={styles.commentInput}
-            multiline
+            returnKeyType="done"
+            onSubmitEditing={submitComment}
+            blurOnSubmit
           />
-          <Button size="sm" onPress={submitComment} disabled={!commentText.trim()}>
-            发送
-          </Button>
+          <View style={styles.bottomActions}>
+            <TouchableOpacity style={styles.bottomAction} onPress={() => toggleLike(post.id)}>
+              <Ionicons
+                name={post.liked ? 'heart' : 'heart-outline'}
+                size={20}
+                color={post.liked ? colors.danger : colors.textLight}
+              />
+              <Text style={[styles.bottomActionText, post.liked && styles.bottomActionActive]}>{post.likes}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.bottomAction} onPress={() => toggleFavorite(post.id)}>
+              <Ionicons
+                name={post.favorited ? 'bookmark' : 'bookmark-outline'}
+                size={19}
+                color={post.favorited ? colors.secondary : colors.textLight}
+              />
+              <Text style={[styles.bottomActionText, post.favorited && styles.bottomActionActive]}>{post.favorites}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.bottomAction} onPress={() => inputRef.current?.focus()}>
+              <Ionicons name="chatbubble-outline" size={19} color={colors.textLight} />
+              <Text style={styles.bottomActionText}>{commentCount}</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     </KeyboardAvoidingView>
@@ -295,7 +323,7 @@ const styles = StyleSheet.create({
   },
   avatarText: { ...typography.bodyBold, color: colors.secondary },
   authorMain: { flex: 1 },
-  authorName: { ...typography.bodyBold, color: colors.textMain },
+  userName: { ...typography.bodyBold, color: colors.textMain },
   postMeta: { ...typography.caption, color: colors.textLight, marginTop: 2 },
   tag: {
     paddingHorizontal: 9,
@@ -305,14 +333,23 @@ const styles = StyleSheet.create({
   },
   tagText: { ...typography.captionBold, color: colors.secondary },
   postText: { ...typography.body, color: colors.textMain, marginBottom: 14 },
+  postTitle: { ...typography.bodyBold, color: colors.textMain, fontSize: 18, marginBottom: 8 },
   mediaWrap: {
-    aspectRatio: 3 / 4,
     borderRadius: spacing.radiusMd,
     overflow: 'hidden',
     backgroundColor: '#D3E0C8',
     marginBottom: 12,
   },
   media: { width: '100%', height: '100%' },
+  imageGrid: {
+    gap: spacing.sm,
+    marginBottom: 12,
+  },
+  detailImage: {
+    width: '100%',
+    borderRadius: spacing.radiusMd,
+    backgroundColor: colors.chipDefault,
+  },
   videoBadge: {
     position: 'absolute',
     left: '50%',
@@ -326,33 +363,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  metaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginTop: 4,
-  },
-  locationInline: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    minWidth: 0,
-  },
-  locationText: { ...typography.captionBold, color: colors.secondary, flexShrink: 1 },
-  actionsInline: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-  },
-  actionMini: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    minHeight: 28,
-  },
-  actionMiniText: { ...typography.captionBold, color: colors.textLight },
-  actionTextActive: { color: colors.secondary },
   commentHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -410,20 +420,25 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   commentLikeText: { ...typography.caption, color: colors.textLight },
+  commentFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 6,
+  },
+  commentTime: { ...typography.caption, color: colors.textLight, fontSize: 11 },
   replyButton: {
-    alignSelf: 'flex-start',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
     paddingVertical: 6,
-    marginTop: 4,
   },
   replyButtonText: { ...typography.captionBold, color: colors.secondary },
   replyList: {
     marginTop: 6,
     paddingLeft: 0,
   },
-  inputWrap: {
+  bottomBar: {
     position: 'absolute',
     left: 0,
     right: 0,
@@ -446,14 +461,14 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   replyingText: { ...typography.captionBold, color: colors.secondary },
-  commentInputRow: {
+  bottomRow: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
+    alignItems: 'center',
     gap: 8,
   },
   commentInput: {
-    flex: 1,
-    maxHeight: 92,
+    flex: 1.4,
+    height: 40,
     backgroundColor: colors.bgLight,
     borderRadius: spacing.radiusMd,
     paddingHorizontal: 12,
@@ -461,4 +476,18 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.textMain,
   },
+  bottomActions: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-evenly',
+  },
+  bottomAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    minHeight: 28,
+  },
+  bottomActionText: { ...typography.captionBold, color: colors.textLight },
+  bottomActionActive: { color: colors.secondary },
 });

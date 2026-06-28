@@ -5,21 +5,27 @@ import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { typography } from '../../theme/typography';
 import { NavBar, Card, Chip, DogAvatar, Button } from '../../components';
+import ErrorState from '../../components/ErrorState';
 import { useDogs } from '../../contexts/DogContext';
-
-const SIZE_LABELS = { small: '小型犬', medium: '中型犬', large: '大型犬' };
+import { SIZE_LABELS } from '../../constants/dog';
+import { imageUrl } from '../../utils/imageUrl';
 
 export default function DogProfileScreen({ navigation, route }) {
   const { dogs } = useDogs();
   const dogId = route?.params?.dogId;
-  const dog = dogs.find(d => d.id === dogId) || dogs[0] || {
-    name: '旺财', breed: '金毛寻回犬', size: 'large', gender: 'male',
-    birthday: '2023-03-15', weight: 32, neutered: true,
-  };
+  const dog = route?.params?.dogId ? dogs.find(d => d.id === dogId) : null;
+  if (!dog) {
+    return (
+      <View style={styles.screen}>
+        <NavBar title="狗狗档案" onBack={() => navigation.goBack()} />
+        <ErrorState message="狗狗不存在" onBack={() => navigation.goBack()} />
+      </View>
+    );
+  }
 
   const sizeLabel = SIZE_LABELS[dog.size] || '大型犬';
   const genderLabel = dog.gender === 'female' ? '♀ 母' : '♂ 公';
-  const weightLabel = dog.weight ? `${dog.weight} kg` : '';
+  const weightLabel = dog.weight ? `${dog.weight.toFixed(1)} kg` : '';
 
   let age = '';
   if (dog.birthday) {
@@ -51,7 +57,7 @@ export default function DogProfileScreen({ navigation, route }) {
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.hero}>
           {hasImage ? (
-            <Image source={{ uri: dog.image }} style={styles.heroAvatar} />
+            <Image source={{ uri: imageUrl(dog.image) }} style={styles.heroAvatar} />
           ) : (
             <DogAvatar size={96} />
           )}
@@ -106,19 +112,6 @@ export default function DogProfileScreen({ navigation, route }) {
 
         <Text style={styles.sectionTitle}>进阶信息</Text>
         <Card noPadding>
-          <TouchableOpacity
-            style={styles.advItem}
-            onPress={() => navigation.navigate('Vaccine')}
-          >
-            <View style={[styles.advIcon, { backgroundColor: 'rgba(146, 102, 153, 0.15)' }]}>
-              <Ionicons name="medkit-outline" size={20} color={colors.accent} />
-            </View>
-            <View style={styles.advText}>
-              <Text style={styles.advTitle}>疫苗记录</Text>
-              <Text style={styles.advSub}>已接种 3 项 · 下次提醒 2026-09-15</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color={colors.textLight} />
-          </TouchableOpacity>
           <TouchableOpacity style={[styles.advItem, { borderBottomWidth: 0 }]}>
             <View style={[styles.advIcon, { backgroundColor: 'rgba(185, 207, 50, 0.2)' }]}>
               <Ionicons name="cut-outline" size={20} color={colors.secondary} />

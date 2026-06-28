@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -14,32 +14,43 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import * as Location from 'expo-location';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { typography } from '../../theme/typography';
-import { Card, Button } from '../../components';
+import { Button } from '../../components';
 import { SQUARE_TAGS } from '../../data/squareData';
 import { useSquare } from '../../contexts/SquareContext';
 import { useProfile } from '../../contexts/ProfileContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { uploadImages } from '../../utils/uploadService';
 
-const MOCK_IMAGE = 'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?auto=format&fit=crop&w=600&q=80';
-const LOCATION_OPTIONS = ['上海', '复兴公园', '世纪公园', '滨江步道'];
-const VISIBILITY_OPTIONS = [
-  { key: 'public', label: '公开', icon: 'earth' },
-  { key: 'private', label: '仅自己可见', icon: 'lock-closed-outline' },
-];
 
 export default function CreatePostScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const { addPost } = useSquare();
   const { profile } = useProfile();
+  const { user } = useAuth();
   const [title, setTitle] = useState('');
   const [text, setText] = useState('');
   const [media, setMedia] = useState([]);
   const [tag, setTag] = useState(null);
-  const [location, setLocation] = useState(profile.area || '上海');
-  const [visibility, setVisibility] = useState('public');
-  const [openPicker, setOpenPicker] = useState(null);
+  const [detectedLocation, setDetectedLocation] = useState(null);
+
+  useEffect(() => {
+    (async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') return;
+      const loc = await Location.getCurrentPositionAsync({});
+      const geocode = await Location.reverseGeocodeAsync({
+        latitude: loc.coords.latitude,
+        longitude: loc.coords.longitude,
+      });
+      if (geocode.length > 0) {
+        setDetectedLocation(geocode[0].city || geocode[0].district || '');
+      }
+    })();
+  }, []);
 
   const addMedia = async () => {
     // 1. 请求相册权限（首次会弹系统弹窗）
@@ -75,21 +86,51 @@ export default function CreatePostScreen({ navigation }) {
   };
   const removeMedia = (id) => setMedia(prev => prev.filter(m => m.id !== id));
 
-  const publish = () => {
+  const publish = async () => {
+    if (!title.trim() && !text.trim()) {
+      Alert.alert('发布失败', '请填写标题或正文');
+      return;
+    }
+    if (media.length === 0) {
+      Alert.alert('发布失败', '请至少选择一张图片');
+      return;
+    }
     const body = text.trim();
-    const content = title.trim()
-      ? (body ? `${title.trim()}\n${body}` : title.trim())
-      : (body || '分享今天的遛狗日常。');
-    const cover = media[0];
-    addPost({
-      text: content,
+    const imageUris = media.filter(m => m.type === 'image').map(m => m.uri);
+    const videoUri = media.find(m => m.type === 'video')?.uri;
+
+    let mediaUrl = null;
+    let images = [];
+    try {
+      if (imageUris.length > 0) {
+        const urls = await uploadImages(imageUris, `${user.id}/posts`, `post_${Date.now()}`);
+        mediaUrl = urls[0];
+        images = urls;
+      }
+      if (videoUri) {
+        mediaUrl = videoUri;
+      }
+    } catch (e) {
+      Alert.alert('上传失败', '图片上传失败，请重试');
+      return;
+    }
+
+    const { error } = await addPost({
+      userName: profile.name || '小明',
+      authorAvatar: (profile.avatar?.charAt(0)?.toUpperCase()) || 'M',
+      title: title.trim(),
+      text: body,
       tag,
-      location,
-      visibility,
-      mediaType: cover?.type === 'video' ? 'video' : 'image',
-      mediaUrl: cover?.uri || MOCK_IMAGE,
+      location: detectedLocation,
+      mediaType: videoUri ? 'video' : 'image',
+      mediaUrl,
+      images,
     });
-    navigation.navigate('SquareHome');
+    if (error) {
+      Alert.alert('发布失败', error.message || '请稍后再试');
+      return;
+    }
+    navigation.replace('SquareHome');
   };
 
   return (
@@ -144,6 +185,8 @@ export default function CreatePostScreen({ navigation }) {
           placeholderTextColor={colors.textLight}
           style={styles.titleInput}
           maxLength={50}
+          returnKeyType="done"
+          blurOnSubmit
         />
 
         {/* 正文 */}
@@ -156,7 +199,7 @@ export default function CreatePostScreen({ navigation }) {
           style={styles.bodyInput}
         />
 
-        {/* 以下保留：标签 / 位置 / 可见性 / 发布 */}
+        {/* 标签 */}
         <Text style={styles.sectionTitle}>标签（可选）</Text>
         <View style={styles.tagWrap}>
           {SQUARE_TAGS.map(item => (
@@ -169,61 +212,6 @@ export default function CreatePostScreen({ navigation }) {
             </TouchableOpacity>
           ))}
         </View>
-
-        <View style={styles.pickerRow}>
-          <TouchableOpacity
-            style={[styles.pickerBox, openPicker === 'location' && styles.pickerBoxActive]}
-            activeOpacity={0.75}
-            onPress={() => setOpenPicker(openPicker === 'location' ? null : 'location')}
-          >
-            <Ionicons name="location" size={16} color={colors.secondary} />
-            <Text style={styles.pickerText} numberOfLines={1}>{location}</Text>
-            <Ionicons name={openPicker === 'location' ? 'chevron-up' : 'chevron-down'} size={14} color={colors.textLight} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.pickerBox, openPicker === 'visibility' && styles.pickerBoxActive]}
-            activeOpacity={0.75}
-            onPress={() => setOpenPicker(openPicker === 'visibility' ? null : 'visibility')}
-          >
-            <Ionicons
-              name={VISIBILITY_OPTIONS.find(item => item.key === visibility)?.icon || 'earth'}
-              size={16}
-              color={colors.secondary}
-            />
-            <Text style={styles.pickerText} numberOfLines={1}>
-              {VISIBILITY_OPTIONS.find(item => item.key === visibility)?.label || '公开'}
-            </Text>
-            <Ionicons name={openPicker === 'visibility' ? 'chevron-up' : 'chevron-down'} size={14} color={colors.textLight} />
-          </TouchableOpacity>
-        </View>
-
-        {openPicker && (
-          <Card noPadding style={styles.pickerMenu}>
-            {(openPicker === 'location' ? LOCATION_OPTIONS : VISIBILITY_OPTIONS).map(option => {
-              const key = openPicker === 'location' ? option : option.key;
-              const label = openPicker === 'location' ? option : option.label;
-              const icon = openPicker === 'location' ? 'location' : option.icon;
-              const active = openPicker === 'location' ? location === key : visibility === key;
-
-              return (
-                <TouchableOpacity
-                  key={key}
-                  style={styles.pickerMenuItem}
-                  activeOpacity={0.75}
-                  onPress={() => {
-                    if (openPicker === 'location') setLocation(key);
-                    else setVisibility(key);
-                    setOpenPicker(null);
-                  }}
-                >
-                  <Ionicons name={icon} size={16} color={colors.secondary} />
-                  <Text style={styles.pickerMenuText}>{label}</Text>
-                  {active && <Ionicons name="checkmark" size={18} color={colors.secondary} />}
-                </TouchableOpacity>
-              );
-            })}
-          </Card>
-        )}
 
         <Button fullWidth onPress={publish}>发布</Button>
       </ScrollView>
@@ -308,7 +296,6 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
 
-  // 以下保留原样式
   sectionTitle: { ...typography.bodyBold, color: colors.secondary, marginBottom: 10, marginTop: 4 },
   tagWrap: {
     flexDirection: 'row',
@@ -328,41 +315,4 @@ const styles = StyleSheet.create({
   },
   tagOptionText: { ...typography.bodyBold, color: colors.textLight },
   tagOptionTextActive: { color: colors.secondary },
-  pickerRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 12,
-  },
-  pickerBox: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    minHeight: 44,
-    paddingHorizontal: 12,
-    borderRadius: spacing.radiusMd,
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  pickerBoxActive: {
-    borderColor: colors.primary,
-    backgroundColor: 'rgba(185, 207, 50, 0.12)',
-  },
-  pickerText: { flex: 1, ...typography.bodyBold, color: colors.textMain },
-  pickerMenu: {
-    marginTop: -4,
-    marginBottom: 12,
-    overflow: 'hidden',
-  },
-  pickerMenuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    minHeight: 48,
-    paddingHorizontal: spacing.md,
-    borderBottomWidth: 1,
-    borderColor: colors.border,
-  },
-  pickerMenuText: { flex: 1, ...typography.bodyBold, color: colors.textMain },
 });

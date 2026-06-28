@@ -1,18 +1,23 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { typography } from '../../theme/typography';
 import { DogAvatar } from '../../components';
-
-const MOCK_DOGS = [
-  { id: '1', name: '旺财', breed: '金毛寻回犬 · ♂ · 32kg', active: true },
-  { id: '2', name: '小白', breed: '萨摩耶 · ♀ · 22kg', active: false },
-  { id: '3', name: '豆豆', breed: '柯基 · ♂ · 12kg', active: false },
-];
+import { useDogs } from '../../contexts/DogContext';
+import { SIZE_LABELS } from '../../constants/dog';
 
 export default function DogSwitchScreen({ navigation }) {
+  const { dogs } = useDogs();
+  const [activeId, setActiveId] = useState(dogs[0]?.id || null);
+
+  const formatBreed = (dog) => {
+    const genderIcon = dog.gender === 'female' ? '♀' : '♂';
+    const weight = dog.weight ? ` · ${dog.weight.toFixed(1)}kg` : '';
+    return `${dog.breed} · ${genderIcon}${weight}`;
+  };
+
   return (
     <View style={styles.overlay}>
       <TouchableOpacity style={styles.backdrop} onPress={() => navigation.goBack()} />
@@ -21,15 +26,19 @@ export default function DogSwitchScreen({ navigation }) {
         <Text style={styles.title}>切换狗狗</Text>
 
         <View style={styles.list}>
-          {MOCK_DOGS.map(dog => (
-            <TouchableOpacity key={dog.id} style={[styles.item, dog.active && styles.itemActive]}>
+          {dogs.map(dog => (
+            <TouchableOpacity
+              key={dog.id}
+              style={[styles.item, activeId === dog.id && styles.itemActive]}
+              onPress={() => setActiveId(dog.id)}
+            >
               <DogAvatar size={48} />
               <View style={styles.itemInfo}>
                 <Text style={styles.itemName}>{dog.name}</Text>
-                <Text style={styles.itemBreed}>{dog.breed}</Text>
+                <Text style={styles.itemBreed}>{formatBreed(dog)}</Text>
               </View>
-              <View style={[styles.check, dog.active && styles.checkActive]}>
-                {dog.active && <Ionicons name="checkmark" size={14} color={colors.white} />}
+              <View style={[styles.check, activeId === dog.id && styles.checkActive]}>
+                {activeId === dog.id && <Ionicons name="checkmark" size={14} color={colors.white} />}
               </View>
             </TouchableOpacity>
           ))}

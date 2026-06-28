@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { imageUrl } from '../utils/imageUrl';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { typography } from '../theme/typography';
+import { formatPostTime } from '../utils/time';
 
 const MAX_NOTE_LENGTH = 80;
 
-export default function ValidationCard({ validation, helpful, onToggleHelpful, onReportInaccuracy }) {
+export default function ValidationCard({ validation, helpful, onToggleHelpful, onReportInaccuracy, onPressUser }) {
   const [previewImage, setPreviewImage] = useState(null);
   const [noteExpanded, setNoteExpanded] = useState(false);
 
@@ -35,29 +37,38 @@ export default function ValidationCard({ validation, helpful, onToggleHelpful, o
 
   const photos = Array.isArray(validation.photos) ? validation.photos : [];
 
+  const displayTags = validation.tags || [];
+
   return (
     <View style={styles.card}>
       <View style={styles.header}>
-        <View style={styles.avatarCircle}>
-          <Text style={styles.avatarEmoji}>{validation.userAvatar || '🐶'}</Text>
-          {validation.dogSize && (
-            <View style={[styles.dogSizeIcon, { backgroundColor: getDogSizeColor(validation.dogSize) }]}>
-              <Text style={styles.dogSizeText}>{getDogSizeLabel(validation.dogSize)}</Text>
-            </View>
-          )}
-        </View>
-        <View style={styles.headerLeft}>
-          <Text style={styles.userName}>{validation.userName}</Text>
-        </View>
+        <TouchableOpacity
+          style={styles.userTouchable}
+          activeOpacity={0.7}
+          disabled={!onPressUser}
+          onPress={() => onPressUser?.(validation.userName)}
+        >
+          <View style={styles.avatarCircle}>
+            <Text style={styles.avatarEmoji}>{validation.userAvatar || '🐶'}</Text>
+            {validation.dogSize && (
+              <View style={[styles.dogSizeIcon, { backgroundColor: getDogSizeColor(validation.dogSize) }]}>
+                <Text style={styles.dogSizeText}>{getDogSizeLabel(validation.dogSize)}</Text>
+              </View>
+            )}
+          </View>
+          <View style={styles.headerLeft}>
+            <Text style={styles.userName}>{validation.userName}</Text>
+          </View>
+        </TouchableOpacity>
         <View style={styles.outcomeRow}>
           <Ionicons name="checkmark-circle" size={14} color={colors.secondary} />
           <Text style={styles.outcomeText}>{validation.outcomeLabel}</Text>
         </View>
       </View>
 
-      {validation.tags?.length > 0 && (
+      {displayTags.length > 0 && (
         <View style={styles.tagRow}>
-          {validation.tags.map((t, i) => (
+          {displayTags.map((t, i) => (
             <View key={i} style={styles.tagChip}>
               <Text style={styles.tagText}>{t}</Text>
             </View>
@@ -81,7 +92,7 @@ export default function ValidationCard({ validation, helpful, onToggleHelpful, o
           {photos.map((photo, i) => (
             <TouchableOpacity key={i} onPress={() => setPreviewImage(photo)} style={styles.photoTouchable}>
               {photo ? (
-                <Image source={{ uri: photo }} style={styles.photoImage} />
+                <Image source={{ uri: imageUrl(photo) }} style={styles.photoImage} />
               ) : (
                 <View style={styles.photoPlaceholder}>
                   <Ionicons name="image-outline" size={20} color={colors.secondary} style={{ opacity: 0.4 }} />
@@ -93,7 +104,7 @@ export default function ValidationCard({ validation, helpful, onToggleHelpful, o
       )}
 
       <View style={styles.footer}>
-        <Text style={styles.time}>{validation.time}</Text>
+        <Text style={styles.time}>{formatPostTime(validation.time)}</Text>
         <View style={styles.footerActions}>
           <TouchableOpacity style={styles.footerBtn} onPress={onToggleHelpful} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <Ionicons
@@ -117,7 +128,7 @@ export default function ValidationCard({ validation, helpful, onToggleHelpful, o
         <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setPreviewImage(null)}>
           <View style={styles.modalContent}>
             {previewImage && (
-              <Image source={{ uri: previewImage }} style={styles.modalImage} resizeMode="contain" />
+              <Image source={{ uri: imageUrl(previewImage) }} style={styles.modalImage} resizeMode="contain" />
             )}
             <TouchableOpacity style={styles.closeBtn} onPress={() => setPreviewImage(null)}>
               <Ionicons name="close-circle" size={32} color={colors.white} />
@@ -141,6 +152,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     marginBottom: 12,
+  },
+  userTouchable: {
+    flexDirection: 'row', alignItems: 'center', flex: 1,
   },
   avatarCircle: {
     width: 36,

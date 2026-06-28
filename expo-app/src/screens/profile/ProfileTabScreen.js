@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useCallback } from 'react';
-import { View, Text, ScrollView, Image, ImageBackground, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import { View, Text, ScrollView, Image, ImageBackground, TouchableOpacity, StyleSheet, Modal, Animated } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,97 +10,105 @@ import { typography } from '../../theme/typography';
 import { useSquare } from '../../contexts/SquareContext';
 import { useProfile } from '../../contexts/ProfileContext';
 import { useDogs } from '../../contexts/DogContext';
+import { useExplore } from '../../contexts/ExploreContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { StatusBadge } from '../../components';
 import FeedCard from '../../components/FeedCard';
+import { formatPostTime } from '../../utils/time';
+import { uploadImage } from '../../utils/uploadService';
+import { imageUrl } from '../../utils/imageUrl';
 import { OWNER_PROFILE, USER_PROFILES, OWNER_NAME_CONST } from '../../data/userProfiles';
+import { getPostImages } from '../../utils/postHelpers';
+import { SIZE_LABELS } from '../../constants/dog';
 
 function calcAge(birthday) {
   if (!birthday) return '';
   const birth = new Date(birthday + 'T00:00:00');
   const now = new Date();
-  const totalMonths = (now.getFullYear() - birth.getFullYear()) * 12 + (now.getMonth() - birth.getMonth());
-  const years = totalMonths / 12;
-  const rounded = Math.round(years * 2) / 2;
-  if (rounded <= 0) return '不到半岁';
-  return rounded % 1 === 0 ? `${rounded}岁` : `${rounded}岁`;
+  let years = now.getFullYear() - birth.getFullYear();
+  let months = now.getMonth() - birth.getMonth();
+  if (now.getDate() < birth.getDate()) months--;
+  if (months < 0) { years--; months += 12; }
+  if (years > 0) return months > 0 ? `${years}岁${months}个月` : `${years}岁`;
+  if (months > 0) return `${months}个月`;
+  return '不到1个月';
 }
 
-const PROFILE_FEED = [
-  {
-    id: 'feed_plain_1', type: '普通图文动态', title: '旺财今天认识了新朋友',
-    meta: '上海 · 日常分享',
-    text: '傍晚在小区附近散步，旺财遇到一只很温柔的边牧，两个小朋友闻了半天，最后一起走了一小段。',
-    createdAt: '今天 18:40', location: '上海',
-    likes: 54, comments: 7, favorites: 12, liked: false,
-    images: [
-      'https://images.unsplash.com/photo-1552053831-71594a27632d?auto=format&fit=crop&w=500&q=80',
-      'https://images.unsplash.com/photo-1587300003388-59208cc962cb?auto=format&fit=crop&w=500&q=80',
-    ],
-  },
-  {
-    id: 'feed_walk_1', type: '公开遛狗动态', title: '和旺财完成了一次傍晚遛狗',
-    meta: '上海 · 42分钟 · 2.3km · 傍晚',
-    text: '今天风很舒服，路线只展示大致区域，不展示起终点。旺财一路闻闻停停，状态很好。',
-    createdAt: '今天 19:20', location: '上海',
-    walkRecord: { distance: '2.3', duration: '42:18', pace: "18'20\"", area: '滨江步道' },
-    likes: 128, comments: 16, favorites: 32, liked: true,
-    images: [
-      'https://images.unsplash.com/photo-1507146426996-ef05306b995a?auto=format&fit=crop&w=500&q=80',
-    ],
-  },
-];
+function formatCount(n) {
+  if (n >= 100000000) return (n / 100000000).toFixed(1) + '亿';
+  if (n >= 10000) return (n / 10000).toFixed(1) + '万';
+  return String(n);
+}
 
-const PERSONAL_FEED = [
-  {
-    id: 'feed_plain_1', type: '普通图文动态', title: '旺财今天认识了新朋友',
-    meta: '上海 · 日常分享',
-    text: '傍晚在小区附近散步，旺财遇到一只很温柔的边牧，两个小朋友闻了半天，最后一起走了一小段。',
-    createdAt: '今天 18:40', location: '上海',
-    likes: 54, comments: 7, favorites: 12, liked: false,
-    images: [
-      'https://images.unsplash.com/photo-1552053831-71594a27632d?auto=format&fit=crop&w=500&q=80',
-      'https://images.unsplash.com/photo-1587300003388-59208cc962cb?auto=format&fit=crop&w=500&q=80',
-      'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?auto=format&fit=crop&w=500&q=80',
-    ],
-  },
-  {
-    id: 'feed_walk_1', type: '公开遛狗动态', title: '和旺财完成了一次傍晚遛狗',
-    meta: '上海 · 42分钟 · 2.3km · 傍晚',
-    text: '今天风很舒服，路线只展示大致区域，不展示起终点。旺财一路闻闻停停，状态很好。',
-    createdAt: '今天 19:20', location: '上海',
-    walkRecord: { distance: '2.3', duration: '42:18', pace: "18'20\"", area: '滨江步道' },
-    likes: 128, comments: 16, favorites: 32, liked: true,
-    images: [
-      'https://images.unsplash.com/photo-1507146426996-ef05306b995a?auto=format&fit=crop&w=500&q=80',
-      'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=500&q=80',
-      'https://images.unsplash.com/photo-1534361960057-19889db9621e?auto=format&fit=crop&w=500&q=80',
-    ],
-  },
-  {
-    id: 'feed_place_1', type: '地点体验动态', title: '这家咖啡店户外对狗狗很友好',
-    meta: 'BLOOM Coffee · 咖啡店',
-    text: '户外座位宽，店员会主动给水碗。大型犬建议避开周末高峰，平日下午更舒服。',
-    createdAt: '昨天 15:30', location: '上海',
-    likes: 96, comments: 8, favorites: 24, liked: false,
-    images: [
-      'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=500&q=80',
-      'https://images.unsplash.com/photo-1601758177266-bc599de87707?auto=format&fit=crop&w=500&q=80',
-      'https://images.unsplash.com/photo-1559925393-8be0ec4767c8?auto=format&fit=crop&w=500&q=80',
-    ],
-  },
-];
+function getNextBirthday(dog) {
+  if (!dog.birthday) return null;
+  const parts = dog.birthday.split('-');
+  const birthMonth = parseInt(parts[1]) - 1;
+  const birthDay = parseInt(parts[2]);
+  const birthYear = parseInt(parts[0]);
+  const today = new Date();
+  const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const thisYearBday = new Date(today.getFullYear(), birthMonth, birthDay);
+  const nextYearBday = new Date(today.getFullYear() + 1, birthMonth, birthDay);
+  const next = thisYearBday >= todayStart ? thisYearBday : nextYearBday;
+  const days = Math.ceil((next - todayStart) / (1000 * 60 * 60 * 24));
+  const turnAge = next.getFullYear() - birthYear;
+  return { days, turnAge, date: next };
+}
+
+function BirthdayCard({ dogs }) {
+  const upcoming = useMemo(() => {
+    return dogs
+      .map(d => ({ dog: d, info: getNextBirthday(d) }))
+      .filter(x => x.info)
+      .sort((a, b) => a.info.days - b.info.days);
+  }, [dogs]);
+
+  const item = upcoming[0];
+  if (!item) return null;
+
+  const isToday = item.info.days === 0;
+  return (
+    <View style={s.birthdayCard}>
+      <View style={s.birthdayHeader}>
+        <Ionicons name="gift" size={20} color={colors.accent} />
+        <Text style={s.birthdayTitle}>
+          {isToday ? '生日快乐 🎉' : '即将到来的生日'}
+        </Text>
+      </View>
+      <View style={s.birthdayBody}>
+        <Text style={s.birthdayDog}>{item.dog.name}</Text>
+        <Text style={s.birthdayInfo}>
+          {isToday
+            ? `今天 ${item.info.turnAge} 岁啦！`
+            : `还有 ${item.info.days} 天 · 即将满 ${item.info.turnAge} 岁 🐾`}
+        </Text>
+      </View>
+    </View>
+  );
+}
 
 const MENU_ITEMS = [
   { label: '我的收藏', icon: 'bookmark-outline', bg: 'rgba(185, 207, 50, 0.2)', route: 'FavoriteLocations' },
-  { label: '我分享过', icon: 'clipboard-outline', bg: 'rgba(185, 207, 50, 0.2)', route: 'ContributionHistory' },
+  { label: '遛狗记录', icon: 'walk-outline', bg: 'rgba(146, 102, 153, 0.15)', route: 'WalkHistory' },
+  { label: '互动消息', icon: 'notifications-outline', bg: 'rgba(185, 207, 50, 0.2)', route: 'Notifications' },
 ];
 
-function StatBlock({ value, label }) {
-  return (
-    <View style={s.statBlock}>
-      <Text style={s.statValue}>{value}</Text>
+function StatBlock({ value, label, onPress }) {
+  const content = (
+    <>
+      <Text style={s.statValue}>{formatCount(value)}</Text>
       <Text style={s.statLabel}>{label}</Text>
-    </View>
+    </>
   );
+  if (onPress) {
+    return (
+      <TouchableOpacity style={s.statBlock} activeOpacity={0.7} onPress={onPress}>
+        {content}
+      </TouchableOpacity>
+    );
+  }
+  return <View style={s.statBlock}>{content}</View>;
 }
 
 function DogCard({ dog, navigation, isSelf, isExpanded, onToggleExpand, totalCount }) {
@@ -133,13 +141,13 @@ function DogCard({ dog, navigation, isSelf, isExpanded, onToggleExpand, totalCou
       onPress={onToggleExpand}
     >
       <View style={s.dogCardHeader}>
-        <Image source={{ uri: dog.image }} style={[s.dogCardAvatar, { borderColor: genderBorderColor }]} />
+        <Image source={{ uri: imageUrl(dog.image) }} style={[s.dogCardAvatar, { borderColor: genderBorderColor }]} />
         <View style={s.dogCardInfoRow}>
           <Text style={s.dogCardName}>{dog.name}</Text>
           <Ionicons name={dog.gender === 'male' ? 'male' : 'female'} size={14} color={colors.textLight} />
           {dog.traits && dog.traits.length > 0 && (
             <View style={s.dogCardTagsInline}>
-              {dog.traits.slice(0, 2).map((t, i) => (
+              {dog.traits.slice(0, 3).map((t, i) => (
                 <View key={i} style={s.dogCardTag}>
                   <Text style={s.dogCardTagText}>{t}</Text>
                 </View>
@@ -168,7 +176,7 @@ function DogCard({ dog, navigation, isSelf, isExpanded, onToggleExpand, totalCou
           }}>
             {dog.size ? (
               <Text style={s.dogCardDetailText}>
-                {dog.size === 'small' ? '小型犬' : dog.size === 'medium' ? '中型犬' : '大型犬'}
+                {SIZE_LABELS[dog.size]}
               </Text>
             ) : null}
             {dog.size ? <View style={{ width: 14 }} /> : null}
@@ -195,22 +203,41 @@ export default function ProfileTabScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
   const { posts } = useSquare();
   const { profile: userProfile, updateProfile } = useProfile();
-  const { dogs, removeDog } = useDogs();
+  const { dogs } = useDogs();
+  const { contributions, getLocation } = useExplore();
+  const { user } = useAuth();
 
   const userName = route?.params?.userName;
-  const isSelf = !userName || userName === OWNER_NAME_CONST;
+  const isSelf = route.name !== 'PersonalProfile' || !userName || userName === OWNER_NAME_CONST;
 
   const otherProfile = !isSelf ? USER_PROFILES[userName] : null;
   const displayProfile = isSelf
-    ? { ...OWNER_PROFILE, ...userProfile }
+    ? { ...OWNER_PROFILE, ...Object.fromEntries(Object.entries(userProfile || {}).filter(([_, v]) => v != null)) }
     : otherProfile || OWNER_PROFILE;
   const dogsList = isSelf ? dogs : (otherProfile?.dogs || []);
 
   const [expandedDogId, setExpandedDogId] = useState(null);
+  const sidebarAnim = useRef(new Animated.Value(0)).current;
+  const [sidebarVisible, setSidebarVisible] = useState(false);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [feedTab, setFeedTab] = useState('square');
+
+  const openSidebar = useCallback(() => {
+    setSidebarVisible(true);
+    Animated.timing(sidebarAnim, {
+      toValue: 1, duration: 250, useNativeDriver: true,
+    }).start();
+  }, []);
+
+  const closeSidebar = useCallback(() => {
+    Animated.timing(sidebarAnim, {
+      toValue: 0, duration: 200, useNativeDriver: true,
+    }).start(() => setSidebarVisible(false));
+  }, []);
 
   const publicPosts = useMemo(() => {
     return posts
-      .filter(post => post.authorName === displayProfile.name && post.visibility === 'public')
+      .filter(post => post.userName === displayProfile.name && post.visibility === 'public')
       .map(post => ({
         id: post.id,
         type: '普通图文动态',
@@ -223,11 +250,17 @@ export default function ProfileTabScreen({ navigation, route }) {
         comments: post.comments.length,
         favorites: post.favorites,
         liked: post.liked,
-        images: [post.mediaUrl],
+        images: getPostImages(post),
         sourcePostId: post.id,
       }));
   }, [posts]);
-  const feed = [...publicPosts, ...(isSelf ? PROFILE_FEED : PERSONAL_FEED)];
+
+  const exploreFeed = useMemo(() => {
+    return contributions.map(c => ({
+      ...c,
+      location: getLocation(c.locationId),
+    })).filter(c => c.location);
+  }, [contributions]);
 
   const pickCover = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -237,7 +270,12 @@ export default function ProfileTabScreen({ navigation, route }) {
       quality: 0.85,
     });
     if (!result.canceled && result.assets?.[0]) {
-      updateProfile({ cover: result.assets[0].uri });
+      try {
+        const url = await uploadImage(result.assets[0].uri, `${user.id}/covers`, 'cover');
+        updateProfile({ cover: url });
+      } catch (e) {
+        Alert.alert('上传失败', '封面上传失败，请重试');
+      }
     }
   };
 
@@ -248,21 +286,85 @@ export default function ProfileTabScreen({ navigation, route }) {
         parent?.setOptions({ tabBarStyle: { display: 'none' } });
         return () => {
           parent?.setOptions({
-            tabBarStyle: {
-              backgroundColor: colors.white,
-              borderTopWidth: 1,
-              borderTopColor: colors.border,
-              height: spacing.bottomTabHeight,
-              paddingBottom: spacing.md,
-              paddingTop: spacing.xs,
-            },
-          });
+              tabBarStyle: {
+                backgroundColor: colors.white,
+                borderTopWidth: 1,
+                borderTopColor: colors.border,
+                height: spacing.bottomTabHeight + Math.max(insets.bottom + 8, 10) - 14,
+                paddingTop: 4,
+                paddingBottom: Math.max(insets.bottom + 8, 10),
+              },
+            });
         };
       }
     }, [navigation, isSelf])
   );
 
   const genderIcon = displayProfile.gender === 'male' ? 'male' : displayProfile.gender === 'female' ? 'female' : null;
+  const hasCover = !!displayProfile.cover;
+  const defaultAvatarIcon = !displayProfile.avatar
+    ? displayProfile.gender === 'male' ? 'male' : displayProfile.gender === 'female' ? 'female' : 'person'
+    : null;
+  const defaultAvatarBg = !displayProfile.avatar
+    ? displayProfile.gender === 'male' ? colors.secondary : displayProfile.gender === 'female' ? colors.accent : colors.textLight
+    : null;
+
+  function ProfileHeroContent() {
+    return (
+      <View style={s.ownerProfileRow}>
+        {displayProfile.avatar ? (
+          <Image source={{ uri: imageUrl(displayProfile.avatar) }} style={s.heroAvatar} />
+        ) : (
+          <View style={[s.heroAvatar, { backgroundColor: defaultAvatarBg, alignItems: 'center', justifyContent: 'center' }]}>
+            <Ionicons name={defaultAvatarIcon} size={32} color={colors.white} />
+          </View>
+        )}
+        <View style={s.heroNameBlock}>
+          <View style={s.heroNameRow}>
+            <Text style={s.heroName}>{displayProfile.name}</Text>
+            {genderIcon && <Ionicons name={genderIcon} size={16} color={colors.white} />}
+            {isSelf ? (
+              <TouchableOpacity
+                style={s.heroEditBtn}
+                activeOpacity={0.75}
+                onPress={() => navigation.navigate('EditProfile')}
+              >
+                <Ionicons name="create-outline" size={16} color={colors.white} />
+                <Text style={s.heroEditBtnText}>编辑资料</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                style={[s.heroFollowBtn, isFollowing && s.heroFollowedBtn]}
+                activeOpacity={0.75}
+                onPress={() => setIsFollowing(!isFollowing)}
+              >
+                <Text style={s.heroFollowBtnText}>{isFollowing ? '已关注' : '关注'}</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          {displayProfile.signature ? (
+            <Text style={s.heroSignature} numberOfLines={2}>{displayProfile.signature}</Text>
+          ) : null}
+
+          <View style={s.heroSocialRow}>
+            <StatBlock
+              value={displayProfile.following}
+              label="关注"
+              onPress={() => navigation.navigate('FollowList', { type: 'following' })}
+            />
+            <View style={s.heroStatDivider} />
+            <StatBlock
+              value={displayProfile.followers}
+              label="粉丝"
+              onPress={() => navigation.navigate('FollowList', { type: 'follower' })}
+            />
+            <View style={s.heroStatDivider} />
+            <StatBlock value={displayProfile.likes} label="获赞" />
+          </View>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={s.screen}>
@@ -270,92 +372,92 @@ export default function ProfileTabScreen({ navigation, route }) {
         {/* Hero: Cover image + owner profile overlay */}
         {isSelf ? (
           <TouchableOpacity activeOpacity={0.85} onPress={pickCover}>
-            <ImageBackground
-              source={{ uri: displayProfile.cover }}
-              style={[s.hero, { paddingTop: insets.top }]}
-            >
-
-              <View style={s.heroOverlay}>
-                <View style={s.ownerProfileRow}>
-                  <Image source={{ uri: displayProfile.avatar }} style={s.heroAvatar} />
-                  <View style={s.heroNameBlock}>
-                    <View style={s.heroNameRow}>
-                      <Text style={s.heroName}>{displayProfile.name}</Text>
-                      {genderIcon && <Ionicons name={genderIcon} size={16} color={colors.white} />}
-                      <TouchableOpacity
-                        style={s.heroEditBtn}
-                        activeOpacity={0.75}
-                        onPress={() => navigation.navigate('EditProfile')}
-                      >
-                        <Ionicons name="create-outline" size={16} color={colors.white} />
-                        <Text style={s.heroEditBtnText}>编辑资料</Text>
-                      </TouchableOpacity>
-                    </View>
-                    {displayProfile.signature ? (
-                      <Text style={s.heroSignature} numberOfLines={2}>{displayProfile.signature}</Text>
-                    ) : null}
-
-                    <View style={s.heroSocialRow}>
-                      <StatBlock value={displayProfile.following} label="关注" />
-                      <View style={s.heroStatDivider} />
-                      <StatBlock value={displayProfile.followers} label="粉丝" />
-                      <View style={s.heroStatDivider} />
-                      <StatBlock value={displayProfile.likes} label="获赞" />
-                    </View>
-                  </View>
+            {hasCover ? (
+              <ImageBackground
+                source={{ uri: imageUrl(displayProfile.cover) }}
+                style={[s.hero, { paddingTop: insets.top }]}
+              >
+                <TouchableOpacity
+                  style={[s.menuBtn, { top: insets.top + 8 }]}
+                  onPress={openSidebar}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="menu-outline" size={20} color={colors.white} />
+                </TouchableOpacity>
+                <View style={s.heroOverlay}>
+                  <ProfileHeroContent />
+                </View>
+              </ImageBackground>
+            ) : (
+              <View style={[s.hero, s.heroCoverPlaceholder, { paddingTop: insets.top }]}>
+                <TouchableOpacity
+                  style={[s.menuBtn, { top: insets.top + 8 }]}
+                  onPress={openSidebar}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="menu-outline" size={20} color={colors.white} />
+                </TouchableOpacity>
+                <View style={s.coverHintRow}>
+                  <Ionicons name="camera-outline" size={16} color="rgba(255,255,255,0.7)" />
+                  <Text style={s.coverHintText}>轻点添加相册背景</Text>
+                </View>
+                <View style={s.heroOverlay}>
+                  <ProfileHeroContent />
                 </View>
               </View>
-            </ImageBackground>
+            )}
           </TouchableOpacity>
         ) : (
-          <ImageBackground
-            source={{ uri: displayProfile.cover }}
-            style={[s.hero, { paddingTop: insets.top }]}
-          >
-
-            <View style={s.heroOverlay}>
-              <View style={s.ownerProfileRow}>
-                <Image source={{ uri: displayProfile.avatar }} style={s.heroAvatar} />
-                <View style={s.heroNameBlock}>
-                  <View style={s.heroNameRow}>
-                    <Text style={s.heroName}>{displayProfile.name}</Text>
-                    {genderIcon && <Ionicons name={genderIcon} size={16} color={colors.white} />}
-                    <TouchableOpacity style={s.heroFollowBtn} activeOpacity={0.75}>
-                      <Text style={s.heroFollowBtnText}>关注</Text>
-                    </TouchableOpacity>
-                  </View>
-                  {displayProfile.signature ? (
-                    <Text style={s.heroSignature} numberOfLines={2}>{displayProfile.signature}</Text>
-                  ) : null}
-
-                  <View style={s.heroSocialRow}>
-                    <StatBlock value={displayProfile.following} label="关注" />
-                    <View style={s.heroStatDivider} />
-                    <StatBlock value={displayProfile.followers} label="粉丝" />
-                    <View style={s.heroStatDivider} />
-                    <StatBlock value={displayProfile.likes} label="获赞" />
-                  </View>
+          <View>
+            {hasCover ? (
+              <ImageBackground
+                source={{ uri: imageUrl(displayProfile.cover) }}
+                style={[s.hero, { paddingTop: insets.top }]}
+              >
+                <TouchableOpacity
+                  style={[s.backBtn, { top: insets.top + 8 }]}
+                  onPress={() => navigation.goBack()}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="arrow-back" size={20} color={colors.white} />
+                </TouchableOpacity>
+                <View style={s.heroOverlay}>
+                  <ProfileHeroContent />
+                </View>
+              </ImageBackground>
+            ) : (
+              <View style={[s.hero, s.heroCoverPlaceholder, { paddingTop: insets.top }]}>
+                <TouchableOpacity
+                  style={[s.backBtn, { top: insets.top + 8 }]}
+                  onPress={() => navigation.goBack()}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="arrow-back" size={20} color={colors.white} />
+                </TouchableOpacity>
+                <View style={s.heroOverlay}>
+                  <ProfileHeroContent />
                 </View>
               </View>
-            </View>
-          </ImageBackground>
+            )}
+          </View>
         )}
 
         {/* Dog cards section */}
-        {dogsList.length > 0 && (
-          <View style={s.section}>
-            <View style={s.sectionHeader}>
-              <Text style={s.sectionTitle}>{isSelf ? '我的狗狗' : 'TA的狗狗'} {dogsList.length}只</Text>
-              {isSelf && (
-                <TouchableOpacity
-                  style={s.sectionAction}
-                  activeOpacity={0.7}
-                  onPress={() => navigation.navigate('DogEdit')}
-                >
-                  <Ionicons name="add-circle" size={28} color={colors.secondary} />
-                </TouchableOpacity>
-              )}
-            </View>
+        <View style={s.section}>
+          <View style={s.sectionHeader}>
+            <Text style={s.sectionTitle}>{isSelf ? '我的狗狗' : 'TA的狗狗'} {dogsList.length}只</Text>
+            {isSelf && (
+              <TouchableOpacity
+                style={s.sectionAction}
+                activeOpacity={0.7}
+                onPress={() => navigation.navigate('DogEdit')}
+              >
+                <Ionicons name="add-circle" size={28} color={colors.secondary} />
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {dogsList.length > 0 ? (
             <View style={s.dogCardGrid}>
               {dogsList.map(dog => (
                 <DogCard
@@ -369,59 +471,135 @@ export default function ProfileTabScreen({ navigation, route }) {
                 />
               ))}
             </View>
-          </View>
-        )}
+          ) : isSelf ? (
+            <TouchableOpacity
+              style={s.dogEmptyCard}
+              activeOpacity={0.7}
+              onPress={() => navigation.navigate('DogEdit')}
+            >
+              <Ionicons name="paw-outline" size={40} color={colors.border} />
+              <Text style={s.dogEmptyText}>还没有狗狗，点击添加</Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
 
         {/* Feed section */}
         <View style={s.section}>
-          <View style={s.sectionHeader}>
-            <Text style={s.sectionTitle}>动态</Text>
+          <View style={s.feedTabBar}>
+            <TouchableOpacity
+              style={[s.feedTab, feedTab === 'square' && s.feedTabActive]}
+              onPress={() => setFeedTab('square')}
+            >
+              <Text style={[s.feedTabText, feedTab === 'square' && s.feedTabTextActive]}>广场</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[s.feedTab, feedTab === 'explore' && s.feedTabActive]}
+              onPress={() => setFeedTab('explore')}
+            >
+              <Text style={[s.feedTabText, feedTab === 'explore' && s.feedTabTextActive]}>去玩</Text>
+            </TouchableOpacity>
           </View>
           <View style={s.feedList}>
-            {feed.map(item => (
-              <FeedCard
-                key={item.id}
-                item={item}
-                profile={displayProfile}
-                onPress={() => navigation.navigate('ProfileFeedDetail', { item, profile: displayProfile })}
-              />
-            ))}
+            {feedTab === 'square' ? (
+              publicPosts.length === 0 ? (
+                <View style={s.feedEmpty}>
+                  <Ionicons name="images-outline" size={32} color={colors.textLight} />
+                  <Text style={s.feedEmptyText}>还没有广场动态</Text>
+                </View>
+              ) : (
+                publicPosts.map(item => (
+                  <FeedCard
+                    key={item.id}
+                    item={item}
+                    profile={displayProfile}
+                    interactive
+                    onPress={() => navigation.navigate('ProfileFeedDetail', { item, profile: displayProfile })}
+                  />
+                ))
+              )
+            ) : (
+              exploreFeed.length === 0 ? (
+                <View style={s.feedEmpty}>
+                  <Ionicons name="paw-outline" size={32} color={colors.textLight} />
+                  <Text style={s.feedEmptyText}>还没有去玩记录</Text>
+                </View>
+              ) : (
+                exploreFeed.map(c => (
+                  <TouchableOpacity
+                    key={c.id}
+                    style={s.exploreCard}
+                    activeOpacity={0.78}
+                    onPress={() => navigation.navigate('LocationDetail', { id: c.locationId })}
+                  >
+                    <View style={s.exploreCardThumb}>
+                      {c.location.photos?.[0] ? (
+                        <Image source={{ uri: imageUrl(c.location.photos[0]) }} style={s.exploreCardImage} />
+                      ) : (
+                        <Ionicons name="image-outline" size={28} color={colors.secondary} style={{ opacity: 0.4 }} />
+                      )}
+                    </View>
+                    <View style={s.exploreCardBody}>
+                      <Text style={s.exploreCardName} numberOfLines={1}>{c.locationName}</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                        <View style={[s.contribBadge, {
+                          backgroundColor: c.bucket === 'created' ? colors.secondary : '#926699',
+                        }]}>
+                          <Text style={s.contribBadgeText}>
+                            {c.bucket === 'created' ? '开拓' : '验证'}
+                          </Text>
+                        </View>
+                        <Text style={s.exploreCardMeta}>{c.locationLabel}</Text>
+                      </View>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
+                        <StatusBadge status={c.status} />
+                        <Text style={[s.exploreCardMeta, { marginLeft: 'auto' }]}>{formatPostTime(c.time)}</Text>
+                      </View>
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color={colors.textLight} />
+                  </TouchableOpacity>
+                ))
+              )
+            )}
           </View>
         </View>
 
-        {/* Menu section (self only) */}
-        {isSelf && (
-          <View style={s.section}>
-            <View style={s.menuSection}>
-              {MENU_ITEMS.map((entry, index) => (
-                <TouchableOpacity
-                  key={entry.route}
-                  style={[s.menuItem, index === MENU_ITEMS.length - 1 && s.menuItemLast]}
-                  onPress={() => navigation.navigate(entry.route)}
-                  activeOpacity={0.75}
-                >
-                  <View style={[s.menuIcon, { backgroundColor: entry.bg }]}>
-                    <Ionicons name={entry.icon} size={20} color={colors.secondary} />
-                  </View>
-                  <Text style={s.menuText}>{entry.label}</Text>
-                  <Ionicons name="chevron-forward" size={16} color={colors.textLight} />
-                </TouchableOpacity>
-              ))}
-            </View>
-            <TouchableOpacity
-              style={s.settingsItem}
-              onPress={() => navigation.navigate('Settings')}
-              activeOpacity={0.75}
-            >
-              <View style={[s.menuIcon, { backgroundColor: 'rgba(106, 128, 108, 0.1)' }]}>
-                <Ionicons name="settings-outline" size={20} color={colors.textLight} />
-              </View>
-              <Text style={s.menuText}>设置</Text>
-              <Ionicons name="chevron-forward" size={16} color={colors.textLight} />
-            </TouchableOpacity>
-          </View>
-        )}
       </ScrollView>
+
+      <Modal visible={sidebarVisible} transparent animationType="none" onRequestClose={closeSidebar}>
+        <View style={s.sidebarOverlay}>
+          <TouchableOpacity style={s.sidebarBackdrop} activeOpacity={1} onPress={closeSidebar} />
+          <Animated.View style={[s.sidebar, { transform: [{ translateX: sidebarAnim.interpolate({
+            inputRange: [0, 1],
+            outputRange: [260, 0],
+          }) }] }]}>
+            <TouchableOpacity style={s.sidebarClose} onPress={closeSidebar}>
+              <Ionicons name="close" size={24} color={colors.secondary} />
+            </TouchableOpacity>
+            {isSelf && <BirthdayCard dogs={dogs} />}
+            {MENU_ITEMS.map(item => (
+              <TouchableOpacity
+                key={item.route}
+                style={s.sidebarItem}
+                onPress={() => { closeSidebar(); navigation.navigate(item.route); }}
+              >
+                <View style={[s.sidebarItemIcon, { backgroundColor: item.bg }]}>
+                  <Ionicons name={item.icon} size={22} color={colors.secondary} />
+                </View>
+                <Text style={s.sidebarItemText}>{item.label}</Text>
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity
+              style={s.sidebarItem}
+              onPress={() => { closeSidebar(); navigation.navigate('Settings'); }}
+            >
+              <View style={[s.sidebarItemIcon, { backgroundColor: 'rgba(106, 128, 108, 0.1)' }]}>
+                <Ionicons name="settings-outline" size={22} color={colors.textLight} />
+              </View>
+              <Text style={s.sidebarItemText}>设置</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -432,6 +610,21 @@ const s = StyleSheet.create({
 
   /* Hero */
   hero: { height: 360, justifyContent: 'flex-end' },
+  heroCoverPlaceholder: {
+    backgroundColor: colors.textMain,
+    justifyContent: 'flex-end',
+  },
+  coverHintRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    paddingBottom: spacing.sm,
+  },
+  coverHintText: {
+    ...typography.captionBold,
+    color: 'rgba(255,255,255,0.7)',
+  },
   heroOverlay: {
     paddingHorizontal: spacing.md,
     paddingTop: spacing.md,
@@ -469,6 +662,7 @@ const s = StyleSheet.create({
     backgroundColor: colors.secondary,
     alignItems: 'center', justifyContent: 'center',
   },
+  heroFollowedBtn: { backgroundColor: colors.border },
   heroFollowBtnText: { ...typography.caption, color: colors.white, fontWeight: 600, fontSize: 14 },
 
   /* Section */
@@ -479,6 +673,17 @@ const s = StyleSheet.create({
   },
   sectionTitle: { ...typography.h3, color: colors.secondary },
   sectionAction: { flexDirection: 'row', alignItems: 'center', minHeight: spacing.touchTarget },
+
+  /* Dog empty state */
+  dogEmptyCard: {
+    marginHorizontal: spacing.md,
+    paddingVertical: 36,
+    borderRadius: spacing.radiusMd,
+    backgroundColor: colors.white,
+    alignItems: 'center', justifyContent: 'center', gap: 8,
+    borderWidth: 1, borderColor: colors.border, borderStyle: 'dashed',
+  },
+  dogEmptyText: { ...typography.body, color: colors.textLight },
 
   /* Dog card list */
   dogCardGrid: {
@@ -532,24 +737,115 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
 
+  /* Feed tab bar */
+  feedTabBar: {
+    flexDirection: 'row',
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.sm,
+  },
+  feedTab: {
+    flex: 1, alignItems: 'center',
+    paddingVertical: spacing.xs,
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  feedTabActive: { borderBottomColor: colors.secondary },
+  feedTabText: { ...typography.body, color: colors.textLight },
+  feedTabTextActive: { color: colors.secondary, ...typography.bodyBold },
+  feedEmpty: {
+    alignItems: 'center',
+    paddingVertical: 48,
+    gap: 8,
+  },
+  feedEmptyText: { ...typography.body, color: colors.textLight },
+  /* Explore card */
+  exploreCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    backgroundColor: colors.white, borderRadius: spacing.radiusMd,
+    padding: 12,
+  },
+  exploreCardThumb: {
+    width: 72, height: 72,
+    backgroundColor: '#D3E0C8', borderRadius: spacing.radiusSm,
+    alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+  },
+  exploreCardImage: { width: '100%', height: '100%' },
+  exploreCardBody: { flex: 1 },
+  exploreCardName: { ...typography.bodyBold, color: colors.textMain },
+  exploreCardMeta: { ...typography.caption, color: colors.textLight, marginTop: 2 },
+  contribBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: spacing.radiusPill,
+  },
+  contribBadgeText: { fontSize: 10, color: colors.white, fontWeight: 600 },
   /* Feed */
-  feedList: { paddingHorizontal: spacing.md, gap: spacing.md },
+  feedList: { paddingHorizontal: spacing.md, gap: 8 },
 
-  /* Menu */
-  menuSection: {
-    marginHorizontal: spacing.md,
-    backgroundColor: colors.white, borderRadius: spacing.radiusMd, overflow: 'hidden',
+  /* Hamburger button */
+  menuBtn: {
+    position: 'absolute', right: 12,
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    alignItems: 'center', justifyContent: 'center',
+    zIndex: 10,
   },
-  menuItem: {
-    flexDirection: 'row', alignItems: 'center', gap: 16,
-    padding: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border, minHeight: 56,
+  backBtn: {
+    position: 'absolute', left: 12,
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    alignItems: 'center', justifyContent: 'center',
+    zIndex: 10,
   },
-  menuItemLast: { borderBottomWidth: 0 },
-  menuIcon: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
-  menuText: { flex: 1, ...typography.bodyBold, color: colors.textMain },
-  settingsItem: {
-    flexDirection: 'row', alignItems: 'center', gap: 16,
-    marginHorizontal: spacing.md, marginTop: spacing.md,
-    padding: spacing.md, backgroundColor: colors.white, borderRadius: spacing.radiusMd, minHeight: 56,
+
+  /* Sidebar overlay */
+  sidebarOverlay: {
+    flex: 1,
   },
+  sidebarBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+  },
+  sidebar: {
+    position: 'absolute', right: 0, top: 0, bottom: 0,
+    width: 260,
+    backgroundColor: colors.white,
+    paddingTop: 60,
+    paddingHorizontal: spacing.md,
+    shadowColor: '#000', shadowOffset: { width: -4, height: 0 },
+    shadowOpacity: 0.1, shadowRadius: 12, elevation: 8,
+  },
+  sidebarClose: {
+    alignSelf: 'flex-end',
+    width: 36, height: 36, borderRadius: 18,
+    alignItems: 'center', justifyContent: 'center',
+    marginBottom: spacing.sm,
+  },
+  sidebarDivider: { height: 1, backgroundColor: colors.border, marginBottom: spacing.sm },
+  sidebarItem: {
+    flexDirection: 'row', alignItems: 'center', gap: 14,
+    paddingVertical: 12,
+    borderBottomWidth: 1, borderBottomColor: colors.border,
+  },
+  sidebarItemIcon: {
+    width: 40, height: 40, borderRadius: 20,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  sidebarItemText: {
+    flex: 1, ...typography.bodyBold, color: colors.secondary, fontSize: 16,
+  },
+  birthdayCard: {
+    backgroundColor: 'rgba(146, 102, 153, 0.08)',
+    borderRadius: spacing.radiusMd,
+    padding: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  birthdayHeader: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
+    marginBottom: spacing.sm,
+  },
+  birthdayTitle: { ...typography.captionBold, color: colors.accent, fontSize: 13 },
+  birthdayBody: { gap: 2 },
+  birthdayDog: { ...typography.bodyBold, color: colors.secondary, fontSize: 16 },
+  birthdayInfo: { ...typography.caption, color: colors.textLight },
 });

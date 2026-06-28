@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet, Image, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet, Image, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { colors } from '../../theme/colors';
@@ -7,8 +7,12 @@ import { spacing } from '../../theme/spacing';
 import { typography } from '../../theme/typography';
 import { NavBar } from '../../components';
 import { useProfile } from '../../contexts/ProfileContext';
+import { useAuth } from '../../contexts/AuthContext';
 import CityPickerModal from '../../components/CityPickerModal';
 import { formatArea } from '../../data/cityData';
+import AvatarCropper from '../../components/AvatarCropper';
+import { uploadImage } from '../../utils/uploadService';
+import { imageUrl } from '../../utils/imageUrl';
 
 const GENDER_OPTIONS = [
   { key: 'male', label: '男' },
@@ -18,6 +22,7 @@ const GENDER_OPTIONS = [
 
 export default function EditProfileScreen({ navigation }) {
   const { profile, updateProfile } = useProfile();
+  const { user } = useAuth();
   const [name, setName] = useState(profile.name);
   const [signature, setSignature] = useState(profile.signature);
   const [province, setProvince] = useState(profile.province || null);
@@ -25,17 +30,30 @@ export default function EditProfileScreen({ navigation }) {
   const [avatar, setAvatar] = useState(profile.avatar);
   const [gender, setGender] = useState(profile.gender);
   const [showCityPicker, setShowCityPicker] = useState(false);
+  const [cropperVisible, setCropperVisible] = useState(false);
+  const [pendingAvatar, setPendingAvatar] = useState(null);
 
   const pickAvatar = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [1, 1],
+      allowsEditing: false,
       quality: 0.8,
     });
     if (!result.canceled && result.assets?.[0]) {
-      setAvatar(result.assets[0].uri);
+      setPendingAvatar(result.assets[0].uri);
+      setCropperVisible(true);
     }
+  };
+
+  const handleCropConfirm = (uri) => {
+    setAvatar(uri);
+    setCropperVisible(false);
+    setPendingAvatar(null);
+  };
+
+  const handleCropCancel = () => {
+    setCropperVisible(false);
+    setPendingAvatar(null);
   };
 
   const handleCityConfirm = ({ province: p, city: c }) => {
@@ -44,16 +62,29 @@ export default function EditProfileScreen({ navigation }) {
     setShowCityPicker(false);
   };
 
-  const handleSave = () => {
-    updateProfile({
+  const handleSave = async () => {
+    let avatarUrl = avatar;
+    if (avatar && avatar !== profile.avatar && !avatar.startsWith('http')) {
+      try {
+        avatarUrl = await uploadImage(avatar, `${user.id}/avatars`, 'avatar');
+      } catch (e) {
+        Alert.alert('上传失败', '头像上传失败，请重试');
+        return;
+      }
+    }
+    const { error } = await updateProfile({
       name,
       signature,
       province,
       city,
       area: formatArea(province, city),
-      avatar,
+      avatar: avatarUrl,
       gender,
     });
+    if (error) {
+      Alert.alert('保存失败', error.message || '请稍后再试');
+      return;
+    }
     navigation.goBack();
   };
 
@@ -69,7 +100,7 @@ export default function EditProfileScreen({ navigation }) {
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <View style={styles.avatarSection}>
           <TouchableOpacity onPress={pickAvatar} activeOpacity={0.7}>
-            <Image source={{ uri: avatar }} style={styles.avatar} />
+            <Image source={{ uri: imageUrl(avatar) }} style={styles.avatar} />
             <View style={styles.avatarBadge}>
               <Ionicons name="camera" size={14} color={colors.white} />
             </View>
@@ -143,6 +174,14 @@ export default function EditProfileScreen({ navigation }) {
         city={city}
         onConfirm={handleCityConfirm}
         onCancel={() => setShowCityPicker(false)}
+      />
+
+      <AvatarCropper
+        visible={cropperVisible}
+        imageUri={pendingAvatar}
+        onConfirm={handleCropConfirm}
+        onCancel={handleCropCancel}
+        onReselect={pickAvatar}
       />
     </View>
   );

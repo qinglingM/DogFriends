@@ -7,6 +7,7 @@ import { typography } from '../../theme/typography';
 import { NavBar, Card } from '../../components';
 import { useExplore } from '../../contexts/ExploreContext';
 import { useSquare } from '../../contexts/SquareContext';
+import { getPostImages } from '../../utils/postHelpers';
 import { CATEGORIES } from '../../data/exploreData';
 import { getCategoryIcon } from '../../data/profileData';
 import CityPickerModal from '../../components/CityPickerModal';
@@ -208,7 +209,7 @@ export default function FavoriteLocationsScreen({ navigation }) {
                     activeOpacity={0.82}
                     onPress={() => navigation.getParent()?.navigate('Square', { screen: 'PostDetail', params: { id: post.id } })}
                   >
-                    <Image source={{ uri: post.mediaUrl }} style={styles.postImage} resizeMode="cover" />
+                    <Image source={{ uri: getPostImages(post)[0] }} style={styles.postImage} resizeMode="cover" />
                     <View style={styles.postBody}>
                       <Text style={styles.postText} numberOfLines={3}>{post.text}</Text>
                       <View style={styles.postActions}>

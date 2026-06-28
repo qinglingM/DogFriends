@@ -7,36 +7,56 @@ import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { typography } from '../theme/typography';
 
-const CURRENT_YEAR = new Date().getFullYear();
-const YEARS = Array.from({ length: CURRENT_YEAR - 1990 + 1 }, (_, i) => 1990 + i);
-const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
-
 function getDaysInMonth(year, month) {
   return new Date(year, month, 0).getDate();
 }
 
-export default function DatePickerModal({ visible, date, onConfirm, onCancel }) {
+export default function DatePickerModal({ visible, date, onConfirm, onCancel, maxDate }) {
   const insets = useSafeAreaInsets();
-  const initDate = date ? new Date(date + 'T00:00:00') : new Date();
+  const max = maxDate ? new Date(maxDate + 'T00:00:00') : new Date();
+  const maxYear = max.getFullYear();
+  const maxMonth = max.getMonth() + 1;
+  const maxDayOfMonth = max.getDate();
 
-  const [year, setYear] = useState(initDate.getFullYear());
-  const [month, setMonth] = useState(initDate.getMonth() + 1);
-  const [day, setDay] = useState(initDate.getDate());
+  function clampDate(d) {
+    const y = Math.min(d.getFullYear(), maxYear);
+    const m = y === maxYear ? Math.min(d.getMonth() + 1, maxMonth) : d.getMonth() + 1;
+    const dd = (y === maxYear && m === maxMonth) ? Math.min(d.getDate(), maxDayOfMonth) : d.getDate();
+    return { year: y, month: m, day: dd };
+  }
+
+  const init = clampDate(date ? new Date(date + 'T00:00:00') : new Date());
+  const [year, setYear] = useState(init.year);
+  const [month, setMonth] = useState(init.month);
+  const [day, setDay] = useState(init.day);
 
   useEffect(() => {
     if (visible) {
-      const d = date ? new Date(date + 'T00:00:00') : new Date();
-      setYear(d.getFullYear());
-      setMonth(d.getMonth() + 1);
-      setDay(d.getDate());
+      const d = clampDate(date ? new Date(date + 'T00:00:00') : new Date());
+      setYear(d.year);
+      setMonth(d.month);
+      setDay(d.day);
     }
   }, [visible, date]);
 
-  const maxDay = useMemo(() => getDaysInMonth(year, month), [year, month]);
+  const years = Array.from({ length: maxYear - 1990 + 1 }, (_, i) => 1990 + i);
+  const months = Array.from({ length: year === maxYear ? maxMonth : 12 }, (_, i) => i + 1);
+
+  const maxDay = useMemo(() => {
+    const daysInMonth = getDaysInMonth(year, month);
+    if (year === maxYear && month === maxMonth) {
+      return Math.min(daysInMonth, maxDayOfMonth);
+    }
+    return daysInMonth;
+  }, [year, month, maxYear, maxMonth, maxDayOfMonth]);
 
   useEffect(() => {
     if (day > maxDay) setDay(maxDay);
   }, [maxDay]);
+
+  useEffect(() => {
+    setMonth(prev => Math.min(prev, year === maxYear ? maxMonth : 12));
+  }, [year]);
 
   const displayText = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 
@@ -64,7 +84,7 @@ export default function DatePickerModal({ visible, date, onConfirm, onCancel }) 
                 style={styles.picker}
                 itemStyle={styles.pickerItem}
               >
-                {YEARS.map((y) => (
+                {years.map((y) => (
                   <Picker.Item key={y} label={`${y}`} value={y} />
                 ))}
               </Picker>
@@ -78,7 +98,7 @@ export default function DatePickerModal({ visible, date, onConfirm, onCancel }) 
                 style={styles.picker}
                 itemStyle={styles.pickerItem}
               >
-                {MONTHS.map((m) => (
+                {months.map((m) => (
                   <Picker.Item key={m} label={`${m}`} value={m} />
                 ))}
               </Picker>

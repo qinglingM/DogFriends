@@ -1,12 +1,21 @@
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Alert, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { typography } from '../../theme/typography';
 import { NavBar, Card } from '../../components';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function SettingsScreen({ navigation }) {
+  const { signOut } = useAuth();
+
+  const handleLogout = () => {
+    Alert.alert('确认退出', '确定要退出登录吗？', [
+      { text: '取消', style: 'cancel' },
+      { text: '退出', style: 'destructive', onPress: () => signOut() },
+    ]);
+  };
   return (
     <View style={styles.screen}>
       <NavBar title="设置" onBack={() => navigation.goBack()} />
@@ -14,28 +23,35 @@ export default function SettingsScreen({ navigation }) {
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.groupLabel}>账号</Text>
         <Card noPadding>
-          {[
-            { icon: 'person-circle-outline', text: '个人信息' },
-            { icon: 'shield-checkmark-outline', text: '隐私设置' },
-          ].map((item, i) => (
-            <TouchableOpacity key={i} style={[styles.menuItem, i < 1 && styles.menuBorder]}>
-              <View style={[styles.menuIcon, { backgroundColor: 'rgba(185, 207, 50, 0.2)' }]}>
-                <Ionicons name={item.icon} size={20} color={colors.secondary} />
-              </View>
-              <Text style={styles.menuText}>{item.text}</Text>
-              <Ionicons name="chevron-forward" size={16} color={colors.textLight} />
-            </TouchableOpacity>
-          ))}
+          <TouchableOpacity
+            style={[styles.menuItem, styles.menuBorder]}
+            onPress={() => navigation.navigate('EditProfile')}
+          >
+            <View style={[styles.menuIcon, { backgroundColor: 'rgba(185, 207, 50, 0.2)' }]}>
+              <Ionicons name="person-circle-outline" size={20} color={colors.secondary} />
+            </View>
+            <Text style={styles.menuText}>个人信息</Text>
+            <Ionicons name="chevron-forward" size={16} color={colors.textLight} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => Alert.alert('提示', '功能开发中')}
+          >
+            <View style={[styles.menuIcon, { backgroundColor: 'rgba(185, 207, 50, 0.2)' }]}>
+              <Ionicons name="shield-checkmark-outline" size={20} color={colors.secondary} />
+            </View>
+            <Text style={styles.menuText}>隐私设置</Text>
+            <Ionicons name="chevron-forward" size={16} color={colors.textLight} />
+          </TouchableOpacity>
         </Card>
 
         <Text style={styles.groupLabel}>通知</Text>
         <Card noPadding>
           {[
             { icon: 'notifications-outline', text: '审核通知', on: true },
-            { icon: 'medkit-outline', text: '疫苗提醒', on: true },
             { icon: 'heart-outline', text: '互动消息', on: false },
           ].map((item, i) => (
-            <View key={i} style={[styles.menuItem, i < 2 && styles.menuBorder]}>
+            <View key={i} style={[styles.menuItem, i < 1 && styles.menuBorder]}>
               <View style={[styles.menuIcon, { backgroundColor: 'rgba(146, 102, 153, 0.15)' }]}>
                 <Ionicons name={item.icon} size={20} color={colors.accent} />
               </View>
@@ -49,21 +65,32 @@ export default function SettingsScreen({ navigation }) {
 
         <Text style={styles.groupLabel}>其他</Text>
         <Card noPadding>
-          {[
-            { icon: 'help-circle-outline', text: '帮助与反馈' },
-            { icon: 'information-circle-outline', text: '关于狗友' },
-          ].map((item, i) => (
-            <TouchableOpacity key={i} style={[styles.menuItem, i < 1 && styles.menuBorder]}>
-              <View style={[styles.menuIcon, { backgroundColor: 'rgba(185, 207, 50, 0.2)' }]}>
-                <Ionicons name={item.icon} size={20} color={colors.secondary} />
-              </View>
-              <Text style={styles.menuText}>{item.text}</Text>
-              <Ionicons name="chevron-forward" size={16} color={colors.textLight} />
-            </TouchableOpacity>
-          ))}
+          <TouchableOpacity
+            style={[styles.menuItem, styles.menuBorder]}
+            onPress={() => Alert.alert('提示', '功能开发中')}
+          >
+            <View style={[styles.menuIcon, { backgroundColor: 'rgba(185, 207, 50, 0.2)' }]}>
+              <Ionicons name="help-circle-outline" size={20} color={colors.secondary} />
+            </View>
+            <Text style={styles.menuText}>帮助与反馈</Text>
+            <Ionicons name="chevron-forward" size={16} color={colors.textLight} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => Alert.alert('', '狗友 v1.0.0')}
+          >
+            <View style={[styles.menuIcon, { backgroundColor: 'rgba(185, 207, 50, 0.2)' }]}>
+              <Ionicons name="information-circle-outline" size={20} color={colors.secondary} />
+            </View>
+            <Text style={styles.menuText}>关于狗友</Text>
+            <Ionicons name="chevron-forward" size={16} color={colors.textLight} />
+          </TouchableOpacity>
         </Card>
 
-        <TouchableOpacity style={styles.logoutBtn}>
+        <TouchableOpacity
+          style={styles.logoutBtn}
+          onPress={handleLogout}
+        >
           <Text style={styles.logoutText}>退出登录</Text>
         </TouchableOpacity>
 

@@ -6,13 +6,16 @@ import { spacing } from '../theme/spacing';
 import { typography } from '../theme/typography';
 import { getProvinces, getCitiesByProvince } from '../data/cityData';
 
-export default function CityPickerModal({ visible, province, city, onConfirm, onCancel }) {
+const HOT_CITIES = ['上海', '北京', '广州', '深圳', '杭州', '成都', '武汉', '南京'];
+const HOT_ROWS = [HOT_CITIES.slice(0, 4), HOT_CITIES.slice(4, 8)];
+
+export default function CityPickerModal({ visible, province, city, onConfirm, onCancel, mode = 'profile' }) {
+  const isExplore = mode === 'explore';
   const provinces = useMemo(() => getProvinces(), []);
 
   const [pendingProvince, setPendingProvince] = useState(province || null);
   const [pendingCity, setPendingCity] = useState(city || null);
 
-  // 打开时回填上次确认的值
   useEffect(() => {
     if (visible) {
       setPendingProvince(province || null);
@@ -21,12 +24,15 @@ export default function CityPickerModal({ visible, province, city, onConfirm, on
   }, [visible, province, city]);
 
   const cities = useMemo(() => {
-    if (!pendingProvince) return [];
-    if (pendingProvince === '不展示') return ['不展示'];
+    if (!pendingProvince || pendingProvince === '全部城市') return [];
     return getCitiesByProvince(pendingProvince);
   }, [pendingProvince]);
 
   const handleProvincePress = (p) => {
+    if (p === '全部城市') {
+      onConfirm({ province: null, city: null });
+      return;
+    }
     setPendingProvince(p);
     setPendingCity(null);
   };
@@ -35,20 +41,23 @@ export default function CityPickerModal({ visible, province, city, onConfirm, on
     setPendingCity(c);
   };
 
+  const handleConfirm = () => {
+    onConfirm({ province: pendingProvince, city: pendingCity });
+  };
+
+  const handleHotCity = (c) => {
+    onConfirm({ province: null, city: c });
+  };
+
   const handleReset = () => {
     setPendingProvince(null);
     setPendingCity(null);
   };
 
-  const handleConfirm = () => {
-    onConfirm({ province: pendingProvince, city: pendingCity });
-  };
-
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestCancel={onCancel}>
       <Pressable style={styles.overlay} onPress={onCancel}>
-        <Pressable style={styles.container} onPress={(e) => e.stopPropagation()}>
-          {/* Header */}
+        <Pressable style={[styles.container, isExplore && styles.containerExplore]} onPress={(e) => e.stopPropagation()}>
           <View style={styles.header}>
             <Text style={styles.headerTitle}>选择城市</Text>
             <TouchableOpacity onPress={onCancel} activeOpacity={0.7}>
@@ -56,16 +65,33 @@ export default function CityPickerModal({ visible, province, city, onConfirm, on
             </TouchableOpacity>
           </View>
 
-          {/* Body: left-right columns */}
+          {isExplore && (
+            <View style={styles.hotGrid}>
+              {HOT_ROWS.map((row, ri) => (
+                <View key={ri} style={styles.hotRow}>
+                  {row.map(c => (
+                    <TouchableOpacity
+                      key={c}
+                      style={[styles.hotChip, city === c && styles.hotChipActive]}
+                      activeOpacity={0.7}
+                      onPress={() => handleHotCity(c)}
+                    >
+                      <Text style={[styles.hotChipText, city === c && styles.hotChipTextActive]}>{c}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              ))}
+            </View>
+          )}
+
           <View style={styles.body}>
-            {/* Left: province list */}
             <View style={styles.leftColumn}>
               <FlatList
-                data={['不展示', ...provinces]}
+                data={isExplore ? ['全部城市', ...provinces] : provinces}
                 keyExtractor={(item) => item}
                 showsVerticalScrollIndicator={false}
                 renderItem={({ item: p }) => {
-                  const isActive = p === pendingProvince;
+                  const isActive = isExplore ? p === pendingProvince : p === pendingProvince;
                   return (
                     <TouchableOpacity
                       style={[styles.provinceItem, isActive && styles.provinceItemActive]}
@@ -81,7 +107,6 @@ export default function CityPickerModal({ visible, province, city, onConfirm, on
               />
             </View>
 
-            {/* Right: city list */}
             <View style={styles.rightColumn}>
               {pendingProvince ? (
                 <FlatList
@@ -112,7 +137,6 @@ export default function CityPickerModal({ visible, province, city, onConfirm, on
             </View>
           </View>
 
-          {/* Footer */}
           <View style={styles.footer}>
             <TouchableOpacity style={styles.resetBtn} activeOpacity={0.7} onPress={handleReset}>
               <Text style={styles.resetBtnText}>重置</Text>
@@ -144,6 +168,9 @@ const styles = StyleSheet.create({
     borderTopRightRadius: spacing.radiusLg,
     height: '70%',
   },
+  containerExplore: {
+    height: '80%',
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -154,6 +181,24 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
   },
   headerTitle: { ...typography.h3, color: colors.secondary },
+  hotGrid: {
+    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
+    gap: 8,
+  },
+  hotRow: {
+    flexDirection: 'row', gap: 8,
+  },
+  hotChip: {
+    flex: 1, alignItems: 'center', paddingVertical: 6,
+    borderRadius: spacing.radiusSm,
+    backgroundColor: colors.white,
+    borderWidth: 1, borderColor: colors.border,
+  },
+  hotChipActive: {
+    backgroundColor: colors.secondary, borderColor: colors.secondary,
+  },
+  hotChipText: { ...typography.caption, color: colors.textMain, fontSize: 12 },
+  hotChipTextActive: { color: colors.white },
   body: {
     flex: 1,
     flexDirection: 'row',

@@ -1,15 +1,30 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { typography } from '../../theme/typography';
 import { NavBar } from '../../components';
+import { formatPostTime } from '../../utils/time';
+import { formatLocation } from '../../utils/location';
 
 export default function ProfileFeedDetailScreen({ navigation, route }) {
   const item = route.params?.item;
   const profile = route.params?.profile;
   if (!item || !profile) return null;
+
+  const images = item.images || [];
+  const [imageRatios, setImageRatios] = useState({});
+
+  useEffect(() => {
+    images.forEach(url => {
+      Image.getSize(url, (w, h) => {
+        setImageRatios(prev => ({ ...prev, [url]: w / h }));
+      }, () => {
+        setImageRatios(prev => ({ ...prev, [url]: 4 / 3 }));
+      });
+    });
+  }, []);
 
   return (
     <View style={styles.screen}>
@@ -22,24 +37,24 @@ export default function ProfileFeedDetailScreen({ navigation, route }) {
         >
           <Image source={{ uri: profile.avatar }} style={styles.avatar} />
           <View style={styles.authorMain}>
-            <Text style={styles.authorName}>{profile.name}</Text>
-            <Text style={styles.feedTime}>{item.createdAt} · {item.location}</Text>
+            <Text style={styles.userName}>{profile.name}</Text>
+            <Text style={styles.feedTime}>{formatPostTime(item.createdAt)} · {formatLocation(item.location)}</Text>
           </View>
         </TouchableOpacity>
 
         <Text style={styles.title}>{item.title}</Text>
-        <View style={styles.metaRow}>
-          <Ionicons name="location-outline" size={16} color={colors.textLight} />
-          <Text style={styles.meta}>{item.meta}</Text>
-        </View>
         <Text style={styles.body}>{item.text}</Text>
 
         {item.walkRecord ? (
           <WalkRecordDetail record={item.walkRecord} />
         ) : (
           <View style={styles.imageGrid}>
-            {item.images?.map((image, index) => (
-              <Image key={`${item.id}_${index}`} source={{ uri: image }} style={styles.image} />
+            {images.map((url, index) => (
+              <Image
+                key={`${item.id}_${index}`}
+                source={{ uri: url }}
+                style={[styles.image, { aspectRatio: imageRatios[url] || 4 / 3 }]}
+              />
             ))}
           </View>
         )}
@@ -54,7 +69,7 @@ export default function ProfileFeedDetailScreen({ navigation, route }) {
             <Text style={styles.actionText}>{item.comments}</Text>
           </View>
           <View style={styles.action}>
-            <Ionicons name="star-outline" size={22} color={colors.secondary} />
+            <Ionicons name="bookmark-outline" size={22} color={colors.secondary} />
             <Text style={styles.actionText}>{item.favorites}</Text>
           </View>
         </View>
@@ -88,9 +103,10 @@ function WalkRecordDetail({ record }) {
 function Metric({ value, unit, label }) {
   return (
     <View style={styles.metric}>
-      <Text style={styles.metricValue}>
-        {value}{!!unit && <Text style={styles.metricUnit}> {unit}</Text>}
-      </Text>
+      <View style={styles.metricValueRow}>
+        <Text style={styles.metricValue}>{value}</Text>
+        {!!unit && <Text style={styles.metricUnit}>{unit}</Text>}
+      </View>
       <Text style={styles.metricLabel}>{label}</Text>
     </View>
   );
@@ -112,21 +128,19 @@ const styles = StyleSheet.create({
     backgroundColor: colors.chipDefault,
   },
   authorMain: { flex: 1 },
-  authorName: { ...typography.bodyBold, color: colors.textMain },
+  userName: { ...typography.bodyBold, color: colors.textMain },
   feedTime: { ...typography.caption, color: colors.textLight },
   title: { ...typography.h3, color: colors.textMain, marginBottom: spacing.sm },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.sm },
-  meta: { ...typography.caption, color: colors.textLight },
   body: { ...typography.body, color: colors.textMain, marginBottom: spacing.md },
   imageGrid: { gap: spacing.sm, marginBottom: spacing.md },
   image: {
     width: '100%',
-    aspectRatio: 3 / 2,
     borderRadius: spacing.radiusMd,
     backgroundColor: colors.chipDefault,
   },
   actionRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-around',
     backgroundColor: colors.white,
     borderRadius: spacing.radiusMd,
@@ -206,6 +220,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
   },
   metric: { flex: 1, alignItems: 'center' },
+  metricValueRow: { flexDirection: 'row', alignItems: 'baseline', gap: 2 },
   metricValue: { ...typography.h3, color: colors.textMain },
   metricUnit: { ...typography.captionBold, color: colors.textMain },
   metricLabel: { ...typography.caption, color: colors.textLight, marginTop: spacing.xs },

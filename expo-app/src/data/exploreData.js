@@ -6,34 +6,35 @@ import { colors } from '../theme/colors';
 // ---------- 共建状态体系 (PRD §13) ----------
 
 export const LOCATION_STATUS = {
-  USER_SUBMITTED: 'user_submitted',     // 用户提交
-  RECENT_VISIT: 'recent_visit',         // 最近有人去过
-  MULTI_VERIFIED: 'multi_verified',     // 多人验证
-  DISPUTED: 'disputed',                 // 信息有争议
+  USER_SUBMITTED: 'user_submitted',     // 待验证新地点
+  RECENT_VISIT: 'recent_visit',         // 最近新增验证
+  MULTI_VERIFIED: 'multi_verified',     // 近期多人验证
+  DISPUTED: 'disputed',                 // 信息具有争议
   RULES_CHANGED: 'rules_changed',       // 规则可能变化
-  NOT_RECOMMENDED: 'not_recommended',   // 不建议前往
+  NOT_RECOMMENDED: 'not_recommended',   // 极高概率受拒
+  NEEDS_UPDATE: 'needs_update',         // 近期无有效反馈
 };
 
 export function getStatusMeta(status) {
   switch (status) {
     case LOCATION_STATUS.USER_SUBMITTED:
-      return { label: '用户提交', bg: '#E8EBE5', fg: '#5A6B5C', icon: 'person-add-outline' };
+      return { label: '待验证新地点', bg: '#E8EBE5', fg: '#5A6B5C', icon: 'person-add-outline' };
     case LOCATION_STATUS.RECENT_VISIT:
-      return { label: '最近有人去过', bg: 'rgba(185, 207, 50, 0.35)', fg: colors.secondary, icon: 'paw' };
+      return { label: '最近新增验证', bg: 'rgba(185, 207, 50, 0.35)', fg: colors.secondary, icon: 'paw' };
     case LOCATION_STATUS.MULTI_VERIFIED:
-      return { label: '多人验证', bg: colors.secondary, fg: colors.white, icon: 'checkmark-circle' };
+      return { label: '近期多人验证', bg: colors.secondary, fg: colors.white, icon: 'checkmark-circle' };
     case LOCATION_STATUS.DISPUTED:
-      return { label: '信息有争议', bg: 'rgba(230, 160, 60, 0.18)', fg: '#8B5A1E', icon: 'alert-circle-outline' };
+      return { label: '信息具有争议', bg: 'rgba(230, 160, 60, 0.18)', fg: '#8B5A1E', icon: 'alert-circle-outline' };
     case LOCATION_STATUS.RULES_CHANGED:
       return { label: '规则可能变化', bg: 'rgba(230, 160, 60, 0.18)', fg: '#8B5A1E', icon: 'time-outline' };
     case LOCATION_STATUS.NOT_RECOMMENDED:
-      return { label: '不建议前往', bg: 'rgba(231, 76, 60, 0.15)', fg: '#A02E22', icon: 'close-circle-outline' };
+      return { label: '极高概率受拒', bg: 'rgba(231, 76, 60, 0.15)', fg: '#A02E22', icon: 'close-circle-outline' };
+    case LOCATION_STATUS.NEEDS_UPDATE:
+      return { label: '近期无有效反馈', bg: '#E8EBE5', fg: '#8A9A8C', icon: 'refresh-outline' };
     default:
-      return { label: '用户提交', bg: '#E8EBE5', fg: '#5A6B5C', icon: 'person-add-outline' };
+      return { label: '待验证新地点', bg: '#E8EBE5', fg: '#5A6B5C', icon: 'person-add-outline' };
   }
 }
-
-// ---------- 顶部风险提示 (PRD §10.3) ----------
 
 export function getStatusBanner(status) {
   switch (status) {
@@ -45,6 +46,11 @@ export function getStatusBanner(status) {
       return { tone: 'danger', text: '近期多人反馈不可带狗，请慎重前往' };
     case LOCATION_STATUS.USER_SUBMITTED:
       return { tone: 'info', text: '这个地点由用户新增，暂时还没有多人验证。如果你去过，也可以帮大家更新信息' };
+    case LOCATION_STATUS.NEEDS_UPDATE:
+      return { tone: 'info', text: '该地点超过 90 天无人验证，信息可能已过时' };
+    case LOCATION_STATUS.MULTI_VERIFIED:
+    case LOCATION_STATUS.RECENT_VISIT:
+      return null;
     default:
       return null;
   }
@@ -75,31 +81,27 @@ export const CATEGORIES = [
   { key: 'cafe', label: '咖啡', icon: 'cafe' },
   { key: 'restaurant', label: '餐厅', icon: 'restaurant' },
   { key: 'mall', label: '商场', icon: 'storefront' },
+  { key: 'scenic', label: '景点', icon: 'map' },
+  { key: 'hotel', label: '住宿', icon: 'bed' },
   { key: 'other', label: '其他', icon: 'ellipsis-horizontal' },
-];
-
-export const SCENE_FILTERS = [
-  { key: 'multi_verified', label: '多人验证' },
-  { key: 'indoor', label: '室内可进' },
-  { key: 'outdoor', label: '室外友好' },
-  { key: 'large_dog', label: '大型犬友好' },
 ];
 
 // ---------- 规则与体型 (PRD §7.3) ----------
 
 export const ENTRY_AREAS = [
-  { key: 'indoor', label: '室内可进', icon: 'home' },
-  { key: 'outdoor', label: '室外可进', icon: 'leaf' },
-  { key: 'terrace_only', label: '仅露台 / 户外', icon: 'restaurant' },
-  { key: 'specific', label: '指定区域可进', icon: 'location' },
-  { key: 'not_allowed', label: '不可进入', icon: 'close-circle' },
+  { key: 'all_areas', label: '全域可进', icon: 'home' },
+  { key: 'not_allowed', label: '全域禁止', icon: 'close-circle' },
+  { key: 'partial', label: '部分可进', icon: 'layers' },
+  { key: 'outdoor', label: '室外允许', icon: 'leaf' },
+  { key: 'indoor', label: '室内允许', icon: 'restaurant' },
+  { key: 'unknown', label: '无法确定', icon: 'help-circle' },
 ];
 
 export const DOG_SIZES = [
-  { key: 'small', label: '小型犬友好', icon: 'paw' },
-  { key: 'medium', label: '中型犬友好', icon: 'paw' },
-  { key: 'large', label: '大型犬友好', icon: 'paw' },
   { key: 'all', label: '所有体型', icon: 'paw' },
+  { key: 'small', label: '小型犬', icon: 'paw' },
+  { key: 'medium', label: '中型犬', icon: 'paw' },
+  { key: 'large', label: '大型犬', icon: 'paw' },
 ];
 
 export const BEHAVIOR_REQUIREMENTS = [
@@ -128,6 +130,8 @@ export const FACILITIES = [
   '有遮阳区',
   '有围栏',
   '有草坪',
+  '开放水域',
+  '爱宠寄存',
   '其他',
 ];
 
@@ -139,6 +143,8 @@ export const FACILITY_ICONS = {
   '有遮阳区': 'umbrella',
   '有围栏': 'grid',
   '有草坪': 'leaf',
+  '开放水域': 'water-outline',
+  '爱宠寄存': 'lock-closed',
   '其他': 'ellipsis-horizontal',
 };
 
@@ -149,27 +155,26 @@ export const DISCOVERY_REASONS = [
   '其他',
 ];
 
-// ---------- 我去过更新信息选项 (PRD §11.4) ----------
+// ---------- 我去过更新信息选项 ----------
 
-export const VISIT_OUTCOMES = [
-  { key: 'success', label: '我带狗成功去了' },
-  { key: 'outdoor_only', label: '只能坐户外' },
-  { key: 'indoor_ok', label: '可以进室内' },
-  { key: 'large_ok', label: '大型犬可以' },
-  { key: 'large_no', label: '大型犬不行' },
-  { key: 'blocked', label: '不让进了' },
+export const WENT_OPTIONS = [
+  { key: 'success', label: '全程顺利' },
+  { key: 'outdoor_only', label: '仅限户外' },
+  { key: 'area_restricted', label: '区域受限' },
+  { key: 'large_no', label: '体型受限' },
 ];
 
-export const VISIT_TAGS = [
-  '需要牵绳',
-  '有水碗',
-  '店员友好',
-  '空间宽敞',
-  '人多拥挤',
-  '周末可能被拒',
-  '适合小型犬',
-  '适合大型犬',
-  '不适合胆小狗',
+export const NOT_WENT_OPTIONS = [
+  { key: 'blocked', label: '拒绝进入' },
+  { key: 'closed', label: '歇业关闭' },
+  { key: 'address_wrong', label: '地址偏差' },
+  { key: 'other', label: '其他情况' },
+];
+
+export const EXPERIENCE_LEVELS = [
+  { key: 'bad', label: '较差' },
+  { key: 'ok', label: '一般' },
+  { key: 'good', label: '很好' },
 ];
 
 // ---------- 信息不准选项 (PRD §12.3) ----------
@@ -183,155 +188,6 @@ export const INACCURACY_REASONS = [
   '内容虚假或恶意',
   '其他',
 ];
-
-// ---------- 初始地点数据 ----------
-
-export const INITIAL_LOCATIONS = [
-  {
-    id: 'loc_bloom',
-    name: 'BLOOM Coffee',
-    category: 'cafe',
-    categoryLabel: '咖啡店',
-    city: '上海',
-    distanceKm: 1.8,
-    phone: '021-1234-5678',
-    hours: '10:00 - 22:00',
-    entryArea: 'terrace_only',
-    dogSize: ['small', 'medium'],
-    behaviors: ['需要牵绳', '不能上椅 / 沙发', '不能吠叫', '不影响其他客人'],
-    facilities: ['有水碗', '有宠物餐', '有狗狗零食', '有遮阳区'],
-    tags: ['仅户外', '有水碗', '小型犬友好'],
-    status: LOCATION_STATUS.RECENT_VISIT,
-    verifierCount: 3,
-    lastUpdatedLabel: '2 天前更新',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=160&q=80',
-    photos: [
-      'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1514888282295-e11b1a6b5c5f?auto=format&fit=crop&w=800&q=80',
-    ],
-    description: '位于老洋房一楼的小咖啡店，露台有几张大桌，狗狗可以安静趴在脚边。',
-  },
-  {
-    id: 'loc_fuxing_park',
-    name: '复兴公园',
-    category: 'park',
-    categoryLabel: '公园',
-    city: '上海',
-    distanceKm: 3.2,
-    phone: '',
-    hours: '06:00 - 22:00',
-    entryArea: 'outdoor',
-    dogSize: ['all'],
-    behaviors: ['需要牵绳'],
-    facilities: ['有便袋', '有草坪', '有遮阳区'],
-    tags: ['室外可进', '需要牵绳', '所有体型'],
-    status: LOCATION_STATUS.MULTI_VERIFIED,
-    verifierCount: 12,
-    lastUpdatedLabel: '今天更新',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=160&q=80',
-    photos: [
-      'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1504208434309-cb69f4fd5084?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?auto=format&fit=crop&w=800&q=80',
-    ],
-    description: '上海老牌的法式公园，绿地宽敞，狗狗牵绳即可入园。',
-  },
-  {
-    id: 'loc_paw_cafe',
-    name: '爪爪咖啡 Paw Cafe',
-    category: 'cafe',
-    categoryLabel: '咖啡店',
-    city: '上海',
-    distanceKm: 1.2,
-    phone: '021-8888-8888',
-    hours: '11:00 - 21:00',
-    entryArea: 'indoor',
-    dogSize: ['large'],
-    behaviors: ['需要牵绳'],
-    facilities: ['有水碗'],
-    tags: ['室外可进', '大型犬友好', '有水碗'],
-    status: LOCATION_STATUS.USER_SUBMITTED,
-    verifierCount: 0,
-    lastUpdatedLabel: '刚刚发布',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1521017432531-fbd92d768814?auto=format&fit=crop&w=160&q=80',
-    photos: [
-      'https://images.unsplash.com/photo-1521017432531-fbd92d768814?auto=format&fit=crop&w=800&q=80',
-    ],
-    description: '本店欢迎所有体型的狗狗，店里准备了水碗。',
-  },
-];
-
-// ---------- 初始狗主人验证 (PRD §10.4) ----------
-
-export const INITIAL_VALIDATIONS = {
-  loc_bloom: [
-    {
-      id: 'v_bloom_1',
-      userName: '豆豆妈妈',
-      userAvatar: '🐶',
-      time: '2 天前',
-      outcomeKey: 'success',
-      outcomeLabel: '我带狗成功去了',
-      dogSize: '小型犬',
-      tags: ['仅户外', '有水碗', '店员友好'],
-      note: '店员很好，给了水碗。露台位置比较宽，狗狗可以安静待着。周末去的时候人有点多，但是店员很耐心，还额外给了狗狗零食。整体体验很不错，推荐大家去试试！',
-      photos: [
-        'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=400&q=80',
-        'https://images.unsplash.com/photo-1587574293340-e0011c4e8ecf?w=400&q=80',
-      ],
-      helpfulCount: 12,
-    },
-    {
-      id: 'v_bloom_2',
-      userName: '柯基阿福',
-      userAvatar: '🐕',
-      time: '5 天前',
-      outcomeKey: 'outdoor_only',
-      outcomeLabel: '只能坐户外',
-      dogSize: '小型犬',
-      tags: ['仅户外', '空间宽敞'],
-      note: '室内有点窄，但露台位置很赞。',
-      photos: [
-        'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=400&q=80',
-        'https://images.unsplash.com/photo-1587574293340-e0011c4e8ecf?w=400&q=80',
-      ],
-      helpfulCount: 4,
-    },
-    {
-      id: 'v_bloom_3',
-      userName: '咖啡日和',
-      userAvatar: '☕',
-      time: '8 天前',
-      outcomeKey: 'success',
-      outcomeLabel: '我带狗成功去了',
-      dogSize: '中型犬',
-      tags: ['店员友好', '人多拥挤'],
-      note: '周末确实人多，狗狗略紧张。建议工作日去。',
-      photos: [],
-      helpfulCount: 2,
-    },
-  ],
-  loc_fuxing_park: [
-    {
-      id: 'v_fuxing_1',
-      userName: '阿黄爸爸',
-      userAvatar: '🐕‍🦺',
-      time: '1 天前',
-      outcomeKey: 'success',
-      outcomeLabel: '我带狗成功去了',
-      dogSize: '大型犬',
-      tags: ['需要牵绳', '空间宽敞'],
-      note: '草坪超大，狗狗很开心。门口工作人员会提醒牵绳。',
-      photos: [
-        'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=400&q=80',
-        'https://images.unsplash.com/photo-1504208434309-cb69f4fd5084?w=400&q=80',
-        'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=400&q=80',
-      ],
-      helpfulCount: 28,
-    },
-  ],
-  loc_paw_cafe: [],
-};
 
 // ---------- 地图选点 Mock：附近 POI / 当前位置 ----------
 
@@ -348,7 +204,7 @@ export const MOCK_NEARBY_POIS = [
     poiId: 'poi_1',
     name: 'Manner Coffee（衡复店）',
     category: 'cafe',
-    categoryLabel: '咖啡店',
+    categoryLabel: '咖啡',
     city: '上海',
     distanceLabel: '约 120 米',
   },
@@ -356,7 +212,7 @@ export const MOCK_NEARBY_POIS = [
     poiId: 'poi_2',
     name: '%Arabica（衡山坊）',
     category: 'cafe',
-    categoryLabel: '咖啡店',
+    categoryLabel: '咖啡',
     city: '上海',
     distanceLabel: '约 240 米',
   },
@@ -380,7 +236,7 @@ export const MOCK_NEARBY_POIS = [
     poiId: 'poi_5',
     name: '巴黎贝甜（徐家汇店）',
     category: 'cafe',
-    categoryLabel: '咖啡店',
+    categoryLabel: '咖啡',
     city: '上海',
     distanceLabel: '约 640 米',
   },
@@ -394,51 +250,28 @@ export const MOCK_NEARBY_POIS = [
   },
 ];
 
-// ---------- 我的贡献模拟数据 ----------
-
-export const INITIAL_CONTRIBUTIONS = [
-  {
-    id: 'c_1',
-    locationId: 'loc_paw_cafe',
-    locationName: '爪爪咖啡 Paw Cafe',
-    locationLabel: '咖啡店',
-    type: '新增地点',
-    time: '2026-06-08',
-    status: LOCATION_STATUS.USER_SUBMITTED,
-    bucket: 'created',
-  },
-  {
-    id: 'c_2',
-    locationId: 'loc_bloom',
-    locationName: 'BLOOM Coffee',
-    locationLabel: '咖啡店',
-    type: '更新信息',
-    time: '2026-06-06',
-    status: LOCATION_STATUS.RECENT_VISIT,
-    bucket: 'verified',
-  },
-];
-
-// ---------- 工具：根据地点 verifierCount / 反馈数推导状态 ----------
+// ---------- 工具：根据时间窗口计数推导状态 ----------
 
 export function deriveStatusFromCounts({
-  verifierCount = 0,
-  inaccuracyCount = 0,
-  hasBlockedReport = false,
+  verifierCount7d = 0,
+  verifierCount90d = 0,
+  verifierCountTotal = 0,
+  inaccuracyCountTotal = 0,
+  hasBlockedReport90d = false,
   isJustCreated = false,
 }) {
-  if (isJustCreated && verifierCount === 0) return LOCATION_STATUS.USER_SUBMITTED;
-  if (hasBlockedReport && verifierCount === 0) return LOCATION_STATUS.NOT_RECOMMENDED;
-  if (hasBlockedReport) return LOCATION_STATUS.RULES_CHANGED;
-  if (inaccuracyCount >= 3) return LOCATION_STATUS.DISPUTED;
-  if (verifierCount >= 3) return LOCATION_STATUS.MULTI_VERIFIED;
-  if (verifierCount >= 1) return LOCATION_STATUS.RECENT_VISIT;
+  if (inaccuracyCountTotal >= 3) return LOCATION_STATUS.DISPUTED;
+  if (hasBlockedReport90d && verifierCount90d < 1) return LOCATION_STATUS.NOT_RECOMMENDED;
+  if (hasBlockedReport90d && verifierCount90d >= 1) return LOCATION_STATUS.RULES_CHANGED;
+  if (verifierCount7d >= 1 || verifierCount90d >= 3) return LOCATION_STATUS.MULTI_VERIFIED;
+  if (verifierCount90d >= 1) return LOCATION_STATUS.RECENT_VISIT;
+  if (verifierCountTotal >= 1) return LOCATION_STATUS.NEEDS_UPDATE;
   return LOCATION_STATUS.USER_SUBMITTED;
 }
 
 // ---------- 工具：根据 verifier 数生成展示文案 ----------
 
-export function getContributionLabel(verifierCount) {
-  if (!verifierCount || verifierCount === 0) return '等待更多狗主人验证';
-  return `${verifierCount} 位狗主人验证`;
+export function getContributionLabel(verifierCount90d) {
+  if (!verifierCount90d || verifierCount90d === 0) return '等待更多狗主人验证';
+  return `${verifierCount90d} 位狗主人验证（近 90 天）`;
 }

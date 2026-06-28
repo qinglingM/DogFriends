@@ -1,10 +1,15 @@
 import React, { useState } from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, Image, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { typography } from '../theme/typography';
 import WalkRecordPreview from './WalkRecordPreview';
+import { formatPostTime } from '../utils/time';
+import { imageUrl } from '../utils/imageUrl';
+import { formatLocation } from '../utils/location';
+
+const PHOTO_SIZE = Math.floor((Dimensions.get('window').width - 82) / 3);
 
 export default function FeedCard({ item, profile, onPress, interactive = false }) {
   const [liked, setLiked] = useState(item.liked);
@@ -29,24 +34,20 @@ export default function FeedCard({ item, profile, onPress, interactive = false }
   return (
     <TouchableOpacity style={s.feedCard} activeOpacity={0.82} onPress={onPress}>
       <View style={s.feedAuthor}>
-        <Image source={{ uri: profile.avatar }} style={s.feedAvatar} />
+        <Image source={{ uri: imageUrl(profile.avatar) }} style={s.feedAvatar} />
         <View style={s.feedAuthorText}>
           <Text style={s.feedName}>{profile.name}</Text>
-          <Text style={s.feedTime}>{item.createdAt} · {item.location}</Text>
+          <Text style={s.feedTime}>{formatPostTime(item.createdAt)}{item.location ? ` · ${formatLocation(item.location)}` : ''}</Text>
         </View>
       </View>
       <Text style={s.feedTitle}>{item.title}</Text>
-      <View style={s.feedMetaRow}>
-        <Ionicons name="location-outline" size={16} color={colors.textLight} />
-        <Text style={s.feedMeta}>{item.meta}</Text>
-      </View>
       <Text style={s.feedText}>{item.text}</Text>
       {item.walkRecord ? (
         <WalkRecordPreview record={item.walkRecord} />
       ) : (
         <View style={s.photoRow}>
           {item.images.slice(0, 3).map((image, index) => (
-            <Image key={`${item.id}_${index}`} source={{ uri: image }} style={s.feedPhoto} />
+            <Image key={`${item.id}_${index}`} source={{ uri: imageUrl(image) }} style={s.feedPhoto} />
           ))}
         </View>
       )}
@@ -67,7 +68,7 @@ export default function FeedCard({ item, profile, onPress, interactive = false }
         </TouchableOpacity>
         <TouchableOpacity style={s.feedAction} activeOpacity={0.7} onPress={handleFavorite}>
           <Ionicons
-            name={interactive ? (favorited ? 'star' : 'star-outline') : 'star-outline'}
+            name={interactive ? (favorited ? 'bookmark' : 'bookmark-outline') : 'bookmark-outline'}
             size={22}
             color={interactive ? (favorited ? '#E6A03C' : colors.textLight) : colors.textLight}
           />
@@ -99,11 +100,9 @@ const s = StyleSheet.create({
   feedName: { ...typography.bodyBold, color: colors.textMain },
   feedTime: { ...typography.caption, color: colors.textLight },
   feedTitle: { ...typography.bodyBold, fontSize: 16, color: colors.textMain, marginBottom: spacing.sm },
-  feedMetaRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.sm },
-  feedMeta: { ...typography.caption, color: colors.textLight },
   feedText: { ...typography.body, color: colors.textMain, marginBottom: spacing.sm },
-  photoRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
-  feedPhoto: { flex: 1, aspectRatio: 1, borderRadius: spacing.radiusSm, backgroundColor: colors.chipDefault },
+  photoRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md, flexWrap: 'wrap' },
+  feedPhoto: { width: PHOTO_SIZE, height: PHOTO_SIZE, borderRadius: spacing.radiusSm, backgroundColor: colors.chipDefault },
   feedActions: {
     flexDirection: 'row', alignItems: 'center',
     justifyContent: 'space-between', paddingTop: spacing.sm,

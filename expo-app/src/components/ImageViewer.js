@@ -4,12 +4,14 @@ import {
   Text,
   Modal,
   TouchableOpacity,
+  Pressable,
   StyleSheet,
   Dimensions,
   ScrollView,
   Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { imageUrl } from '../utils/imageUrl';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { typography } from '../theme/typography';
@@ -48,10 +50,10 @@ export default function ImageViewer({ visible, images, initialIndex = 0, onClose
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={s.overlay}>
+      <Pressable style={s.overlay} onPress={onClose}>
         <View style={s.header}>
           <Text style={s.counter}>{currentIndex + 1} / {images.length}</Text>
-          <TouchableOpacity style={s.closeBtn} onPress={onClose} activeOpacity={0.7}>
+          <TouchableOpacity style={s.closeBtn} onPress={(e) => { e.stopPropagation(); onClose(); }} activeOpacity={0.7}>
             <Ionicons name="close" size={24} color={colors.white} />
           </TouchableOpacity>
         </View>
@@ -74,18 +76,18 @@ export default function ImageViewer({ visible, images, initialIndex = 0, onClose
                 showsVerticalScrollIndicator={false}
                 showsHorizontalScrollIndicator={false}
               >
-                <Image source={{ uri }} style={s.image} resizeMode="contain" />
+                <Image source={{ uri: imageUrl(uri) }} style={s.image} resizeMode="contain" />
               </ScrollView>
             ))}
           </ScrollView>
 
           {currentIndex > 0 && (
-            <TouchableOpacity style={[s.navBtn, s.navBtnLeft]} onPress={goPrev} activeOpacity={0.7}>
+            <TouchableOpacity style={[s.navBtn, s.navBtnLeft]} onPress={(e) => { e.stopPropagation(); goPrev(); }} activeOpacity={0.7}>
               <Ionicons name="chevron-back" size={28} color={colors.white} />
             </TouchableOpacity>
           )}
           {currentIndex < images.length - 1 && (
-            <TouchableOpacity style={[s.navBtn, s.navBtnRight]} onPress={goNext} activeOpacity={0.7}>
+            <TouchableOpacity style={[s.navBtn, s.navBtnRight]} onPress={(e) => { e.stopPropagation(); goNext(); }} activeOpacity={0.7}>
               <Ionicons name="chevron-forward" size={28} color={colors.white} />
             </TouchableOpacity>
           )}
@@ -101,7 +103,7 @@ export default function ImageViewer({ visible, images, initialIndex = 0, onClose
             ))}
           </View>
         )}
-      </View>
+      </Pressable>
     </Modal>
   );
 }

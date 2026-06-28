@@ -1,36 +1,46 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Animated, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Animated, Dimensions, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import * as Location from 'expo-location';
+import * as FileSystem from 'expo-file-system/legacy';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { typography } from '../../theme/typography';
 import { MapPlaceholder, DogAvatar } from '../../components';
 import { useWalk } from '../../contexts/WalkContext';
-
-const MOCK_DOGS = [
-  { id: '1', name: '旺财', selected: true },
-  { id: '2', name: '小白', selected: true },
-  { id: '3', name: '豆豆', selected: false },
-];
+import { useDogs } from '../../contexts/DogContext';
+import { haversineDistance } from '../../utils/location';
+import { takePhoto } from '../../utils/imagePicker';
 
 const MAIN_BTN_SIZE = 72;
 const SIDE_BTN_SIZE = 72;
 
 export default function WalkHomeScreen({ navigation }) {
   const insets = useSafeAreaInsets();
-  const { getWeekStats, startWalk, updateWalk, addPhoto, currentWalk } = useWalk();
+  const { getWeekStats, 加载完成, startWalk, updateWalk, addPhoto, currentWalk } = useWalk();
   const weekStats = getWeekStats();
+  const { dogs: allDogs, 加载完成: 狗加载完成 } = useDogs();
 
-  const [dogs, setDogs] = useState(MOCK_DOGS);
+  const [dogs, setDogs] = useState([]);
   const [isWalking, setIsWalking] = useState(false);
   const [seconds, setSeconds] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  const [gpsDistance, setGpsDistance] = useState(0);
   const [photos, setPhotos] = useState([]);
+  const gpsSub = useRef(null);
+  const lastPosRef = useRef(null);
+  const cumDistRef = useRef(0);
+  const trackPointsRef = useRef([]);
+
+  useEffect(() => {
+    if (dogs.length === 0 && allDogs.length > 0) {
+      setDogs(allDogs.map(d => ({ id: d.id, name: d.name, selected: true })));
+    }
+  }, [allDogs]);
 
   const pauseSlide = useRef(new Animated.Value(0)).current;
   const cameraSlide = useRef(new Animated.Value(0)).current;
-  const pulseAnim = useRef(new Animated.Value(1)).current;
   const mainBtnScale = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
@@ -40,12 +50,7 @@ export default function WalkHomeScreen({ navigation }) {
   }, [isWalking, isPaused]);
 
   useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 0.3, duration: 750, useNativeDriver: true }),
-        Animated.timing(pulseAnim, { toValue: 1, duration: 750, useNativeDriver: true }),
-      ])
-    ).start();
+    return () => { if (gpsSub.current) { gpsSub.current.remove(); } };
   }, []);
 
   const formatTime = (s) => {
@@ -78,30 +83,99 @@ export default function WalkHomeScreen({ navigation }) {
     ]).start();
   }, [mainBtnScale, pauseSlide, cameraSlide]);
 
-  const handleGo = () => {
+  const handleGo = async () => {
     const selectedDogs = dogs.filter(d => d.selected).map(d => ({ id: d.id, name: d.name }));
+    if (selectedDogs.length === 0) {
+      if (allDogs.length === 0) {
+        Alert.alert('提示', '你还没有添加狗狗，先去「档案」页面添加吧', [
+          { text: '取消', style: 'cancel' },
+          { text: '去档案', onPress: () => navigation.navigate('Profile') },
+        ]);
+      } else {
+        Alert.alert('提示', '请先选择要遛的狗狗');
+      }
+      return;
+    }
+
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('权限提示', '需要位置权限才能记录遛狗路线');
+      return;
+    }
+
+    lastPosRef.current = null;
+    cumDistRef.current = 0;
+    trackPointsRef.current = [];
+    setGpsDistance(0);
+
     startWalk(selectedDogs);
     setIsWalking(true);
     setSeconds(0);
     setPhotos([]);
     animateGoToStop();
+
+    gpsSub.current = await Location.watchPositionAsync(
+      { accuracy: Location.Accuracy.High, distanceInterval: 3, timeInterval: 5000 },
+      (loc) => {
+        const { latitude, longitude } = loc.coords;
+        const point = { latitude, longitude, timestamp: loc.timestamp };
+        trackPointsRef.current = [...trackPointsRef.current, point];
+
+        if (lastPosRef.current) {
+          const dist = haversineDistance(
+            lastPosRef.current.latitude, lastPosRef.current.longitude,
+            latitude, longitude,
+          );
+          // 过滤 GPS 漂移：低于 5m 不累计距离
+          if (dist >= 0.005) {
+            cumDistRef.current += dist;
+          }
+        }
+        lastPosRef.current = point;
+        setGpsDistance(cumDistRef.current);
+      },
+    );
   };
 
   const handleStop = () => {
+    if (gpsSub.current) { gpsSub.current.remove(); gpsSub.current = null; }
+
     Animated.parallel([
       Animated.timing(pauseSlide, { toValue: 0, duration: 200, useNativeDriver: true }),
       Animated.timing(cameraSlide, { toValue: 0, duration: 200, useNativeDriver: true }),
     ]).start(() => {
-      updateWalk({ duration: seconds, distance: 0, pace: 0 });
+      const distance = cumDistRef.current;
+      const pace = seconds > 0 ? (distance / (seconds / 3600)) : 0;
+      updateWalk({
+        duration: seconds,
+        distance: Math.round(distance * 100) / 100,
+        pace: Math.round(pace * 10) / 10,
+        trackPoints: trackPointsRef.current,
+      });
       navigation.navigate('WalkCheckin');
     });
   };
 
   const handlePause = () => setIsPaused(!isPaused);
 
-  const handleCamera = () => {
+  const handleCamera = async () => {
+    const uri = await takePhoto();
+    if (!uri) return;
+
+    let persistentUri;
+    try {
+      const photoDir = `${FileSystem.documentDirectory}walk_photos/`;
+      await FileSystem.makeDirectoryAsync(photoDir, { intermediates: true });
+      persistentUri = `${photoDir}${Date.now()}.jpg`;
+      await FileSystem.copyAsync({ from: uri, to: persistentUri });
+    } catch (e) {
+      console.warn('[WalkHome] failed to persist photo, using temp URI', e);
+      persistentUri = uri;
+    }
+
     const newPhoto = {
       id: Date.now(),
+      uri: persistentUri,
       time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
     };
     setPhotos(prev => [...prev, newPhoto]);
@@ -127,7 +201,7 @@ export default function WalkHomeScreen({ navigation }) {
               <View style={styles.statValueRow}>
                 <Ionicons name={isWalking ? 'speedometer-outline' : 'paw'} size={16} color={colors.primary} />
                 <Text style={styles.statVal}>
-                  {isWalking ? (seconds > 0 ? ((seconds / 3600) > 0 ? '4.5' : '0.0') : '0.0') : weekStats.count}
+                  {isWalking ? (gpsDistance > 0 && seconds > 0 ? (gpsDistance / (seconds / 3600)).toFixed(1) : '0.0') : weekStats.count}
                 </Text>
                 <Text style={styles.statUnit}>{isWalking ? 'km/h' : '次'}</Text>
               </View>
@@ -148,7 +222,7 @@ export default function WalkHomeScreen({ navigation }) {
               <View style={styles.statValueRow}>
                 <Ionicons name="trending-up" size={16} color={colors.primary} />
                 <Text style={styles.statVal}>
-                  {isWalking ? (seconds > 0 ? (seconds * 0.0013).toFixed(1) : '0.0') : weekStats.distance.toFixed(1)}
+                  {isWalking ? (gpsDistance > 0 ? gpsDistance.toFixed(1) : '0.0') : weekStats.distance.toFixed(1)}
                 </Text>
                 <Text style={styles.statUnit}>km</Text>
               </View>
@@ -156,21 +230,14 @@ export default function WalkHomeScreen({ navigation }) {
           </View>
         </View>
 
-        {isWalking && (
-          <View style={[styles.trackingPill, { top: insets.top + 72 }]}>
-            <Animated.View style={[styles.pulseDot, { opacity: pulseAnim }]} />
-          </View>
-        )}
-
-        <View style={[styles.recenterWrap, { bottom: 40 + insets.bottom }]}>
-          <TouchableOpacity style={styles.recenterBtn} activeOpacity={0.7}>
+        <View style={[styles.recenterWrap, { bottom: 102 + insets.bottom }]}>
+          <TouchableOpacity style={styles.recenterBtn} activeOpacity={0.7} onPress={() => {}}>
             <Ionicons name="locate" size={22} color={colors.secondary} />
           </TouchableOpacity>
         </View>
       </View>
 
-      <View style={[styles.floatBottom, { paddingBottom: 16 + insets.bottom }]}>
-        <View style={styles.dogAvatarsRow}>
+      <View style={[styles.dogAvatarsRow, { bottom: 140 + insets.bottom }]}>
           {(isWalking ? dogs.filter(d => d.selected) : dogs).map(dog => (
             <TouchableOpacity
               key={dog.id}
@@ -196,7 +263,7 @@ export default function WalkHomeScreen({ navigation }) {
           ))}
         </View>
 
-        <View style={styles.controlsRow}>
+        <View style={[styles.controlsRow, { bottom: 0 }]}>
           {isWalking && (
             <Animated.View style={{ transform: [{ translateY: pauseSlide }], alignItems: 'center' }}>
               <TouchableOpacity style={styles.sideBtn} onPress={handlePause} activeOpacity={0.7}>
@@ -235,7 +302,6 @@ export default function WalkHomeScreen({ navigation }) {
             </Animated.View>
           )}
         </View>
-      </View>
     </View>
   );
 }
@@ -299,23 +365,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.textLight,
   },
-  trackingPill: {
-    position: 'absolute',
-    left: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: colors.primary,
-    borderRadius: spacing.radiusPill,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    zIndex: 5,
-  },
-  trackingText: {
-    ...typography.captionBold,
-    fontSize: 12,
-    color: colors.secondary,
-  },
   recenterWrap: {
     position: 'absolute',
     right: 16,
@@ -332,19 +381,13 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 6,
   },
-  floatBottom: {
-    position: 'absolute',
-    bottom: 0, left: 0, right: 0,
-    paddingHorizontal: 24,
-    paddingTop: 16,
-    alignItems: 'center',
-    gap: 12,
-    zIndex: 10,
-  },
   dogAvatarsRow: {
+    position: 'absolute',
+    left: 0, right: 0,
     flexDirection: 'row',
     justifyContent: 'center',
     gap: 24,
+    zIndex: 10,
   },
   dogItem: {
     alignItems: 'center',
@@ -376,11 +419,14 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.8)',
   },
   controlsRow: {
+    position: 'absolute',
+    left: 0, right: 0,
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'center',
     gap: 20,
     height: 120,
+    zIndex: 10,
   },
   sideBtn: {
     width: SIDE_BTN_SIZE, height: SIDE_BTN_SIZE,
@@ -437,10 +483,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     textAlign: 'center',
     marginTop: 6,
-  },
-  pulseDot: {
-    width: 6, height: 6, borderRadius: 3,
-    backgroundColor: colors.secondary,
   },
   galleryBadge: {
     position: 'absolute',

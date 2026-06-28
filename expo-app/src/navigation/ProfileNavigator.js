@@ -6,11 +6,11 @@ import ProfileFeedDetailScreen from '../screens/profile/ProfileFeedDetailScreen'
 import DogProfileScreen from '../screens/profile/DogProfileScreen';
 import DogEditScreen from '../screens/profile/DogEditScreen';
 import DogSwitchScreen from '../screens/profile/DogSwitchScreen';
-import VaccineScreen from '../screens/profile/VaccineScreen';
 import FavoriteLocationsScreen from '../screens/profile/FavoriteLocationsScreen';
-import ContributionHistoryScreen from '../screens/profile/ContributionHistoryScreen';
 import WalkHistoryScreen from '../screens/walk/WalkHistoryScreen';
 import WalkDetailScreen from '../screens/walk/WalkDetailScreen';
+import FollowListScreen from '../screens/profile/FollowListScreen';
+import NotificationScreen from '../screens/profile/NotificationScreen';
 import LocationDetailScreen from '../screens/explore/LocationDetailScreen';
 import UpdateInfoScreen from '../screens/explore/UpdateInfoScreen';
 import SettingsScreen from '../screens/common/SettingsScreen';
@@ -27,14 +27,14 @@ export default function ProfileNavigator() {
       <Stack.Screen name="DogProfile" component={DogProfileScreen} />
       <Stack.Screen name="DogEdit" component={DogEditScreen} />
       <Stack.Screen name="DogSwitch" component={DogSwitchScreen} options={{ presentation: 'modal' }} />
-      <Stack.Screen name="Vaccine" component={VaccineScreen} />
       <Stack.Screen name="FavoriteLocations" component={FavoriteLocationsScreen} />
-      <Stack.Screen name="ContributionHistory" component={ContributionHistoryScreen} />
-      <Stack.Screen name="LocationDetail" component={LocationDetailScreen} />
+      <Stack.Screen name="LocationDetail" component={LocationDetailScreen} options={{ tabBarStyle: { display: 'none' } }} />
       <Stack.Screen name="UpdateInfo" component={UpdateInfoScreen} />
       <Stack.Screen name="WalkHistory" component={WalkHistoryScreen} />
       <Stack.Screen name="WalkDetail" component={WalkDetailScreen} />
       <Stack.Screen name="Settings" component={SettingsScreen} />
+      <Stack.Screen name="FollowList" component={FollowListScreen} />
+      <Stack.Screen name="Notifications" component={NotificationScreen} />
     </Stack.Navigator>
   );
 }

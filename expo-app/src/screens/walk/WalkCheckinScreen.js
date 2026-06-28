@@ -8,6 +8,7 @@ import { spacing } from '../../theme/spacing';
 import { typography } from '../../theme/typography';
 import { NavBar, Button, Chip, DogAvatar, EmojiSelector } from '../../components';
 import { useWalk } from '../../contexts/WalkContext';
+import { useDogs } from '../../contexts/DogContext';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const CARD_GAP = 12;
@@ -140,6 +141,7 @@ const BEHAVIOR_STORAGE_KEY = '@dogfriends_behavior_history';
 export default function WalkCheckinScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const { saveCheckin, finishWalk, currentWalk } = useWalk();
+  const { dogs: allDogs, updateDog } = useDogs();
   const dogs = currentWalk?.dogs?.length ? currentWalk.dogs : [{ id: '1', name: '旺财' }];
 
   const [behaviorHistory, setBehaviorHistory] = useState({});
@@ -167,17 +169,15 @@ export default function WalkCheckinScreen({ navigation }) {
     });
   }, [behaviorHistory]);
 
-  const isMultiDog = dogs.length > 1;
-  const cardWidth = isMultiDog ? SCREEN_WIDTH * 0.88 : SCREEN_WIDTH * 0.96;
+  const cardWidth = SCREEN_WIDTH * 0.92;
   const sidePadding = (SCREEN_WIDTH - cardWidth) / 2;
 
-  const updateDog = (dogId, data) => {
+  const updateRecord = (dogId, data) => {
     setRecords(prev => ({ ...prev, [dogId]: data }));
   };
 
-  const anyHasData = Object.values(records).some(d =>
-    d.pee !== null || d.poop !== null || d.mood !== null || d.behaviors?.length > 0
-  );
+  const isFilled = (data) => data.pee !== null || data.poop !== null || data.mood !== null || data.behaviors?.length > 0;
+  const dataCount = Object.values(records).filter(isFilled).length;
 
   const saveBehaviorHistory = (behaviors) => {
     if (!behaviors || behaviors.length === 0) return;
@@ -195,6 +195,20 @@ export default function WalkCheckinScreen({ navigation }) {
       saveCheckin(dogId, data);
       saveBehaviorHistory(data.behaviors);
     });
+    // handleNext 已累计前 N-1 只狗，这里只处理最后一只
+    const lastDog = dogs[dogs.length - 1];
+    const fullDog = allDogs.find(d => d.id === lastDog.id);
+    if (fullDog) {
+      const ws = fullDog.walkStats || { walks: 0, distance: 0, duration: 0 };
+      updateDog({
+        id: lastDog.id,
+        walkStats: {
+          walks: (ws.walks || 0) + 1,
+          distance: (ws.distance || 0) + (currentWalk?.distance || 0),
+          duration: (ws.duration || 0) + (currentWalk?.duration || 0),
+        },
+      });
+    }
     finishWalk();
     navigation.replace('WalkResult');
   };
@@ -203,6 +217,30 @@ export default function WalkCheckinScreen({ navigation }) {
     Keyboard.dismiss();
     finishWalk();
     navigation.replace('WalkResult');
+  };
+
+
+  const handleNext = () => {
+    Keyboard.dismiss();
+    const dogId = dogs[currentIndex].id;
+    saveCheckin(dogId, records[dogId]);
+    saveBehaviorHistory(records[dogId].behaviors);
+    const dog = dogs[currentIndex];
+    const fullDog = allDogs.find(d => d.id === dog.id);
+    if (fullDog) {
+      const ws = fullDog.walkStats || { walks: 0, distance: 0, duration: 0 };
+      updateDog({
+        id: dog.id,
+        walkStats: {
+          walks: (ws.walks || 0) + 1,
+          distance: (ws.distance || 0) + (currentWalk?.distance || 0),
+          duration: (ws.duration || 0) + (currentWalk?.duration || 0),
+        },
+      });
+    }
+    const nextIndex = currentIndex + 1;
+    scrollRef.current?.scrollTo({ x: nextIndex * (cardWidth + CARD_GAP), animated: true });
+    setCurrentIndex(nextIndex);
   };
 
   const onScroll = (e) => {
@@ -233,40 +271,52 @@ export default function WalkCheckinScreen({ navigation }) {
         >
           {dogs.map((dog) => (
             <View key={dog.id} style={[styles.cardPage, { width: cardWidth }]}>
-              <DogCheckinCard
-                dog={dog}
-                data={records[dog.id]}
-                onChange={(data) => updateDog(dog.id, data)}
-                sortedBehaviors={sortedBehaviors}
-              />
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                nestedScrollEnabled
+                contentContainerStyle={styles.cardScrollContent}
+              >
+                <DogCheckinCard
+                  dog={dog}
+                  data={records[dog.id]}
+                  onChange={(data) => updateRecord(dog.id, data)}
+                  sortedBehaviors={sortedBehaviors}
+                />
+              </ScrollView>
             </View>
           ))}
-          <View style={{ width: sidePadding }} />
         </ScrollView>
-
-        {dogs.length > 1 && (
-          <View style={styles.dotsRow}>
-            {dogs.map((_, i) => (
-              <View key={i} style={[styles.dot, i === currentIndex && styles.dotActive]} />
-            ))}
-          </View>
-        )}
       </KeyboardAvoidingView>
 
-      <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 8 }]}>
-        <Button variant="secondary" onPress={handleSkip} style={styles.skipBtn}>
-          跳过
-        </Button>
-        <Button
-          variant="primary"
-          onPress={handleSave}
-          disabled={!anyHasData}
-          style={[styles.saveBtn, !anyHasData && { opacity: 0.4 }]}
-        >
-          保存并查看结果
-        </Button>
-      </View>
+      {dogs.length > 1 && (
+        <View style={[styles.dotsBar, { bottom: insets.bottom + 36 }]}>
+          {dogs.map((_, i) => (
+            <View key={i} style={[styles.dot, i === currentIndex && styles.dotActive]} />
+          ))}
+        </View>
+      )}
 
+      <View style={[styles.buttonRow, { bottom: insets.bottom - 16 }]}>
+        {(() => {
+          const isSingle = dogs.length === 1;
+          const isLast = currentIndex === dogs.length - 1;
+          let variant, text, onPressFn;
+          if (isSingle || isLast) {
+            if (dataCount === dogs.length) {
+              variant = 'primary'; text = '保存记录'; onPressFn = handleSave;
+            } else {
+              variant = 'secondary'; text = isSingle ? '跳过记录' : `跳过记录 ${dataCount}/${dogs.length}`; onPressFn = handleSkip;
+            }
+          } else {
+            variant = 'secondary'; text = '下一只'; onPressFn = handleNext;
+          }
+          return (
+            <Button variant={variant} onPress={onPressFn} size="sm" style={styles.capsule}>
+              {text}
+            </Button>
+          );
+        })()}
+      </View>
     </View>
   );
 }
@@ -279,7 +329,10 @@ const styles = StyleSheet.create({
   },
   cardPage: {
     marginRight: CARD_GAP,
-    justifyContent: 'center',
+  },
+  cardScrollContent: {
+    paddingVertical: spacing.sm,
+    paddingBottom: 8,
   },
   card: {
     backgroundColor: colors.white,
@@ -330,9 +383,22 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   chipGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
-  dotsRow: {
-    flexDirection: 'row', justifyContent: 'center', gap: 6,
-    paddingVertical: spacing.sm,
+  countBadge: {
+    backgroundColor: colors.danger,
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+  },
+  countBadgeText: { ...typography.caption, fontSize: 11, fontWeight: '700', color: colors.white },
+  dotsBar: {
+    position: 'absolute',
+    left: 0, right: 0,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 6,
   },
   dot: {
     width: 6, height: 6, borderRadius: 3,
@@ -341,11 +407,11 @@ const styles = StyleSheet.create({
   dotActive: {
     backgroundColor: colors.primary, width: 16,
   },
-  bottomBar: {
-    flexDirection: 'row', gap: spacing.sm,
-    paddingHorizontal: spacing.screenMargin,
-    backgroundColor: colors.bg,
+  buttonRow: {
+    position: 'absolute',
+    left: 24, right: 24,
   },
-  skipBtn: { flex: 1 },
-  saveBtn: { flex: 2 },
+  capsule: {
+    borderRadius: 20,
+  },
 });
