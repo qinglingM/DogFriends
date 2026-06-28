@@ -7,6 +7,7 @@ import DogProfileScreen from '../screens/profile/DogProfileScreen';
 import DogEditScreen from '../screens/profile/DogEditScreen';
 import DogSwitchScreen from '../screens/profile/DogSwitchScreen';
 import FavoriteLocationsScreen from '../screens/profile/FavoriteLocationsScreen';
+import LikedPostsScreen from '../screens/profile/LikedPostsScreen';
 import WalkHistoryScreen from '../screens/walk/WalkHistoryScreen';
 import WalkDetailScreen from '../screens/walk/WalkDetailScreen';
 import FollowListScreen from '../screens/profile/FollowListScreen';
@@ -14,6 +15,8 @@ import NotificationScreen from '../screens/profile/NotificationScreen';
 import LocationDetailScreen from '../screens/explore/LocationDetailScreen';
 import UpdateInfoScreen from '../screens/explore/UpdateInfoScreen';
 import SettingsScreen from '../screens/common/SettingsScreen';
+import UserAgreementScreen from '../screens/common/UserAgreementScreen';
+import PrivacyPolicyScreen from '../screens/common/PrivacyPolicyScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -33,7 +36,10 @@ export default function ProfileNavigator() {
       <Stack.Screen name="WalkHistory" component={WalkHistoryScreen} />
       <Stack.Screen name="WalkDetail" component={WalkDetailScreen} />
       <Stack.Screen name="Settings" component={SettingsScreen} />
+      <Stack.Screen name="UserAgreement" component={UserAgreementScreen} />
+      <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
       <Stack.Screen name="FollowList" component={FollowListScreen} />
+      <Stack.Screen name="LikedPosts" component={LikedPostsScreen} />
       <Stack.Screen name="Notifications" component={NotificationScreen} />
     </Stack.Navigator>
   );

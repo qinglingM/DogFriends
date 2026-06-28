@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, Image, TouchableOpacity, StyleSheet, Dimensions, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
@@ -11,11 +11,10 @@ import { formatLocation } from '../utils/location';
 
 const PHOTO_SIZE = Math.floor((Dimensions.get('window').width - 82) / 3);
 
-export default function FeedCard({ item, profile, onPress, interactive = false }) {
+export default function FeedCard({ item, profile, onPress, interactive = false, onDelete }) {
   const [liked, setLiked] = useState(item.liked);
   const [likes, setLikes] = useState(item.likes);
-  const [favorited, setFavorited] = useState(false);
-  const [favorites, setFavorites] = useState(item.favorites);
+  const [menuVisible, setMenuVisible] = useState(false);
 
   const handleLike = (e) => {
     e.stopPropagation();
@@ -24,11 +23,22 @@ export default function FeedCard({ item, profile, onPress, interactive = false }
     setLikes(prev => liked ? prev - 1 : prev + 1);
   };
 
-  const handleFavorite = (e) => {
+  const handleMenuToggle = (e) => {
     e.stopPropagation();
-    if (!interactive) return;
-    setFavorited(!favorited);
-    setFavorites(prev => favorited ? prev - 1 : prev + 1);
+    setMenuVisible(prev => !prev);
+  };
+
+  const handleDeleteOption = (e) => {
+    e.stopPropagation();
+    setMenuVisible(false);
+    Alert.alert(
+      '删除帖子',
+      '确定要删除这条动态吗？',
+      [
+        { text: '取消', style: 'cancel' },
+        { text: '删除', style: 'destructive', onPress: () => onDelete?.(item.id) },
+      ]
+    );
   };
 
   return (
@@ -66,20 +76,20 @@ export default function FeedCard({ item, profile, onPress, interactive = false }
           <Ionicons name="chatbubble-outline" size={22} color={colors.textLight} />
           <Text style={s.feedActionText}>{item.comments}</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={s.feedAction} activeOpacity={0.7} onPress={handleFavorite}>
-          <Ionicons
-            name={interactive ? (favorited ? 'bookmark' : 'bookmark-outline') : 'bookmark-outline'}
-            size={22}
-            color={interactive ? (favorited ? '#E6A03C' : colors.textLight) : colors.textLight}
-          />
-          <Text style={[s.feedActionText, interactive && favorited && { color: '#E6A03C' }]}>
-            {interactive ? favorites : item.favorites}
-          </Text>
-        </TouchableOpacity>
         {interactive && (
-          <TouchableOpacity style={s.feedActionMore} activeOpacity={0.7} onPress={(e) => e.stopPropagation()}>
-            <Ionicons name="ellipsis-horizontal" size={22} color={colors.textLight} />
-          </TouchableOpacity>
+          <View style={s.moreWrap}>
+            <TouchableOpacity style={s.feedActionMore} activeOpacity={0.7} onPress={handleMenuToggle}>
+              <Ionicons name="ellipsis-horizontal" size={22} color={colors.textLight} />
+            </TouchableOpacity>
+            {menuVisible && (
+              <View style={s.dropdown}>
+                <TouchableOpacity style={s.dropdownItem} activeOpacity={0.7} onPress={handleDeleteOption}>
+                  <Ionicons name="trash-outline" size={18} color={colors.danger} />
+                  <Text style={s.dropdownItemText}>删除</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
         )}
       </View>
     </TouchableOpacity>
@@ -109,6 +119,35 @@ const s = StyleSheet.create({
     borderTopWidth: 1, borderTopColor: colors.border,
   },
   feedAction: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, minWidth: 64 },
+  moreWrap: { position: 'relative' },
   feedActionMore: { padding: spacing.xs },
   feedActionText: { ...typography.body, color: colors.textLight },
+  dropdown: {
+    position: 'absolute',
+    right: 0,
+    bottom: 36,
+    backgroundColor: colors.white,
+    borderRadius: spacing.radiusSm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 4,
+    minWidth: 100,
+    zIndex: 10,
+  },
+  dropdownItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  dropdownItemText: {
+    ...typography.body,
+    color: colors.danger,
+    fontSize: 14,
+  },
 });

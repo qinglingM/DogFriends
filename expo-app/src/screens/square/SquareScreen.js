@@ -23,7 +23,7 @@ function splitColumns(posts) {
 
 export default function SquareScreen({ navigation }) {
   const insets = useSafeAreaInsets();
-  const { posts, 加载完成, refresh, toggleLike, toggleFavorite } = useSquare();
+  const { posts, 加载完成, refresh, toggleLike } = useSquare();
   const [activeTag, setActiveTag] = useState('all');
   const openAuthorProfile = (post) => {
     navigation.navigate('UserProfile', { userName: post.userName });
@@ -64,9 +64,13 @@ export default function SquareScreen({ navigation }) {
             openAuthorProfile(post);
           }}
         >
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{post.authorAvatar}</Text>
-          </View>
+          {post.authorAvatar?.length > 2 ? (
+            <Image source={{ uri: imageUrl(post.authorAvatar) }} style={styles.avatar} resizeMode="cover" />
+          ) : (
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>{post.authorAvatar}</Text>
+            </View>
+          )}
           <Text style={styles.userName} numberOfLines={1}>{post.userName}</Text>
         </TouchableOpacity>
 
@@ -87,18 +91,9 @@ export default function SquareScreen({ navigation }) {
           </TouchableOpacity>
           <View style={styles.action}>
             <Ionicons name="chatbubble-outline" size={15} color={colors.textLight} />
-            <Text style={styles.actionText}>{post.comments.length}</Text>
+            <Text style={styles.actionText}>{post.commentCount}</Text>
           </View>
-          <TouchableOpacity
-            style={styles.action}
-            onPress={(event) => {
-              event.stopPropagation();
-              toggleFavorite(post.id);
-            }}
-          >
-            <Ionicons name={post.favorited ? 'bookmark' : 'bookmark-outline'} size={15} color={post.favorited ? colors.secondary : colors.textLight} />
-            <Text style={styles.actionText}>{post.favorites}</Text>
-          </TouchableOpacity>
+
         </View>
       </View>
     </TouchableOpacity>

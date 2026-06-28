@@ -32,7 +32,7 @@ export default function DogSwitchScreen({ navigation }) {
               style={[styles.item, activeId === dog.id && styles.itemActive]}
               onPress={() => setActiveId(dog.id)}
             >
-              <DogAvatar size={48} />
+              <DogAvatar size={48} image={dog.image} />
               <View style={styles.itemInfo}>
                 <Text style={styles.itemName}>{dog.name}</Text>
                 <Text style={styles.itemBreed}>{formatBreed(dog)}</Text>

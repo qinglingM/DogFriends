@@ -48,7 +48,6 @@ export default function PostDetailScreen({ route, navigation }) {
   const {
     getPost,
     toggleLike,
-    toggleFavorite,
     addComment,
     addCommentReply,
     toggleCommentLike,
@@ -190,9 +189,13 @@ export default function PostDetailScreen({ route, navigation }) {
       >
         <View style={styles.postCard}>
           <TouchableOpacity style={styles.authorRow} activeOpacity={0.75} onPress={openAuthorProfile}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{post.authorAvatar}</Text>
-            </View>
+            {post.authorAvatar?.length > 2 ? (
+              <Image source={{ uri: imageUrl(post.authorAvatar) }} style={styles.avatar} resizeMode="cover" />
+            ) : (
+              <View style={styles.avatar}>
+                <Text style={styles.avatarText}>{post.authorAvatar}</Text>
+              </View>
+            )}
             <View style={styles.authorMain}>
               <Text style={styles.userName}>{post.userName}</Text>
               <Text style={styles.postMeta}>{formatPostTime(post.createdAt)}{post.location ? ` · ${formatLocation(post.location)}` : ''}</Text>
@@ -278,14 +281,6 @@ export default function PostDetailScreen({ route, navigation }) {
                 color={post.liked ? colors.danger : colors.textLight}
               />
               <Text style={[styles.bottomActionText, post.liked && styles.bottomActionActive]}>{post.likes}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.bottomAction} onPress={() => toggleFavorite(post.id)}>
-              <Ionicons
-                name={post.favorited ? 'bookmark' : 'bookmark-outline'}
-                size={19}
-                color={post.favorited ? colors.secondary : colors.textLight}
-              />
-              <Text style={[styles.bottomActionText, post.favorited && styles.bottomActionActive]}>{post.favorites}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.bottomAction} onPress={() => inputRef.current?.focus()}>
               <Ionicons name="chatbubble-outline" size={19} color={colors.textLight} />

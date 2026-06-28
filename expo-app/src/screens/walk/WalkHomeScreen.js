@@ -34,8 +34,16 @@ export default function WalkHomeScreen({ navigation }) {
   const trackPointsRef = useRef([]);
 
   useEffect(() => {
-    if (dogs.length === 0 && allDogs.length > 0) {
-      setDogs(allDogs.map(d => ({ id: d.id, name: d.name, selected: true })));
+    if (allDogs.length > 0) {
+      setDogs(prev => {
+        const merged = allDogs.map(d => {
+          const existing = prev.find(p => p.id === d.id);
+          return existing
+            ? { ...existing, image: d.image }
+            : { id: d.id, name: d.name, image: d.image, selected: true };
+        });
+        return merged;
+      });
     }
   }, [allDogs]);
 
@@ -84,7 +92,7 @@ export default function WalkHomeScreen({ navigation }) {
   }, [mainBtnScale, pauseSlide, cameraSlide]);
 
   const handleGo = async () => {
-    const selectedDogs = dogs.filter(d => d.selected).map(d => ({ id: d.id, name: d.name }));
+    const selectedDogs = dogs.filter(d => d.selected).map(d => ({ id: d.id, name: d.name, image: d.image }));
     if (selectedDogs.length === 0) {
       if (allDogs.length === 0) {
         Alert.alert('提示', '你还没有添加狗狗，先去「档案」页面添加吧', [
@@ -250,7 +258,7 @@ export default function WalkHomeScreen({ navigation }) {
                 dog.selected && styles.avatarRingActive,
                 isWalking && styles.avatarRingWalking,
               ]}>
-                <DogAvatar size={52} />
+                <DogAvatar size={52} image={dog.image} />
               </View>
               <Text style={[
                 styles.dogName,

@@ -6,6 +6,7 @@ import { spacing } from '../../theme/spacing';
 import { typography } from '../../theme/typography';
 import { NavBar, Card, DogAvatar, MapPlaceholder } from '../../components';
 import { useWalk } from '../../contexts/WalkContext';
+import { useDogs } from '../../contexts/DogContext';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -27,7 +28,32 @@ const BRISTOL_LABELS = {
 export default function WalkDetailScreen({ navigation, route }) {
   const walkId = route?.params?.id;
   const { records } = useWalk();
+  const { dogs: allDogs } = useDogs();
   const record = useMemo(() => records.find(r => r.id === walkId), [records, walkId]);
+
+  const [currentPage, setCurrentPage] = useState(0);
+  const [overlayVisible, setOverlayVisible] = useState(true);
+  const overlayOpacity = useRef(new Animated.Value(1)).current;
+  const [scrollH, setScrollH] = useState(SCREEN_HEIGHT);
+
+  const toggleOverlay = useCallback(() => {
+    const toValue = overlayVisible ? 0 : 1;
+    Animated.timing(overlayOpacity, {
+      toValue, duration: 200, useNativeDriver: true,
+    }).start();
+    setOverlayVisible(!overlayVisible);
+  }, [overlayVisible, overlayOpacity]);
+
+  const handlePageChange = useCallback((e) => {
+    const page = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+    setCurrentPage(page);
+    if (!overlayVisible) {
+      setOverlayVisible(true);
+      Animated.timing(overlayOpacity, {
+        toValue: 1, duration: 200, useNativeDriver: true,
+      }).start();
+    }
+  }, [overlayVisible, overlayOpacity]);
 
   if (!record) {
     return (
@@ -42,6 +68,7 @@ export default function WalkDetailScreen({ navigation, route }) {
   }
 
   const dogs = record.dogs || [];
+  const getDogInfo = (dogId) => allDogs.find(d => d.id === dogId) || { name: dogId, image: null };
   const checkins = record.checkins || {};
   const startTime = record.startTime ? new Date(record.startTime) : null;
   const endTime = record.endTime ? new Date(record.endTime) : null;
@@ -87,29 +114,6 @@ export default function WalkDetailScreen({ navigation, route }) {
   };
 
   const photos = record.photos || [];
-  const [currentPage, setCurrentPage] = useState(0);
-  const [overlayVisible, setOverlayVisible] = useState(true);
-  const overlayOpacity = useRef(new Animated.Value(1)).current;
-  const [scrollH, setScrollH] = useState(SCREEN_HEIGHT);
-
-  const toggleOverlay = useCallback(() => {
-    const toValue = overlayVisible ? 0 : 1;
-    Animated.timing(overlayOpacity, {
-      toValue, duration: 200, useNativeDriver: true,
-    }).start();
-    setOverlayVisible(!overlayVisible);
-  }, [overlayVisible, overlayOpacity]);
-
-  const handlePageChange = useCallback((e) => {
-    const page = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
-    setCurrentPage(page);
-    if (!overlayVisible) {
-      setOverlayVisible(true);
-      Animated.timing(overlayOpacity, {
-        toValue: 1, duration: 200, useNativeDriver: true,
-      }).start();
-    }
-  }, [overlayVisible, overlayOpacity]);
 
   const heroContent = (page) => (
     <>
@@ -120,12 +124,16 @@ export default function WalkDetailScreen({ navigation, route }) {
             <Text style={styles.heroTime}>{timeStr}{timeStr ? ' · ' : ''}{durationStr}</Text>
           </View>
           <View style={styles.heroDogInline}>
-            {dogs.map((dog, i) => (
-              <View key={dog?.id ?? i} style={styles.heroDogChip}>
-                <DogAvatar size={16} />
-                <Text style={styles.heroDogName}>{dog.name}</Text>
-              </View>
-            ))}
+            {dogs.map((dog, i) => {
+              const dogId = dog?.id || dog;
+              const info = getDogInfo(dogId);
+              return (
+                <View key={dogId ?? i} style={styles.heroDogChip}>
+                  <DogAvatar size={16} image={info.image} />
+                  <Text style={styles.heroDogName}>{info.name}</Text>
+                </View>
+              );
+            })}
           </View>
         </View>
       </View>
@@ -193,52 +201,58 @@ export default function WalkDetailScreen({ navigation, route }) {
             </View>
           )}
 
-          <View style={styles.lowerSection}>
-            <View style={styles.routeCard}>
-              <Text style={styles.sectionTitle}>路线轨迹</Text>
-              <View style={{ flex: 1 }}>
-                <MapPlaceholder label="路线轨迹图" height={null} style={{ flex: 1 }} />
-              </View>
+          <View style={[styles.routeCard, { marginHorizontal: 16, marginTop: 16 }]}>
+            <Text style={styles.sectionTitle}>路线轨迹</Text>
+            <View style={{ height: 220, borderRadius: spacing.radiusMd, overflow: 'hidden' }}>
+              <MapPlaceholder label="路线轨迹图" height={220} />
             </View>
           </View>
 
-          {Object.keys(checkins).length > 0 && (
-            <View style={{ paddingHorizontal: 16, paddingBottom: 32, paddingTop: 8 }}>
+          <View style={{ paddingHorizontal: 16, paddingBottom: 32, paddingTop: 8 }}>
               <Card>
                 <View style={styles.checkinTitle}>
                   <Ionicons name="clipboard" size={16} color={colors.primary} />
                   <Text style={styles.checkinTitleText}>健康打卡记录</Text>
                 </View>
-                {dogs.map((dog, dogIndex) => {
-                  const checkin = checkins[dog.id];
+                {dogs.length > 0 ? dogs.map((dog, dogIndex) => {
+                  const dogId = dog?.id || dog;
+                  const info = getDogInfo(dogId);
+                  const checkin = checkins[dogId];
                   const rows = formatCheckinRows(checkin);
-                  if (rows.length === 0 && !checkin) return null;
                   return (
-                    <View key={dog?.id ?? dogIndex}>
-                      {dogIndex > 0 && (
+                    <View key={dogId ?? dogIndex}>
+                      {(dogIndex > 0) && (
                         <View style={[styles.dogSection, { marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border }]}>
-                          <DogAvatar size={32} />
-                          <Text style={styles.dogSectionName}>{dog.name}</Text>
+                          <DogAvatar size={32} image={info.image} />
+                          <Text style={styles.dogSectionName}>{info.name}</Text>
                         </View>
                       )}
                       {dogIndex === 0 && (
                         <View style={styles.dogSection}>
-                          <DogAvatar size={32} />
-                          <Text style={styles.dogSectionName}>{dog.name}</Text>
+                          <DogAvatar size={32} image={info.image} />
+                          <Text style={styles.dogSectionName}>{info.name}</Text>
                         </View>
                       )}
-                      {rows.map((row, i) => (
+                      {rows.length > 0 && rows.map((row, i) => (
                         <View key={i} style={[styles.checkinRow, i < rows.length - 1 && styles.checkinRowBorder]}>
                           <Text style={styles.checkinLabel}>{row.label}</Text>
                           <Text style={styles.checkinValue}>{row.value}</Text>
                         </View>
                       ))}
+                      {rows.length === 0 && (
+                        <View style={styles.checkinRow}>
+                          <Text style={styles.checkinValue}>无记录</Text>
+                        </View>
+                      )}
                     </View>
                   );
-                })}
+                }) : (
+                  <View style={styles.checkinRow}>
+                    <Text style={styles.checkinValue}>无狗狗信息</Text>
+                  </View>
+                )}
               </Card>
             </View>
-          )}
         </View>
       </ScrollView>
     </View>
@@ -290,11 +304,10 @@ const styles = StyleSheet.create({
   statCellValue: { color: colors.secondary, fontSize: 15, fontWeight: '700' },
   statCellLabel: { color: colors.textLight, fontSize: 10, fontWeight: '500' },
   statDivider: { width: 1, height: 20, backgroundColor: 'rgba(52,112,72,0.2)' },
-  lowerSection: { padding: 16, flex: 1 },
   sectionTitle: { ...typography.bodyBold, color: colors.secondary, marginBottom: 12 },
   routeCard: {
     backgroundColor: colors.white, borderRadius: spacing.radiusLg,
-    padding: spacing.md, flex: 1,
+    padding: spacing.md,
   },
   mapWrap: {
     borderRadius: spacing.radiusMd, overflow: 'hidden',
@@ -306,12 +319,12 @@ const styles = StyleSheet.create({
   dogSection: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: colors.border },
   dogSectionName: { ...typography.bodyBold, color: colors.secondary },
   checkinRow: {
-    flexDirection: 'row', justifyContent: 'space-between',
-    alignItems: 'center', paddingVertical: 8,
+    flexDirection: 'row',
+    paddingVertical: 8, gap: 8,
   },
   checkinRowBorder: { borderBottomWidth: 1, borderBottomColor: colors.border },
   checkinLabel: { ...typography.body, color: colors.textLight, minWidth: 72 },
-  checkinValue: { ...typography.bodyBold, color: colors.secondary },
+  checkinValue: { ...typography.bodyBold, color: colors.secondary, flexShrink: 1 },
   empty: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
   emptyText: { ...typography.body, color: colors.textLight },
   pageDots: {

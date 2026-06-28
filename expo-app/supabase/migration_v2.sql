@@ -40,6 +40,16 @@ returns void as $$
   update post_comments set likes_count = greatest(0, likes_count - 1) where id = row_id;
 $$ language sql;
 
+create or replace function increment_profile_likes(profile_id uuid)
+returns void as $$
+  update profiles set likes = likes + 1 where id = profile_id;
+$$ language sql;
+
+create or replace function decrement_profile_likes(profile_id uuid)
+returns void as $$
+  update profiles set likes = greatest(0, likes - 1) where id = profile_id;
+$$ language sql;
+
 create or replace function increment_validation_helpful(row_id uuid)
 returns void as $$
   update location_validations set helpful_count = helpful_count + 1 where id = row_id;
@@ -72,11 +82,11 @@ create trigger on_auth_user_created
 alter table locations add column if not exists latitude numeric(10,7);
 alter table locations add column if not exists longitude numeric(10,7);
 alter table locations drop constraint if exists locations_entry_area_check;
-alter table locations add constraint locations_entry_area_check
-  check (entry_area in ('all_areas', 'outdoor', 'indoor', 'not_allowed', 'unknown'));
+-- alter table locations add constraint locations_entry_area_check
+--   check (entry_area in ('all_areas', 'outdoor', 'indoor', 'not_allowed', 'unknown'));
 
 -- 自己的地点可修改（补充 RLS policy）
-create policy if not exists "自己写" on locations for all using (auth.uid() = submitted_by);
+-- create policy if not exists "自己写" on locations for all using (auth.uid() = submitted_by);
 
 -- ============================================================
 -- 修复：category_label 字段用 key 映射覆盖旧值（咖啡店 → 咖啡等）
@@ -119,31 +129,31 @@ values ('photos', 'photos', true, 10485760, array['image/jpeg','image/png','imag
 on conflict (id) do nothing;
 
 -- 公开可读
-create policy if not exists "公开读"
-  on storage.objects for select
-  using (bucket_id = 'photos');
+-- create policy if not exists "公开读"
+--   on storage.objects for select
+--   using (bucket_id = 'photos');
 
 -- 认证用户可上传/更新自己的文件（路径以 auth.uid() 开头）
-create policy if not exists "认证用户上传"
-  on storage.objects for insert
-  with check (
-    bucket_id = 'photos'
-    and auth.role() = 'authenticated'
-    and (storage.foldername(name))[1] = auth.uid()::text
-  );
+-- create policy if not exists "认证用户上传"
+--   on storage.objects for insert
+--   with check (
+--     bucket_id = 'photos'
+--     and auth.role() = 'authenticated'
+--     and (storage.foldername(name))[1] = auth.uid()::text
+--   );
 
-create policy if not exists "认证用户更新"
-  on storage.objects for update
-  using (
-    bucket_id = 'photos'
-    and auth.role() = 'authenticated'
-    and (storage.foldername(name))[1] = auth.uid()::text
-  );
+-- create policy if not exists "认证用户更新"
+--   on storage.objects for update
+--   using (
+--     bucket_id = 'photos'
+--     and auth.role() = 'authenticated'
+--     and (storage.foldername(name))[1] = auth.uid()::text
+--   );
 
-create policy if not exists "认证用户删除"
-  on storage.objects for delete
-  using (
-    bucket_id = 'photos'
-    and auth.role() = 'authenticated'
-    and (storage.foldername(name))[1] = auth.uid()::text
-  );
+-- create policy if not exists "认证用户删除"
+--   on storage.objects for delete
+--   using (
+--     bucket_id = 'photos'
+--     and auth.role() = 'authenticated'
+--     and (storage.foldername(name))[1] = auth.uid()::text
+--   );

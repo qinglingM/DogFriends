@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import { View, Text, ScrollView, Image, ImageBackground, TouchableOpacity, StyleSheet, Modal, Animated } from 'react-native';
+import { View, Text, ScrollView, Image, ImageBackground, TouchableOpacity, StyleSheet, Modal, Animated, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,12 +12,13 @@ import { useProfile } from '../../contexts/ProfileContext';
 import { useDogs } from '../../contexts/DogContext';
 import { useExplore } from '../../contexts/ExploreContext';
 import { useAuth } from '../../contexts/AuthContext';
-import { StatusBadge } from '../../components';
+import { StatusBadge, DogAvatar } from '../../components';
 import FeedCard from '../../components/FeedCard';
 import { formatPostTime } from '../../utils/time';
 import { uploadImage } from '../../utils/uploadService';
 import { imageUrl } from '../../utils/imageUrl';
-import { OWNER_PROFILE, USER_PROFILES, OWNER_NAME_CONST } from '../../data/userProfiles';
+import { supabase } from '../../lib/supabase';
+
 import { getPostImages } from '../../utils/postHelpers';
 import { SIZE_LABELS } from '../../constants/dog';
 
@@ -90,6 +91,7 @@ function BirthdayCard({ dogs }) {
 
 const MENU_ITEMS = [
   { label: '我的收藏', icon: 'bookmark-outline', bg: 'rgba(185, 207, 50, 0.2)', route: 'FavoriteLocations' },
+  { label: '我的点赞', icon: 'heart-outline', bg: 'rgba(230, 160, 60, 0.15)', route: 'LikedPosts' },
   { label: '遛狗记录', icon: 'walk-outline', bg: 'rgba(146, 102, 153, 0.15)', route: 'WalkHistory' },
   { label: '互动消息', icon: 'notifications-outline', bg: 'rgba(185, 207, 50, 0.2)', route: 'Notifications' },
 ];
@@ -141,7 +143,7 @@ function DogCard({ dog, navigation, isSelf, isExpanded, onToggleExpand, totalCou
       onPress={onToggleExpand}
     >
       <View style={s.dogCardHeader}>
-        <Image source={{ uri: imageUrl(dog.image) }} style={[s.dogCardAvatar, { borderColor: genderBorderColor }]} />
+        <DogAvatar size={44} image={dog.image} borderColor={genderBorderColor} />
         <View style={s.dogCardInfoRow}>
           <Text style={s.dogCardName}>{dog.name}</Text>
           <Ionicons name={dog.gender === 'male' ? 'male' : 'female'} size={14} color={colors.textLight} />
@@ -201,25 +203,68 @@ function DogCard({ dog, navigation, isSelf, isExpanded, onToggleExpand, totalCou
 
 export default function ProfileTabScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
-  const { posts } = useSquare();
-  const { profile: userProfile, updateProfile } = useProfile();
+  const { posts, deletePost } = useSquare();
+  const { profile: userProfile, updateProfile, followUser, unfollowUser, fetchProfile, refresh: refreshProfile } = useProfile();
   const { dogs } = useDogs();
   const { contributions, getLocation } = useExplore();
   const { user } = useAuth();
 
   const userName = route?.params?.userName;
-  const isSelf = route.name !== 'PersonalProfile' || !userName || userName === OWNER_NAME_CONST;
+  const isSelf = !userName || userName === userProfile?.name;
 
-  const otherProfile = !isSelf ? USER_PROFILES[userName] : null;
+  const [remoteProfile, setRemoteProfile] = useState(null);
+  const [remoteDogs, setRemoteDogs] = useState([]);
+  const [isFollowing, setIsFollowing] = useState(false);
+
+  useEffect(() => {
+    if (isSelf) return;
+    (async () => {
+      const { data: pData } = await supabase.from('profiles').select('*').eq('name', userName).single();
+      if (pData) {
+        setRemoteProfile(pData);
+        const { data: dData } = await supabase.from('dogs').select('*').eq('profile_id', pData.id);
+        if (dData) setRemoteDogs(dData);
+        if (user) {
+          const { data: followData } = await supabase.from('follows').select('follower_id').match({ follower_id: user.id, following_id: pData.id });
+          setIsFollowing(!!followData?.length);
+        }
+      }
+    })();
+  }, [userName, isSelf, user]);
+
+  const handleFollow = useCallback(async () => {
+    if (!remoteProfile) return;
+    if (isFollowing) {
+      const res = await unfollowUser(remoteProfile.id);
+      if (res?.error) {
+        console.error('unfollow failed', res.error);
+        return;
+      }
+      setIsFollowing(false);
+      setRemoteProfile(p => p ? { ...p, followers: Math.max(0, (p.followers || 0) - 1) } : p);
+    } else {
+      const res = await followUser(remoteProfile.id);
+      if (res?.error) {
+        console.error('follow failed', res.error);
+        Alert.alert('关注失败', res.error.message || '请稍后再试');
+        return;
+      }
+      setIsFollowing(true);
+      setRemoteProfile(p => p ? { ...p, followers: (p.followers || 0) + 1 } : p);
+    }
+  }, [remoteProfile, isFollowing, followUser, unfollowUser]);
+
   const displayProfile = isSelf
-    ? { ...OWNER_PROFILE, ...Object.fromEntries(Object.entries(userProfile || {}).filter(([_, v]) => v != null)) }
-    : otherProfile || OWNER_PROFILE;
-  const dogsList = isSelf ? dogs : (otherProfile?.dogs || []);
+    ? { name: userProfile?.name, avatar: userProfile?.avatar, cover: userProfile?.cover, gender: userProfile?.gender, signature: userProfile?.signature, following: userProfile?.following || 0, followers: userProfile?.followers || 0, likes: userProfile?.likes || 0, area: userProfile?.area }
+    : remoteProfile
+    ? { name: remoteProfile.name, avatar: remoteProfile.avatar, cover: remoteProfile.cover, gender: remoteProfile.gender, signature: remoteProfile.signature || '', following: remoteProfile.following || 0, followers: remoteProfile.followers || 0, likes: remoteProfile.likes || 0, area: remoteProfile.area || '' }
+    : { name: userName || '用户', avatar: null, cover: null, gender: null, signature: '', following: 0, followers: 0, likes: 0, area: '' };
+  const dogsList = isSelf ? dogs : remoteDogs;
 
+  const [avatarPreviewVisible, setAvatarPreviewVisible] = useState(false);
   const [expandedDogId, setExpandedDogId] = useState(null);
   const sidebarAnim = useRef(new Animated.Value(0)).current;
   const [sidebarVisible, setSidebarVisible] = useState(false);
-  const [isFollowing, setIsFollowing] = useState(false);
   const [feedTab, setFeedTab] = useState('square');
 
   const openSidebar = useCallback(() => {
@@ -247,8 +292,7 @@ export default function ProfileTabScreen({ navigation, route }) {
         createdAt: post.createdAt,
         location: post.location || displayProfile.area,
         likes: post.likes,
-        comments: post.comments.length,
-        favorites: post.favorites,
+        comments: post.commentCount,
         liked: post.liked,
         images: getPostImages(post),
         sourcePostId: post.id,
@@ -256,7 +300,14 @@ export default function ProfileTabScreen({ navigation, route }) {
   }, [posts]);
 
   const exploreFeed = useMemo(() => {
-    return contributions.map(c => ({
+    const byLocation = {};
+    contributions.forEach(c => {
+      const loc = c.locationId;
+      if (!byLocation[loc] || (byLocation[loc].bucket === 'verified' && c.bucket === 'created')) {
+        byLocation[loc] = c;
+      }
+    });
+    return Object.values(byLocation).map(c => ({
       ...c,
       location: getLocation(c.locationId),
     })).filter(c => c.location);
@@ -281,6 +332,9 @@ export default function ProfileTabScreen({ navigation, route }) {
 
   useFocusEffect(
     useCallback(() => {
+      if (isSelf) {
+        refreshProfile();
+      }
       if (!isSelf) {
         const parent = navigation.getParent();
         parent?.setOptions({ tabBarStyle: { display: 'none' } });
@@ -297,7 +351,7 @@ export default function ProfileTabScreen({ navigation, route }) {
             });
         };
       }
-    }, [navigation, isSelf])
+    }, [navigation, isSelf, refreshProfile])
   );
 
   const genderIcon = displayProfile.gender === 'male' ? 'male' : displayProfile.gender === 'female' ? 'female' : null;
@@ -313,7 +367,9 @@ export default function ProfileTabScreen({ navigation, route }) {
     return (
       <View style={s.ownerProfileRow}>
         {displayProfile.avatar ? (
-          <Image source={{ uri: imageUrl(displayProfile.avatar) }} style={s.heroAvatar} />
+          <TouchableOpacity activeOpacity={0.8} onPress={() => setAvatarPreviewVisible(true)}>
+            <Image source={{ uri: imageUrl(displayProfile.avatar) }} style={s.heroAvatar} />
+          </TouchableOpacity>
         ) : (
           <View style={[s.heroAvatar, { backgroundColor: defaultAvatarBg, alignItems: 'center', justifyContent: 'center' }]}>
             <Ionicons name={defaultAvatarIcon} size={32} color={colors.white} />
@@ -336,7 +392,7 @@ export default function ProfileTabScreen({ navigation, route }) {
               <TouchableOpacity
                 style={[s.heroFollowBtn, isFollowing && s.heroFollowedBtn]}
                 activeOpacity={0.75}
-                onPress={() => setIsFollowing(!isFollowing)}
+                onPress={handleFollow}
               >
                 <Text style={s.heroFollowBtnText}>{isFollowing ? '已关注' : '关注'}</Text>
               </TouchableOpacity>
@@ -359,7 +415,7 @@ export default function ProfileTabScreen({ navigation, route }) {
               onPress={() => navigation.navigate('FollowList', { type: 'follower' })}
             />
             <View style={s.heroStatDivider} />
-            <StatBlock value={displayProfile.likes} label="获赞" />
+            <StatBlock value={displayProfile.likes} label="获赞与收藏" />
           </View>
         </View>
       </View>
@@ -371,42 +427,36 @@ export default function ProfileTabScreen({ navigation, route }) {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scrollContent}>
         {/* Hero: Cover image + owner profile overlay */}
         {isSelf ? (
-          <TouchableOpacity activeOpacity={0.85} onPress={pickCover}>
+          <View style={[s.hero, { paddingTop: insets.top }]}>
             {hasCover ? (
-              <ImageBackground
-                source={{ uri: imageUrl(displayProfile.cover) }}
-                style={[s.hero, { paddingTop: insets.top }]}
-              >
-                <TouchableOpacity
-                  style={[s.menuBtn, { top: insets.top + 8 }]}
-                  onPress={openSidebar}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name="menu-outline" size={20} color={colors.white} />
-                </TouchableOpacity>
-                <View style={s.heroOverlay}>
-                  <ProfileHeroContent />
-                </View>
-              </ImageBackground>
+              <TouchableOpacity activeOpacity={0.85} onPress={pickCover} style={StyleSheet.absoluteFill}>
+                <ImageBackground
+                  source={{ uri: imageUrl(displayProfile.cover) }}
+                  style={{ width: '100%', height: '100%' }}
+                />
+              </TouchableOpacity>
             ) : (
-              <View style={[s.hero, s.heroCoverPlaceholder, { paddingTop: insets.top }]}>
-                <TouchableOpacity
-                  style={[s.menuBtn, { top: insets.top + 8 }]}
-                  onPress={openSidebar}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name="menu-outline" size={20} color={colors.white} />
-                </TouchableOpacity>
+              <TouchableOpacity activeOpacity={0.85} onPress={pickCover} style={[s.heroCoverPlaceholder, StyleSheet.absoluteFill]} />
+            )}
+            <TouchableOpacity
+              style={[s.menuBtn, { top: insets.top + 8 }]}
+              onPress={openSidebar}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="menu-outline" size={20} color={colors.white} />
+            </TouchableOpacity>
+            {!hasCover && (
+              <TouchableOpacity activeOpacity={0.85} onPress={pickCover}>
                 <View style={s.coverHintRow}>
                   <Ionicons name="camera-outline" size={16} color="rgba(255,255,255,0.7)" />
                   <Text style={s.coverHintText}>轻点添加相册背景</Text>
                 </View>
-                <View style={s.heroOverlay}>
-                  <ProfileHeroContent />
-                </View>
-              </View>
+              </TouchableOpacity>
             )}
-          </TouchableOpacity>
+            <View style={s.heroOverlay}>
+              <ProfileHeroContent />
+            </View>
+          </View>
         ) : (
           <View>
             {hasCover ? (
@@ -513,6 +563,12 @@ export default function ProfileTabScreen({ navigation, route }) {
                     item={item}
                     profile={displayProfile}
                     interactive
+                    onDelete={async (postId) => {
+                      const { error } = await deletePost(postId);
+                      if (error) {
+                        Alert.alert('删除失败', error.message || '请稍后再试');
+                      }
+                    }}
                     onPress={() => navigation.navigate('ProfileFeedDetail', { item, profile: displayProfile })}
                   />
                 ))
@@ -564,6 +620,15 @@ export default function ProfileTabScreen({ navigation, route }) {
         </View>
 
       </ScrollView>
+
+      {/* Avatar preview modal */}
+      <Modal visible={avatarPreviewVisible} transparent animationType="fade" onRequestClose={() => setAvatarPreviewVisible(false)}>
+        <TouchableOpacity style={s.avatarPreviewBackdrop} activeOpacity={1} onPress={() => setAvatarPreviewVisible(false)}>
+          {displayProfile.avatar && (
+            <Image source={{ uri: imageUrl(displayProfile.avatar) }} style={s.avatarPreviewImage} resizeMode="contain" />
+          )}
+        </TouchableOpacity>
+      </Modal>
 
       <Modal visible={sidebarVisible} transparent animationType="none" onRequestClose={closeSidebar}>
         <View style={s.sidebarOverlay}>
@@ -645,13 +710,13 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center',
     paddingTop: spacing.xs, gap: spacing.md,
   },
-  statBlock: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
+  statBlock: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs, paddingVertical: 8 },
   statValue: { ...typography.captionBold, color: colors.white, fontSize: 14 },
   statLabel: { ...typography.caption, color: 'rgba(255,255,255,0.7)', fontSize: 14 },
   heroStatDivider: { width: 1, height: 16, backgroundColor: 'rgba(255,255,255,0.3)' },
   heroEditBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs,
-    height: 24, paddingHorizontal: spacing.sm,
+    height: 32, paddingHorizontal: spacing.sm,
     borderRadius: spacing.radiusPill,
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.6)',
   },
@@ -848,4 +913,16 @@ const s = StyleSheet.create({
   birthdayBody: { gap: 2 },
   birthdayDog: { ...typography.bodyBold, color: colors.secondary, fontSize: 16 },
   birthdayInfo: { ...typography.caption, color: colors.textLight },
+  /* Avatar preview */
+  avatarPreviewBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.9)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarPreviewImage: {
+    width: '80%',
+    aspectRatio: 1,
+    borderRadius: spacing.radiusMd,
+  },
 });

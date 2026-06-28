@@ -7,16 +7,23 @@ import { spacing } from '../../theme/spacing';
 import { typography } from '../../theme/typography';
 import { TipCard, DogAvatar } from '../../components';
 import { useWalk } from '../../contexts/WalkContext';
+import { useDogs } from '../../contexts/DogContext';
 
 export default function WalkResultScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const { records, currentWalk } = useWalk();
+  const { dogs: allDogs } = useDogs();
   const last = records[0];
 
   const distance = last?.distance || 0;
   const duration = last?.duration || 0;
   const pace = last?.pace || 0;
   const dogs = last?.dogs || currentWalk?.dogs || [];
+  const getDogImage = (dog) => {
+    if (dog?.image) return dog.image;
+    const found = allDogs.find(d => d.id === (dog?.id || dog));
+    return found?.image || null;
+  };
   const trackPoints = last?.trackPoints || [];
   const pointCount = trackPoints.length;
 
@@ -50,7 +57,7 @@ export default function WalkResultScreen({ navigation }) {
         <View style={styles.dogRow}>
           {dogs.map(dog => (
             <View key={dog.id} style={styles.dogItem}>
-              <DogAvatar size={48} />
+              <DogAvatar size={48} image={getDogImage(dog)} />
               <Text style={styles.dogName}>{dog.name}</Text>
             </View>
           ))}

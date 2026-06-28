@@ -7,13 +7,16 @@ import { typography } from '../../theme/typography';
 import { NavBar } from '../../components';
 import { formatPostTime } from '../../utils/time';
 import { formatLocation } from '../../utils/location';
+import { useSquare } from '../../contexts/SquareContext';
 
 export default function ProfileFeedDetailScreen({ navigation, route }) {
+  const { toggleLike } = useSquare();
   const item = route.params?.item;
   const profile = route.params?.profile;
+  const [local, setLocal] = useState(item);
   if (!item || !profile) return null;
 
-  const images = item.images || [];
+  const images = local.images || [];
   const [imageRatios, setImageRatios] = useState({});
 
   useEffect(() => {
@@ -60,18 +63,21 @@ export default function ProfileFeedDetailScreen({ navigation, route }) {
         )}
 
         <View style={styles.actionRow}>
-          <View style={styles.action}>
-            <Ionicons name={item.liked ? 'heart' : 'heart-outline'} size={22} color={item.liked ? colors.danger : colors.secondary} />
-            <Text style={styles.actionText}>{item.likes}</Text>
-          </View>
+          <TouchableOpacity
+            style={styles.action}
+            onPress={async () => {
+              await toggleLike(local.sourcePostId);
+              setLocal(p => ({ ...p, liked: !p.liked, likes: p.likes + (p.liked ? -1 : 1) }));
+            }}
+          >
+            <Ionicons name={local.liked ? 'heart' : 'heart-outline'} size={22} color={local.liked ? colors.danger : colors.secondary} />
+            <Text style={styles.actionText}>{local.likes}</Text>
+          </TouchableOpacity>
           <View style={styles.action}>
             <Ionicons name="chatbubble-outline" size={21} color={colors.secondary} />
-            <Text style={styles.actionText}>{item.comments}</Text>
+            <Text style={styles.actionText}>{local.comments}</Text>
           </View>
-          <View style={styles.action}>
-            <Ionicons name="bookmark-outline" size={22} color={colors.secondary} />
-            <Text style={styles.actionText}>{item.favorites}</Text>
-          </View>
+
         </View>
       </ScrollView>
     </View>

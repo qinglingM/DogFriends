@@ -93,7 +93,7 @@ function DogCheckinCard({ dog, data, onChange, sortedBehaviors }) {
   return (
     <View style={styles.card}>
       <View style={styles.dogHeader}>
-        <DogAvatar size={36} />
+        <DogAvatar size={36} image={dog.image} />
         <View style={styles.dogInfo}>
           <Text style={styles.dogName}>{dog.name}</Text>
         </View>
@@ -191,31 +191,38 @@ export default function WalkCheckinScreen({ navigation }) {
 
   const handleSave = () => {
     Keyboard.dismiss();
+
+    const checkins = {};
     Object.entries(records).forEach(([dogId, data]) => {
-      saveCheckin(dogId, data);
+      checkins[dogId] = data;
       saveBehaviorHistory(data.behaviors);
     });
-    // handleNext 已累计前 N-1 只狗，这里只处理最后一只
+
+    // 直接构建完整 checkins 传给 finishWalk，避免 React 批处理导致 state 未及时更新
     const lastDog = dogs[dogs.length - 1];
     const fullDog = allDogs.find(d => d.id === lastDog.id);
     if (fullDog) {
-      const ws = fullDog.walkStats || { walks: 0, distance: 0, duration: 0 };
       updateDog({
-        id: lastDog.id,
+        ...fullDog,
         walkStats: {
-          walks: (ws.walks || 0) + 1,
-          distance: (ws.distance || 0) + (currentWalk?.distance || 0),
-          duration: (ws.duration || 0) + (currentWalk?.duration || 0),
+          walks: (fullDog.walkStats?.walks || 0) + 1,
+          distance: (fullDog.walkStats?.distance || 0) + (currentWalk?.distance || 0),
+          duration: (fullDog.walkStats?.duration || 0) + (currentWalk?.duration || 0),
         },
       });
     }
-    finishWalk();
+    finishWalk(checkins);
     navigation.replace('WalkResult');
   };
 
   const handleSkip = () => {
     Keyboard.dismiss();
-    finishWalk();
+    const checkins = {};
+    Object.entries(records).forEach(([dogId, data]) => {
+      checkins[dogId] = data;
+      saveBehaviorHistory(data.behaviors);
+    });
+    finishWalk(checkins);
     navigation.replace('WalkResult');
   };
 
@@ -228,13 +235,12 @@ export default function WalkCheckinScreen({ navigation }) {
     const dog = dogs[currentIndex];
     const fullDog = allDogs.find(d => d.id === dog.id);
     if (fullDog) {
-      const ws = fullDog.walkStats || { walks: 0, distance: 0, duration: 0 };
       updateDog({
-        id: dog.id,
+        ...fullDog,
         walkStats: {
-          walks: (ws.walks || 0) + 1,
-          distance: (ws.distance || 0) + (currentWalk?.distance || 0),
-          duration: (ws.duration || 0) + (currentWalk?.duration || 0),
+          walks: (fullDog.walkStats?.walks || 0) + 1,
+          distance: (fullDog.walkStats?.distance || 0) + (currentWalk?.distance || 0),
+          duration: (fullDog.walkStats?.duration || 0) + (currentWalk?.duration || 0),
         },
       });
     }

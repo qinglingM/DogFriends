@@ -341,12 +341,21 @@ export function ExploreProvider({ children }) {
     const wasFav = !!state.favorites[id];
     dispatch({ type: 'TOGGLE_FAVORITE', id });
 
+    const location = state.locations.find(l => l.id === id);
+    const submittedBy = location?.submittedBy;
+
     if (wasFav) {
       await supabase.from('location_favorites').delete().match({ location_id: id, profile_id: user.id });
+      if (submittedBy) {
+        await supabase.rpc('decrement_profile_likes', { profile_id: submittedBy });
+      }
     } else {
       await supabase.from('location_favorites').insert({ location_id: id, profile_id: user.id });
+      if (submittedBy) {
+        await supabase.rpc('increment_profile_likes', { profile_id: submittedBy });
+      }
     }
-  }, [state.favorites, user]);
+  }, [state.favorites, state.locations, user]);
 
   const addLocation = useCallback(async (location) => {
     const DB_ENTRY_AREA = { all_areas: 'all_areas', outdoor: 'outdoor', indoor: 'indoor', not_allowed: 'not_allowed', partial: 'unknown', unknown: 'unknown' };

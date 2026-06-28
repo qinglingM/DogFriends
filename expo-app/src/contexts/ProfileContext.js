@@ -85,6 +85,48 @@ export function ProfileProvider({ children }) {
     return { error: null };
   }, [user]);
 
+  const followUser = useCallback(async (targetId) => {
+    if (!user || targetId === user.id) return { error: { message: '未登录或不能关注自己' } };
+    const { error } = await supabase.from('follows').insert({ follower_id: user.id, following_id: targetId });
+    if (error) {
+      console.error('followUser insert error', error);
+      return { error };
+    }
+
+    await Promise.all([
+      supabase.rpc('increment_profile_following', { profile_id: user.id }),
+      supabase.rpc('increment_profile_followers', { profile_id: targetId }),
+    ]);
+    setProfile(prev => prev ? { ...prev, following: (prev.following || 0) + 1 } : prev);
+    return {};
+  }, [user]);
+
+  const unfollowUser = useCallback(async (targetId) => {
+    if (!user || targetId === user.id) return { error: { message: '未登录或不能操作自己' } };
+    const { error } = await supabase.from('follows').delete().match({ follower_id: user.id, following_id: targetId });
+    if (error) {
+      console.error('unfollowUser delete error', error);
+      return { error };
+    }
+
+    await Promise.all([
+      supabase.rpc('decrement_profile_following', { profile_id: user.id }),
+      supabase.rpc('decrement_profile_followers', { profile_id: targetId }),
+    ]);
+    setProfile(prev => prev ? { ...prev, following: Math.max(0, (prev.following || 0) - 1) } : prev);
+    return {};
+  }, [user]);
+
+  const fetchProfile = useCallback(async (targetId) => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', targetId)
+      .single();
+    if (!error && data) return rowToProfile(data);
+    return null;
+  }, []);
+
   const refresh = useCallback(async () => {
     设置加载完成(false);
     const { data, error } = await supabase
@@ -102,8 +144,11 @@ export function ProfileProvider({ children }) {
     profile,
     加载完成,
     updateProfile,
+    followUser,
+    unfollowUser,
+    fetchProfile,
     refresh,
-  }), [profile, 加载完成, updateProfile, refresh]);
+  }), [profile, 加载完成, updateProfile, followUser, unfollowUser, fetchProfile, refresh]);
 
   return <ProfileContext.Provider value={value}>{children}</ProfileContext.Provider>;
 }

@@ -35,21 +35,17 @@ export async function uploadImage(localUri, folder, fileName, opts = {}) {
   const ext = uri.split('.').pop()?.toLowerCase() || 'jpg';
   const path = `${folder}/${fileName}.${ext === 'heic' ? 'jpg' : ext}`;
 
-  // 读文件为 base64（兼容 content://、file://、ph:// 所有平台）
   const contentType = `image/${ext === 'png' ? 'png' : 'jpeg'}`;
   const base64 = await FileSystem.readAsStringAsync(uri, {
     encoding: FileSystem.EncodingType.Base64,
   });
-  const blob = await new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    xhr.open('GET', `data:${contentType};base64,${base64}`, true);
-    xhr.responseType = 'blob';
-    xhr.onload = () => resolve(xhr.response);
-    xhr.onerror = reject;
-    xhr.send();
-  });
+  const binaryStr = atob(base64);
+  const bytes = new Uint8Array(binaryStr.length);
+  for (let i = 0; i < binaryStr.length; i++) {
+    bytes[i] = binaryStr.charCodeAt(i);
+  }
 
-  const { data, error } = await supabase.storage.from(BUCKET).upload(path, blob, {
+  const { data, error } = await supabase.storage.from(BUCKET).upload(path, bytes, {
     contentType,
     upsert: true,
   });

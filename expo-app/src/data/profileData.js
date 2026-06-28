@@ -8,6 +8,12 @@ export function getCategoryIcon(category) {
       return 'restaurant';
     case 'mall':
       return 'storefront';
+    case 'scenic':
+      return 'map';
+    case 'hotel':
+      return 'bed';
+    case 'other':
+      return 'ellipsis-horizontal';
     default:
       return 'location';
   }

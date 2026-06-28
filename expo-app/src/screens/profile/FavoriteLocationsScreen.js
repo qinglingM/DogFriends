@@ -6,8 +6,6 @@ import { spacing } from '../../theme/spacing';
 import { typography } from '../../theme/typography';
 import { NavBar, Card } from '../../components';
 import { useExplore } from '../../contexts/ExploreContext';
-import { useSquare } from '../../contexts/SquareContext';
-import { getPostImages } from '../../utils/postHelpers';
 import { CATEGORIES } from '../../data/exploreData';
 import { getCategoryIcon } from '../../data/profileData';
 import CityPickerModal from '../../components/CityPickerModal';
@@ -32,31 +30,13 @@ function LocationThumbnail({ location }) {
   );
 }
 
-function splitColumns(items) {
-  return items.reduce(
-    (cols, item, index) => {
-      cols[index % 2].push(item);
-      return cols;
-    },
-    [[], []]
-  );
-}
-
 export default function FavoriteLocationsScreen({ navigation }) {
   const { locations, favorites, toggleFavorite } = useExplore();
-  const { posts, toggleFavorite: togglePostFavorite } = useSquare();
-  const [contentType, setContentType] = useState('locations');
   const [city, setCity] = useState('all');
   const [category, setCategory] = useState('all');
   const [openFilter, setOpenFilter] = useState(null);
   const [cityPickerOpen, setCityPickerOpen] = useState(false);
   const favoriteLocations = locations.filter(loc => favorites[loc.id]);
-  const favoritePosts = posts.filter(post => post.favorited);
-  const postColumns = splitColumns(favoritePosts);
-  const visibleCities = useMemo(() => {
-    const cities = Array.from(new Set(favoriteLocations.map(loc => loc.city || '上海')));
-    return ['all', ...cities];
-  }, [favoriteLocations]);
   const visibleCategories = useMemo(() => {
     const cityFiltered = city === 'all'
       ? favoriteLocations
@@ -91,52 +71,29 @@ export default function FavoriteLocationsScreen({ navigation }) {
       <NavBar title="我的收藏" onBack={() => navigation.goBack()} />
 
       <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.segment}>
+        <View style={styles.filterBar}>
           <TouchableOpacity
-            style={[styles.segmentItem, contentType === 'locations' && styles.segmentItemActive]}
-            onPress={() => {
-              setContentType('locations');
-              setOpenFilter(null);
-            }}
+            style={[styles.filterBox, styles.filterBoxActive]}
+            activeOpacity={0.75}
+            onPress={() => setCityPickerOpen(true)}
           >
-            <Text style={[styles.segmentText, contentType === 'locations' && styles.segmentTextActive]}>我收藏的地点</Text>
+            <Ionicons name="location" size={16} color={colors.secondary} />
+            <Text style={styles.filterBoxText} numberOfLines={1}>{selectedCityLabel}</Text>
+            <Ionicons name="chevron-down" size={14} color={colors.textLight} />
           </TouchableOpacity>
+
           <TouchableOpacity
-            style={[styles.segmentItem, contentType === 'posts' && styles.segmentItemActive]}
-            onPress={() => {
-              setContentType('posts');
-              setOpenFilter(null);
-            }}
+            style={[styles.filterBox, openFilter === 'category' && styles.filterBoxActive]}
+            activeOpacity={0.75}
+            onPress={() => setOpenFilter(openFilter === 'category' ? null : 'category')}
           >
-            <Text style={[styles.segmentText, contentType === 'posts' && styles.segmentTextActive]}>我收藏的帖子</Text>
+            <Ionicons name="options-outline" size={16} color={colors.secondary} />
+            <Text style={styles.filterBoxText} numberOfLines={1}>{selectedCategoryLabel}</Text>
+            <Ionicons name={openFilter === 'category' ? 'chevron-up' : 'chevron-down'} size={14} color={colors.textLight} />
           </TouchableOpacity>
         </View>
 
-        {contentType === 'locations' && (
-          <View style={styles.filterBar}>
-            <TouchableOpacity
-              style={[styles.filterBox, styles.filterBoxActive]}
-              activeOpacity={0.75}
-              onPress={() => setCityPickerOpen(true)}
-            >
-              <Ionicons name="location" size={16} color={colors.secondary} />
-              <Text style={styles.filterBoxText} numberOfLines={1}>{selectedCityLabel}</Text>
-              <Ionicons name="chevron-down" size={14} color={colors.textLight} />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.filterBox, openFilter === 'category' && styles.filterBoxActive]}
-              activeOpacity={0.75}
-              onPress={() => setOpenFilter(openFilter === 'category' ? null : 'category')}
-            >
-              <Ionicons name="options-outline" size={16} color={colors.secondary} />
-              <Text style={styles.filterBoxText} numberOfLines={1}>{selectedCategoryLabel}</Text>
-              <Ionicons name={openFilter === 'category' ? 'chevron-up' : 'chevron-down'} size={14} color={colors.textLight} />
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {contentType === 'locations' && openFilter && (
+        {openFilter && (
           <Card noPadding style={styles.filterMenu}>
             {visibleCategories.map(option => {
               const key = option.key;
@@ -160,81 +117,37 @@ export default function FavoriteLocationsScreen({ navigation }) {
           </Card>
         )}
 
-        {contentType === 'locations' ? (
-          <Card noPadding style={styles.listCard}>
-            {filteredLocations.length === 0 ? (
-              <View style={styles.emptyBlock}>
-                <Ionicons name="bookmark-outline" size={24} color={colors.textLight} />
-                <Text style={styles.emptyTitle}>{favoriteLocations.length === 0 ? '还没有收藏地点' : '这个分类下没有收藏'}</Text>
-                <Text style={styles.emptyText}>
-                  {favoriteLocations.length === 0 ? '看到适合带狗去的地方，可以先收藏起来。' : '切换分类看看其他收藏地点。'}
-                </Text>
-              </View>
-            ) : (
-              filteredLocations.map((location, index) => (
-                <TouchableOpacity
-                  key={location.id}
-                  style={[styles.listItem, index === filteredLocations.length - 1 && styles.listItemLast]}
-                  activeOpacity={0.75}
-                  onPress={() => navigation.navigate('LocationDetail', { id: location.id })}
-                  onLongPress={() => toggleFavorite(location.id)}
-                >
-                  <LocationThumbnail location={location} />
-                  <View style={styles.listMain}>
-                    <Text style={styles.listTitle} numberOfLines={1}>{location.name}</Text>
-                    <Text style={styles.listMeta} numberOfLines={1}>
-                      {location.categoryLabel} · {location.city || '上海'}
-                    </Text>
-                    <Text style={styles.listSub} numberOfLines={1}>{location.lastUpdatedLabel}</Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={16} color={colors.textLight} />
-                </TouchableOpacity>
-              ))
-            )}
-          </Card>
-        ) : favoritePosts.length === 0 ? (
-          <View style={styles.emptyBlock}>
-            <Ionicons name="bookmark-outline" size={24} color={colors.textLight} />
-            <Text style={styles.emptyTitle}>还没有收藏帖子</Text>
-            <Text style={styles.emptyText}>在广场看到有用内容，可以先收藏起来。</Text>
-          </View>
-        ) : (
-          <View style={styles.postMasonry}>
-            {postColumns.map((column, columnIndex) => (
-              <View key={columnIndex} style={styles.postColumn}>
-                {column.map(post => (
-                  <TouchableOpacity
-                    key={post.id}
-                    style={styles.postCard}
-                    activeOpacity={0.82}
-                    onPress={() => navigation.getParent()?.navigate('Square', { screen: 'PostDetail', params: { id: post.id } })}
-                  >
-                    <Image source={{ uri: getPostImages(post)[0] }} style={styles.postImage} resizeMode="cover" />
-                    <View style={styles.postBody}>
-                      <Text style={styles.postText} numberOfLines={3}>{post.text}</Text>
-                      <View style={styles.postActions}>
-                        <View style={styles.postAction}>
-                          <Ionicons name="heart-outline" size={14} color={colors.textLight} />
-                          <Text style={styles.postActionText}>{post.likes}</Text>
-                        </View>
-                        <TouchableOpacity
-                          style={styles.postAction}
-                          onPress={(event) => {
-                            event.stopPropagation();
-                            togglePostFavorite(post.id);
-                          }}
-                        >
-                          <Ionicons name="bookmark" size={14} color={colors.secondary} />
-                          <Text style={styles.postActionText}>{post.favorites}</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            ))}
-          </View>
-        )}
+        <Card noPadding style={styles.listCard}>
+          {filteredLocations.length === 0 ? (
+            <View style={styles.emptyBlock}>
+              <Ionicons name="bookmark-outline" size={24} color={colors.textLight} />
+              <Text style={styles.emptyTitle}>{favoriteLocations.length === 0 ? '还没有收藏地点' : '这个分类下没有收藏'}</Text>
+              <Text style={styles.emptyText}>
+                {favoriteLocations.length === 0 ? '看到适合带狗去的地方，可以先收藏起来。' : '切换分类看看其他收藏地点。'}
+              </Text>
+            </View>
+          ) : (
+            filteredLocations.map((location, index) => (
+              <TouchableOpacity
+                key={location.id}
+                style={[styles.listItem, index === filteredLocations.length - 1 && styles.listItemLast]}
+                activeOpacity={0.75}
+                onPress={() => navigation.navigate('LocationDetail', { id: location.id })}
+                onLongPress={() => toggleFavorite(location.id)}
+              >
+                <LocationThumbnail location={location} />
+                <View style={styles.listMain}>
+                  <Text style={styles.listTitle} numberOfLines={1}>{location.name}</Text>
+                  <Text style={styles.listMeta} numberOfLines={1}>
+                    {location.categoryLabel} · {location.city || '上海'}
+                  </Text>
+                  <Text style={styles.listSub} numberOfLines={1}>{location.lastUpdatedLabel}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={colors.textLight} />
+              </TouchableOpacity>
+            ))
+          )}
+        </Card>
       </ScrollView>
 
       <CityPickerModal
@@ -254,25 +167,6 @@ export default function FavoriteLocationsScreen({ navigation }) {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   content: { padding: spacing.screenMargin, paddingBottom: 48 },
-  segment: {
-    flexDirection: 'row',
-    backgroundColor: colors.white,
-    borderRadius: spacing.radiusMd,
-    padding: 4,
-    marginBottom: 12,
-  },
-  segmentItem: {
-    flex: 1,
-    minHeight: 40,
-    borderRadius: spacing.radiusSm,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  segmentItemActive: {
-    backgroundColor: colors.primary,
-  },
-  segmentText: { ...typography.bodyBold, color: colors.textLight },
-  segmentTextActive: { color: colors.secondary },
   filterBar: {
     flexDirection: 'row',
     gap: 10,
@@ -349,37 +243,4 @@ const styles = StyleSheet.create({
   },
   emptyTitle: { ...typography.bodyBold, color: colors.textMain },
   emptyText: { ...typography.caption, color: colors.textLight, textAlign: 'center' },
-  postMasonry: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  postColumn: {
-    flex: 1,
-    gap: 12,
-  },
-  postCard: {
-    backgroundColor: colors.white,
-    borderRadius: spacing.radiusMd,
-    overflow: 'hidden',
-  },
-  postImage: {
-    width: '100%',
-    aspectRatio: 3 / 4,
-    backgroundColor: '#D3E0C8',
-  },
-  postBody: {
-    padding: 10,
-    gap: 8,
-  },
-  postText: { ...typography.caption, color: colors.textMain },
-  postActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  postAction: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-  },
-  postActionText: { ...typography.caption, color: colors.textLight },
 });

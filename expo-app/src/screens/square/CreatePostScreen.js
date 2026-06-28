@@ -58,7 +58,7 @@ export default function CreatePostScreen({ navigation }) {
     if (permission.status !== 'granted') {
       Alert.alert(
         '需要相册权限',
-        '请在系统设置里允许「狗友」访问你的照片，才能上传图片。',
+        '请在系统设置里允许「遛遛」访问你的照片，才能上传图片。',
         [
           { text: '取消', style: 'cancel' },
           { text: '去设置', onPress: () => Linking.openSettings?.() },

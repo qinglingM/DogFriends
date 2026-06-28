@@ -6,11 +6,13 @@ import { spacing } from '../../theme/spacing';
 import { typography } from '../../theme/typography';
 import { NavBar, Card, Chip, DogAvatar } from '../../components';
 import { useWalk } from '../../contexts/WalkContext';
+import { useDogs } from '../../contexts/DogContext';
 
 const MONTHS = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
 
 export default function WalkHistoryScreen({ navigation }) {
   const { records, 加载完成, refresh, getRecentRecords, getTotalStats } = useWalk();
+  const { dogs: allDogs } = useDogs();
   const totalStats = getTotalStats();
   const now = new Date();
   const [currentDate, setCurrentDate] = useState(new Date(now.getFullYear(), now.getMonth(), 1));
@@ -43,7 +45,7 @@ export default function WalkHistoryScreen({ navigation }) {
       distance: `${(record.distance || 0).toFixed(1)} km`,
       duration: `${m} min`,
       pace: `${record.pace || 0} km/h`,
-      dogs: (record.dogs || []).map(d => d.name),
+      dogs: (record.dogs || []).map(d => typeof d === 'string' ? d : d.id),
     };
   };
 
@@ -142,12 +144,15 @@ export default function WalkHistoryScreen({ navigation }) {
                   </View>
                 </View>
                 <View style={styles.recordDogs}>
-                  {record.dogs.map((d, i) => (
-                    <React.Fragment key={i}>
-                      <DogAvatar size={24} />
-                      <Text style={styles.recordDogName}>{d}</Text>
-                    </React.Fragment>
-                  ))}
+                  {record.dogs.map((dogId, i) => {
+                    const fullDog = allDogs.find(d => d.id === dogId);
+                    return (
+                      <React.Fragment key={i}>
+                        <DogAvatar size={24} image={fullDog?.image} />
+                        <Text style={styles.recordDogName}>{fullDog?.name || dogId}</Text>
+                      </React.Fragment>
+                    );
+                  })}
                 </View>
               </TouchableOpacity>
             </View>

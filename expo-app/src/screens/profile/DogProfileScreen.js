@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
@@ -8,7 +8,6 @@ import { NavBar, Card, Chip, DogAvatar, Button } from '../../components';
 import ErrorState from '../../components/ErrorState';
 import { useDogs } from '../../contexts/DogContext';
 import { SIZE_LABELS } from '../../constants/dog';
-import { imageUrl } from '../../utils/imageUrl';
 
 export default function DogProfileScreen({ navigation, route }) {
   const { dogs } = useDogs();
@@ -43,8 +42,6 @@ export default function DogProfileScreen({ navigation, route }) {
       age = '不到1个月';
     }
   }
-  const hasImage = dog.image && dog.image.length > 0;
-
   return (
     <View style={styles.screen}>
       <NavBar
@@ -56,11 +53,7 @@ export default function DogProfileScreen({ navigation, route }) {
 
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.hero}>
-          {hasImage ? (
-            <Image source={{ uri: imageUrl(dog.image) }} style={styles.heroAvatar} />
-          ) : (
-            <DogAvatar size={96} />
-          )}
+          <DogAvatar size={96} image={dog.image} />
           <Text style={styles.heroName}>{dog.name}</Text>
           <Text style={styles.heroBreed}>{dog.breed} · {genderLabel}</Text>
           <View style={styles.heroTags}>

@@ -6,6 +6,7 @@ import PostDetailScreen from '../screens/square/PostDetailScreen';
 import ProfileTabScreen from '../screens/profile/ProfileTabScreen';
 import ProfileFeedDetailScreen from '../screens/profile/ProfileFeedDetailScreen';
 import DogProfileScreen from '../screens/profile/DogProfileScreen';
+import FollowListScreen from '../screens/profile/FollowListScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -18,6 +19,7 @@ export default function SquareNavigator() {
       <Stack.Screen name="UserProfile" component={ProfileTabScreen} />
       <Stack.Screen name="ProfileFeedDetail" component={ProfileFeedDetailScreen} />
       <Stack.Screen name="DogProfile" component={DogProfileScreen} />
+      <Stack.Screen name="FollowList" component={FollowListScreen} />
     </Stack.Navigator>
   );
 }

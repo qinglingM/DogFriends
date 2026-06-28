@@ -248,6 +248,19 @@ create table contributions (
 create index idx_contributions_profile_id on contributions(profile_id);
 
 -- ============================================================
+-- 16. follows — 关注关系
+-- ============================================================
+create table follows (
+  follower_id  uuid not null references profiles(id) on delete cascade,
+  following_id uuid not null references profiles(id) on delete cascade,
+  created_at   timestamptz not null default now(),
+  primary key (follower_id, following_id)
+);
+
+create index idx_follows_follower_id on follows(follower_id);
+create index idx_follows_following_id on follows(following_id);
+
+-- ============================================================
 -- RLS（行级安全）
 -- ============================================================
 alter table profiles enable row level security;
@@ -264,6 +277,7 @@ alter table validation_helpful enable row level security;
 alter table inaccuracy_reports enable row level security;
 alter table walk_records enable row level security;
 alter table contributions enable row level security;
+alter table follows enable row level security;
 
 -- 公开内容所有人可读
 create policy "公开读" on profiles for select using (true);
@@ -286,6 +300,11 @@ create policy "自己写" on location_validations for insert with check (auth.ui
 create policy "自己写" on location_favorites for all using (auth.uid() = profile_id);
 create policy "自己写" on validation_helpful for all using (auth.uid() = profile_id);
 create policy "自己写" on inaccuracy_reports for insert with check (auth.uid() = profile_id);
+
+-- 关注：可读所有人的关注关系，只能管理自己的
+create policy "公开读" on follows for select using (true);
+create policy "自己管理关注" on follows for insert with check (auth.uid() = follower_id);
+create policy "自己取消关注" on follows for delete using (auth.uid() = follower_id);
 
 -- 公开新增
 create policy "公开新增" on locations for insert with check (true);
@@ -596,47 +615,85 @@ insert into contributions (profile_id, location_id, type, status, created_at) va
 create or replace function increment_post_likes(row_id uuid)
 returns void as $$
   update posts set likes_count = likes_count + 1 where id = row_id;
-$$ language sql;
+$$ language sql security definer;
 
 create or replace function decrement_post_likes(row_id uuid)
 returns void as $$
   update posts set likes_count = greatest(0, likes_count - 1) where id = row_id;
-$$ language sql;
+$$ language sql security definer;
 
 create or replace function increment_post_favorites(row_id uuid)
 returns void as $$
   update posts set favorites_count = favorites_count + 1 where id = row_id;
-$$ language sql;
+$$ language sql security definer;
 
 create or replace function decrement_post_favorites(row_id uuid)
 returns void as $$
   update posts set favorites_count = greatest(0, favorites_count - 1) where id = row_id;
-$$ language sql;
+$$ language sql security definer;
 
 create or replace function increment_post_comments(row_id uuid)
 returns void as $$
   update posts set comments_count = comments_count + 1 where id = row_id;
-$$ language sql;
+$$ language sql security definer;
 
 create or replace function increment_comment_likes(row_id uuid)
 returns void as $$
   update post_comments set likes_count = likes_count + 1 where id = row_id;
-$$ language sql;
+$$ language sql security definer;
 
 create or replace function decrement_comment_likes(row_id uuid)
 returns void as $$
   update post_comments set likes_count = greatest(0, likes_count - 1) where id = row_id;
-$$ language sql;
+$$ language sql security definer;
 
 create or replace function increment_validation_helpful(row_id uuid)
 returns void as $$
   update location_validations set helpful_count = helpful_count + 1 where id = row_id;
-$$ language sql;
+$$ language sql security definer;
 
 create or replace function decrement_validation_helpful(row_id uuid)
 returns void as $$
   update location_validations set helpful_count = greatest(0, helpful_count - 1) where id = row_id;
-$$ language sql;
+$$ language sql security definer;
+
+-- ============================================================
+-- 用户资料获赞计数 RPC（调用方需要）
+-- ============================================================
+
+create or replace function increment_profile_likes(profile_id uuid)
+returns void as $$
+  update profiles set likes = likes + 1 where id = profile_id;
+$$ language sql security definer;
+
+create or replace function decrement_profile_likes(profile_id uuid)
+returns void as $$
+  update profiles set likes = greatest(0, likes - 1) where id = profile_id;
+$$ language sql security definer;
+
+-- ============================================================
+-- 关注/粉丝计数 RPC（security definer 以绕过 profile RLS）
+-- ============================================================
+
+create or replace function increment_profile_following(profile_id uuid)
+returns void as $$
+  update profiles set following = following + 1 where id = profile_id;
+$$ language sql security definer;
+
+create or replace function decrement_profile_following(profile_id uuid)
+returns void as $$
+  update profiles set following = greatest(0, following - 1) where id = profile_id;
+$$ language sql security definer;
+
+create or replace function increment_profile_followers(profile_id uuid)
+returns void as $$
+  update profiles set followers = followers + 1 where id = profile_id;
+$$ language sql security definer;
+
+create or replace function decrement_profile_followers(profile_id uuid)
+returns void as $$
+  update profiles set followers = greatest(0, followers - 1) where id = profile_id;
+$$ language sql security definer;
 
 -- ============================================================
 -- 自动创建 profile 当用户注册时
@@ -655,3 +712,22 @@ drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure handle_new_user();
+
+-- ============================================================
+-- Storage RLS — photos bucket
+-- ============================================================
+-- 注意：需要在 Supabase Dashboard → Storage → photos → Policies 中确认
+-- 或手动执行以下策略
+
+-- 公开读
+create policy "公开读" on storage.objects for select using (bucket_id = 'photos');
+
+-- 认证用户可上传（自己身份）
+create policy "认证用户上传" on storage.objects for insert with check (
+  bucket_id = 'photos' and auth.role() = 'authenticated'
+);
+
+-- 用户可更新/删除自己的文件
+create policy "自己写文件" on storage.objects for all using (
+  bucket_id = 'photos' and auth.uid() = owner
+);

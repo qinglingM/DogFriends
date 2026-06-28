@@ -80,6 +80,7 @@ function reducer(state, action) {
       if (!state.currentWalk) return state;
       const record = {
         ...state.currentWalk,
+        checkins: action.checkinsOverride || state.currentWalk.checkins || {},
         endTime: new Date().toISOString(),
         date: new Date().toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' }),
         dateLabel: new Date().toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric', weekday: 'short' }),
@@ -132,11 +133,13 @@ export function WalkProvider({ children }) {
 
   const saveCheckin = useCallback((dogId, checkin) => dispatch({ type: 'SAVE_CHECKIN', dogId, checkin }), []);
 
-  const finishWalk = useCallback(async () => {
+  const finishWalk = useCallback(async (checkinsOverride) => {
     const current = state.currentWalk;
     if (!current) return;
 
-    dispatch({ type: 'FINISH_WALK' });
+    const finalCheckins = checkinsOverride || current.checkins || {};
+
+    dispatch({ type: 'FINISH_WALK', checkinsOverride: finalCheckins });
 
     const photoUris = (current.photos || []).map(p => typeof p === 'string' ? p : p.uri);
 
@@ -150,7 +153,7 @@ export function WalkProvider({ children }) {
       pace: current.pace || null,
       track_points: current.trackPoints || null,
       photos: photoUris,
-      checkins: current.checkins || null,
+      checkins: finalCheckins,
     });
     if (error) {
       console.error('[WalkContext] finishWalk insert failed', error);

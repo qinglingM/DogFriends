@@ -21,26 +21,26 @@ export default function SettingsScreen({ navigation }) {
       <NavBar title="设置" onBack={() => navigation.goBack()} />
 
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.groupLabel}>账号</Text>
+        <Text style={styles.groupLabel}>协议</Text>
         <Card noPadding>
           <TouchableOpacity
             style={[styles.menuItem, styles.menuBorder]}
-            onPress={() => navigation.navigate('EditProfile')}
+            onPress={() => navigation.navigate('UserAgreement')}
           >
             <View style={[styles.menuIcon, { backgroundColor: 'rgba(185, 207, 50, 0.2)' }]}>
-              <Ionicons name="person-circle-outline" size={20} color={colors.secondary} />
+              <Ionicons name="document-text-outline" size={20} color={colors.secondary} />
             </View>
-            <Text style={styles.menuText}>个人信息</Text>
+            <Text style={styles.menuText}>用户协议</Text>
             <Ionicons name="chevron-forward" size={16} color={colors.textLight} />
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.menuItem}
-            onPress={() => Alert.alert('提示', '功能开发中')}
+            onPress={() => navigation.navigate('PrivacyPolicy')}
           >
-            <View style={[styles.menuIcon, { backgroundColor: 'rgba(185, 207, 50, 0.2)' }]}>
+            <View style={[styles.menuIcon, { backgroundColor: 'rgba(52, 112, 72, 0.15)' }]}>
               <Ionicons name="shield-checkmark-outline" size={20} color={colors.secondary} />
             </View>
-            <Text style={styles.menuText}>隐私设置</Text>
+            <Text style={styles.menuText}>隐私政策</Text>
             <Ionicons name="chevron-forward" size={16} color={colors.textLight} />
           </TouchableOpacity>
         </Card>
@@ -77,12 +77,12 @@ export default function SettingsScreen({ navigation }) {
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.menuItem}
-            onPress={() => Alert.alert('', '狗友 v1.0.0')}
+            onPress={() => Alert.alert('', '遛遛 v1.0.0')}
           >
             <View style={[styles.menuIcon, { backgroundColor: 'rgba(185, 207, 50, 0.2)' }]}>
               <Ionicons name="information-circle-outline" size={20} color={colors.secondary} />
             </View>
-            <Text style={styles.menuText}>关于狗友</Text>
+            <Text style={styles.menuText}>关于遛遛</Text>
             <Ionicons name="chevron-forward" size={16} color={colors.textLight} />
           </TouchableOpacity>
         </Card>
@@ -96,7 +96,7 @@ export default function SettingsScreen({ navigation }) {
 
         <View style={styles.version}>
           <Ionicons name="paw" size={32} color={colors.primary} />
-          <Text style={styles.versionName}>狗友</Text>
+          <Text style={styles.versionName}>遛遛</Text>
           <Text style={styles.versionNum}>版本 1.0.0</Text>
         </View>
       </ScrollView>
