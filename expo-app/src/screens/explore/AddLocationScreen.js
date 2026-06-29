@@ -306,6 +306,8 @@ export default function AddLocationScreen({ route, navigation }) {
           placeholderTextColor={colors.textLight}
           multiline
           maxLength={200}
+          returnKeyType="done"
+          blurOnSubmit
         />
         <Text style={styles.charCounter}>{`${note.length}/200`}</Text>
 

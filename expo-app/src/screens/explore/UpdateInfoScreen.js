@@ -272,6 +272,8 @@ export default function UpdateInfoScreen({ route, navigation }) {
           placeholderTextColor={colors.textLight}
           multiline
           maxLength={200}
+          returnKeyType="done"
+          blurOnSubmit
         />
         <Text style={styles.charCounter}>{`${note.length}/200`}</Text>
 

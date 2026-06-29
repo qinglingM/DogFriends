@@ -197,6 +197,8 @@ export default function CreatePostScreen({ navigation }) {
           placeholderTextColor={colors.textLight}
           multiline
           maxLength={400}
+          returnKeyType="done"
+          blurOnSubmit
           style={styles.bodyInput}
         />
         <Text style={styles.charCounter}>{`${text.length}/400`}</Text>

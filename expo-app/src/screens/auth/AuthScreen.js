@@ -208,6 +208,7 @@ export default function AuthScreen() {
             onChangeText={setPhone}
             keyboardType="phone-pad"
             maxLength={17}
+            returnKeyType="done"
             autoComplete="tel"
           />
 
@@ -221,6 +222,7 @@ export default function AuthScreen() {
                   onChangeText={(value) => setCode(value.replace(/\D/g, ''))}
                   keyboardType="number-pad"
                   maxLength={6}
+                  returnKeyType="done"
                   autoComplete="one-time-code"
                 />
               </View>
@@ -251,6 +253,7 @@ export default function AuthScreen() {
               onChangeText={(text) => setPassword(text.replace(/[^a-zA-Z0-9]/g, ''))}
               secureTextEntry
               maxLength={20}
+              returnKeyType="done"
               autoComplete={mode === 'forgot' ? 'new-password' : 'current-password'}
             />
           )}
@@ -263,6 +266,7 @@ export default function AuthScreen() {
               onChangeText={(text) => setConfirmPassword(text.replace(/[^a-zA-Z0-9]/g, ''))}
               secureTextEntry
               maxLength={20}
+              returnKeyType="done"
               autoComplete="new-password"
             />
           )}
