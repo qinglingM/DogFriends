@@ -44,6 +44,8 @@ export default function WalkHomeScreen({ navigation }) {
         });
         return merged;
       });
+    } else {
+      setDogs([]);
     }
   }, [allDogs]);
 

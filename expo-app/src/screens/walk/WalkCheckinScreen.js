@@ -142,7 +142,7 @@ export default function WalkCheckinScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const { saveCheckin, finishWalk, currentWalk } = useWalk();
   const { dogs: allDogs, updateDog } = useDogs();
-  const dogs = currentWalk?.dogs?.length ? currentWalk.dogs : [{ id: '1', name: '旺财' }];
+  const dogs = currentWalk?.dogs?.length ? currentWalk.dogs : (allDogs.length > 0 ? allDogs.map(d => ({ id: d.id, name: d.name, image: d.image })) : []);
 
   const [behaviorHistory, setBehaviorHistory] = useState({});
   const [records, setRecords] = useState(() => {
