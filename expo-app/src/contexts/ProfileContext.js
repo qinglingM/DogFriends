@@ -26,6 +26,21 @@ function withArea(profile) {
   return { ...profile, area: formatArea(profile.province, profile.city) };
 }
 
+async function generateUniqueName() {
+  for (let i = 0; i < 10; i++) {
+    const num = Math.floor(10000 + Math.random() * 90000);
+    const name = `遛友${num}`;
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('name', name)
+      .limit(1);
+    if (error || (data && data.length > 0)) continue;
+    return name;
+  }
+  return `遛友${Math.floor(10000 + Math.random() * 90000)}`;
+}
+
 export function ProfileProvider({ children }) {
   const { user } = useAuth();
   const [profile, setProfile] = useState(null);
@@ -43,9 +58,10 @@ export function ProfileProvider({ children }) {
       if (!error && data) {
         setProfile(rowToProfile(data));
       } else {
+        const defaultName = await generateUniqueName();
         const { data: newProfile, error: insertErr } = await supabase
           .from('profiles')
-          .insert({ id: user.id, name: user.email?.split('@')[0] || '' })
+          .insert({ id: user.id, name: defaultName })
           .select('*')
           .single();
         if (!insertErr && newProfile) {
