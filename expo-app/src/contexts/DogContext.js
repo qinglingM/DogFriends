@@ -19,7 +19,6 @@ function rowToDog(row) {
     gender: row.gender,
     birthday: row.birthday,
     weight: row.weight != null ? parseFloat(row.weight) : null,
-    neutered: row.neutered,
     traits: row.traits || [],
     image: row.image,
     walkStats: {
@@ -27,7 +26,6 @@ function rowToDog(row) {
       distance: row.walk_stats_distance != null ? parseFloat(row.walk_stats_distance) : 0,
       duration: row.walk_stats_duration || 0,
     },
-    publicWalkStats: row.public_walk_stats,
     publicProfile: row.public_profile,
   };
 }
@@ -41,13 +39,11 @@ function dogToRow(dog, profileId) {
     gender: dog.gender,
     birthday: dog.birthday || null,
     weight: dog.weight != null ? dog.weight : null,
-    neutered: dog.neutered || false,
     traits: dog.traits || [],
     image: dog.image || null,
     walk_stats_walks: dog.walkStats?.walks || 0,
     walk_stats_distance: dog.walkStats?.distance || 0,
     walk_stats_duration: dog.walkStats?.duration || 0,
-    public_walk_stats: dog.publicWalkStats ?? true,
     public_profile: dog.publicProfile ?? true,
   };
 }

@@ -59,7 +59,7 @@ export default function FollowListScreen({ navigation, route }) {
   }, [user, type]);
 
   const openProfile = (item) => {
-    navigation.navigate('PersonalProfile', { userName: item.name });
+    navigation.navigate('PersonalProfile', { profileId: item.id, userName: item.name });
   };
 
   const renderItem = ({ item }) => (

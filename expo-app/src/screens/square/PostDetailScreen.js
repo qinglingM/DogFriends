@@ -1,6 +1,7 @@
 import React, { useMemo, useRef, useState, useCallback, useEffect } from 'react';
 import {
   Image,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -44,6 +45,7 @@ function flattenReplies(replies = []) {
 }
 
 export default function PostDetailScreen({ route, navigation }) {
+  const COMMENT_LIMIT = 200;
   const id = route?.params?.id;
   const {
     getPost,
@@ -53,9 +55,13 @@ export default function PostDetailScreen({ route, navigation }) {
     toggleCommentLike,
   } = useSquare();
   const inputRef = useRef(null);
+  const scrollRef = useRef(null);
+  const toastTimerRef = useRef(null);
   const insets = useSafeAreaInsets();
   const [commentText, setCommentText] = useState('');
   const [replyTarget, setReplyTarget] = useState(null);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
 
   useFocusEffect(
     useCallback(() => {
@@ -99,6 +105,41 @@ export default function PostDetailScreen({ route, navigation }) {
     });
   }, []);
 
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const showSub = Keyboard.addListener(showEvent, () => setKeyboardVisible(true));
+    const hideSub = Keyboard.addListener(hideEvent, () => setKeyboardVisible(false));
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
+  useEffect(() => () => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+  }, []);
+
+  const showToast = (message) => {
+    setToastMessage(message);
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => {
+      setToastMessage('');
+      toastTimerRef.current = null;
+    }, 2000);
+  };
+
+  const handleCommentTextChange = (value) => {
+    if (value.length <= COMMENT_LIMIT) {
+      setCommentText(value);
+      return;
+    }
+
+    setCommentText(value.slice(0, COMMENT_LIMIT));
+    showToast(`评论最多 ${COMMENT_LIMIT} 个字`);
+  };
+
   const submitComment = () => {
     const text = commentText.trim();
     if (!text) return;
@@ -113,11 +154,12 @@ export default function PostDetailScreen({ route, navigation }) {
   };
 
   const openAuthorProfile = () => {
-    navigation.navigate('UserProfile', { userName: post.userName });
+    navigation.navigate('UserProfile', { profileId: post.authorId, userName: post.userName });
   };
 
   const startReply = (comment) => {
     setReplyTarget({ id: comment.id, userName: comment.userName });
+    scrollRef.current?.scrollToEnd({ animated: true });
     inputRef.current?.focus();
   };
 
@@ -179,11 +221,14 @@ export default function PostDetailScreen({ route, navigation }) {
   return (
     <KeyboardAvoidingView
       style={styles.screen}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={0}
     >
       <NavBar title="帖子详情" onBack={() => navigation.goBack()} />
 
       <ScrollView
+        ref={scrollRef}
+        style={styles.scrollView}
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
@@ -252,7 +297,7 @@ export default function PostDetailScreen({ route, navigation }) {
         )}
       </ScrollView>
 
-      <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 12 }]}>
+      <View style={styles.bottomBar}>
         {replyTarget && (
           <View style={styles.replyingBar}>
             <Text style={styles.replyingText}>回复 {replyTarget.userName}</Text>
@@ -265,14 +310,14 @@ export default function PostDetailScreen({ route, navigation }) {
           <TextInput
             ref={inputRef}
             value={commentText}
-            onChangeText={setCommentText}
+            onChangeText={handleCommentTextChange}
             placeholder={replyTarget ? `回复 ${replyTarget.userName}...` : '写下你的评论...'}
             placeholderTextColor={colors.textLight}
             style={styles.commentInput}
-            maxLength={200}
-            returnKeyType="done"
+            returnKeyType="send"
             onSubmitEditing={submitComment}
-            blurOnSubmit
+            blurOnSubmit={false}
+            enablesReturnKeyAutomatically
           />
           <View style={styles.bottomActions}>
             <TouchableOpacity style={styles.bottomAction} onPress={() => toggleLike(post.id)}>
@@ -289,9 +334,8 @@ export default function PostDetailScreen({ route, navigation }) {
             </TouchableOpacity>
           </View>
         </View>
-        {commentText.length > 0 && (
-          <Text style={styles.commentCounter}>{`${commentText.length}/200`}</Text>
-        )}
+        {!!toastMessage && <Text style={styles.commentToast}>{toastMessage}</Text>}
+        <View style={{ height: keyboardVisible ? 0 : insets.bottom }} />
       </View>
     </KeyboardAvoidingView>
   );
@@ -299,7 +343,8 @@ export default function PostDetailScreen({ route, navigation }) {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: spacing.screenMargin, paddingBottom: 112 },
+  scrollView: { flex: 1 },
+  content: { padding: spacing.screenMargin, paddingBottom: spacing.lg },
   postCard: {
     backgroundColor: colors.white,
     borderRadius: spacing.radiusMd,
@@ -438,10 +483,6 @@ const styles = StyleSheet.create({
     paddingLeft: 0,
   },
   bottomBar: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
     backgroundColor: colors.white,
     borderTopWidth: 1,
     borderTopColor: colors.border,
@@ -471,8 +512,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bgLight,
     borderRadius: spacing.radiusMd,
     paddingHorizontal: 12,
-    paddingVertical: 9,
     ...typography.body,
+    lineHeight: undefined,
+    paddingVertical: 0,
+    textAlignVertical: 'center',
     color: colors.textMain,
   },
   bottomActions: {
@@ -489,11 +532,11 @@ const styles = StyleSheet.create({
   },
   bottomActionText: { ...typography.captionBold, color: colors.textLight },
   bottomActionActive: { color: colors.secondary },
-  commentCounter: {
+  commentToast: {
     ...typography.caption,
-    fontSize: 10,
-    color: colors.textLight,
-    textAlign: 'right',
-    marginTop: 2,
+    fontSize: 12,
+    color: colors.danger,
+    textAlign: 'center',
+    marginTop: 6,
   },
 });

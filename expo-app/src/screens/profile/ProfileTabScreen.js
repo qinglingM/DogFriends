@@ -115,10 +115,9 @@ function StatBlock({ value, label, onPress }) {
 
 function DogCard({ dog, navigation, isSelf, isExpanded, onToggleExpand, totalCount }) {
   if (!dog) return null;
-  const ws = dog.walkStats;
   const genderBorderColor = dog.gender === 'male' ? '#4A90D9' : '#E88BA4';
 
-  if (dog.publicProfile === false) {
+  if (!isSelf && dog.publicProfile === false) {
     return (
       <View style={s.dogCard}>
         <View style={s.dogCardHeader}>
@@ -209,8 +208,9 @@ export default function ProfileTabScreen({ navigation, route }) {
   const { contributions, getLocation } = useExplore();
   const { user } = useAuth();
 
+  const profileId = route?.params?.profileId;
   const userName = route?.params?.userName;
-  const isSelf = !userName || userName === userProfile?.name;
+  const isSelf = profileId ? profileId === user?.id : (!userName || userName === userProfile?.name);
 
   const [remoteProfile, setRemoteProfile] = useState(null);
   const [remoteDogs, setRemoteDogs] = useState([]);
@@ -219,10 +219,13 @@ export default function ProfileTabScreen({ navigation, route }) {
   useEffect(() => {
     if (isSelf) return;
     (async () => {
-      const { data: pData } = await supabase.from('profiles').select('*').eq('name', userName).single();
+      const profileQuery = supabase.from('profiles').select('*');
+      const { data: pData } = profileId
+        ? await profileQuery.eq('id', profileId).single()
+        : await profileQuery.eq('name', userName).single();
       if (pData) {
         setRemoteProfile(pData);
-        const { data: dData } = await supabase.from('dogs').select('*').eq('profile_id', pData.id);
+        const { data: dData } = await supabase.from('dogs').select('*').eq('profile_id', pData.id).eq('public_profile', true);
         if (dData) setRemoteDogs(dData);
         if (user) {
           const { data: followData } = await supabase.from('follows').select('follower_id').match({ follower_id: user.id, following_id: pData.id });
@@ -230,7 +233,7 @@ export default function ProfileTabScreen({ navigation, route }) {
         }
       }
     })();
-  }, [userName, isSelf, user]);
+  }, [profileId, userName, isSelf, user]);
 
   const handleFollow = useCallback(async () => {
     if (!remoteProfile) return;
@@ -255,10 +258,10 @@ export default function ProfileTabScreen({ navigation, route }) {
   }, [remoteProfile, isFollowing, followUser, unfollowUser]);
 
   const displayProfile = isSelf
-    ? { name: userProfile?.name, avatar: userProfile?.avatar, cover: userProfile?.cover, gender: userProfile?.gender, signature: userProfile?.signature, following: userProfile?.following || 0, followers: userProfile?.followers || 0, likes: userProfile?.likes || 0, area: userProfile?.area }
+    ? { id: userProfile?.id, name: userProfile?.name, avatar: userProfile?.avatar, cover: userProfile?.cover, gender: userProfile?.gender, signature: userProfile?.signature, following: userProfile?.following || 0, followers: userProfile?.followers || 0, likes: userProfile?.likes || 0, area: userProfile?.area }
     : remoteProfile
-    ? { name: remoteProfile.name, avatar: remoteProfile.avatar, cover: remoteProfile.cover, gender: remoteProfile.gender, signature: remoteProfile.signature || '', following: remoteProfile.following || 0, followers: remoteProfile.followers || 0, likes: remoteProfile.likes || 0, area: remoteProfile.area || '' }
-    : { name: userName || '用户', avatar: null, cover: null, gender: null, signature: '', following: 0, followers: 0, likes: 0, area: '' };
+    ? { id: remoteProfile.id, name: remoteProfile.name, avatar: remoteProfile.avatar, cover: remoteProfile.cover, gender: remoteProfile.gender, signature: remoteProfile.signature || '', following: remoteProfile.following || 0, followers: remoteProfile.followers || 0, likes: remoteProfile.likes || 0, area: remoteProfile.area || '' }
+    : { id: profileId || null, name: userName || '用户', avatar: null, cover: null, gender: null, signature: '', following: 0, followers: 0, likes: 0, area: '' };
   const dogsList = isSelf ? dogs : remoteDogs;
 
   const [avatarPreviewVisible, setAvatarPreviewVisible] = useState(false);
@@ -282,9 +285,14 @@ export default function ProfileTabScreen({ navigation, route }) {
 
   const publicPosts = useMemo(() => {
     return posts
-      .filter(post => post.userName === displayProfile.name && post.visibility === 'public')
+      .filter(post => {
+        if (post.visibility !== 'public') return false;
+        if (displayProfile.id && post.authorId === displayProfile.id) return true;
+        return post.userName === displayProfile.name;
+      })
       .map(post => ({
         id: post.id,
+        authorId: post.authorId,
         type: '普通图文动态',
         title: post.tag ? `#${post.tag}` : '我的分享',
         meta: `${post.location || displayProfile.area} · ${post.createdAt}`,
@@ -297,7 +305,7 @@ export default function ProfileTabScreen({ navigation, route }) {
         images: getPostImages(post),
         sourcePostId: post.id,
       }));
-  }, [posts]);
+  }, [posts, displayProfile.id, displayProfile.name, displayProfile.area]);
 
   const exploreFeed = useMemo(() => {
     const byLocation = {};
@@ -530,7 +538,12 @@ export default function ProfileTabScreen({ navigation, route }) {
               <Ionicons name="paw-outline" size={40} color={colors.border} />
               <Text style={s.dogEmptyText}>还没有狗狗，点击添加</Text>
             </TouchableOpacity>
-          ) : null}
+          ) : (
+            <View style={s.dogEmptyCard}>
+              <Ionicons name="lock-closed-outline" size={40} color={colors.border} />
+              <Text style={s.dogEmptyText}>对方未公开狗狗信息</Text>
+            </View>
+          )}
         </View>
 
         {/* Feed section */}

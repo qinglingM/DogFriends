@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -31,11 +31,13 @@ export default function CreatePostScreen({ navigation }) {
   const { addPost } = useSquare();
   const { profile } = useProfile();
   const { user } = useAuth();
+  const publishingRef = useRef(false);
   const [title, setTitle] = useState('');
   const [text, setText] = useState('');
   const [media, setMedia] = useState([]);
   const [tag, setTag] = useState(null);
   const [detectedLocation, setDetectedLocation] = useState(null);
+  const [publishing, setPublishing] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -53,6 +55,7 @@ export default function CreatePostScreen({ navigation }) {
   }, []);
 
   const addMedia = async () => {
+    if (publishingRef.current) return;
     // 1. 请求相册权限（首次会弹系统弹窗）
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (permission.status !== 'granted') {
@@ -84,9 +87,13 @@ export default function CreatePostScreen({ navigation }) {
       Alert.alert('选择失败', err?.message || '请稍后再试');
     }
   };
-  const removeMedia = (id) => setMedia(prev => prev.filter(m => m.id !== id));
+  const removeMedia = (id) => {
+    if (publishingRef.current) return;
+    setMedia(prev => prev.filter(m => m.id !== id));
+  };
 
   const publish = async () => {
+    if (publishingRef.current) return;
     if (!title.trim() && !text.trim()) {
       Alert.alert('发布失败', '请填写标题或正文');
       return;
@@ -99,38 +106,46 @@ export default function CreatePostScreen({ navigation }) {
     const imageUris = media.filter(m => m.type === 'image').map(m => m.uri);
     const videoUri = media.find(m => m.type === 'video')?.uri;
 
-    let mediaUrl = null;
-    let images = [];
-    try {
-      if (imageUris.length > 0) {
-        const urls = await uploadImages(imageUris, `${user.id}/posts`, `post_${Date.now()}`);
-        mediaUrl = urls[0];
-        images = urls;
-      }
-      if (videoUri) {
-        mediaUrl = videoUri;
-      }
-    } catch (e) {
-      Alert.alert('上传失败', '图片上传失败，请重试');
-      return;
-    }
+    publishingRef.current = true;
+    setPublishing(true);
 
-    const { error } = await addPost({
-      userName: profile.name || '小明',
-      authorAvatar: (profile.avatar?.charAt(0)?.toUpperCase()) || 'M',
-      title: title.trim(),
-      text: body,
-      tag,
-      location: detectedLocation,
-      mediaType: videoUri ? 'video' : 'image',
-      mediaUrl,
-      images,
-    });
-    if (error) {
-      Alert.alert('发布失败', error.message || '请稍后再试');
-      return;
+    try {
+      let mediaUrl = null;
+      let images = [];
+      try {
+        if (imageUris.length > 0) {
+          const urls = await uploadImages(imageUris, `${user.id}/posts`, `post_${Date.now()}`);
+          mediaUrl = urls[0];
+          images = urls;
+        }
+        if (videoUri) {
+          mediaUrl = videoUri;
+        }
+      } catch (e) {
+        Alert.alert('上传失败', '图片上传失败，请重试');
+        return;
+      }
+
+      const { error } = await addPost({
+        userName: profile.name || '小明',
+        authorAvatar: (profile.avatar?.charAt(0)?.toUpperCase()) || 'M',
+        title: title.trim(),
+        text: body,
+        tag,
+        location: detectedLocation,
+        mediaType: videoUri ? 'video' : 'image',
+        mediaUrl,
+        images,
+      });
+      if (error) {
+        Alert.alert('发布失败', error.message || '请稍后再试');
+        return;
+      }
+      navigation.replace('SquareHome');
+    } finally {
+      publishingRef.current = false;
+      setPublishing(false);
     }
-    navigation.replace('SquareHome');
   };
 
   return (
@@ -172,9 +187,9 @@ export default function CreatePostScreen({ navigation }) {
               </TouchableOpacity>
             </View>
           ))}
-          <TouchableOpacity style={[styles.mediaTile, styles.addTile]} onPress={addMedia} activeOpacity={0.7}>
-            <Ionicons name="add" size={40} color={colors.textLight} />
-          </TouchableOpacity>
+              <TouchableOpacity style={[styles.mediaTile, styles.addTile, publishing && styles.mediaTileDisabled]} onPress={addMedia} activeOpacity={publishing ? 1 : 0.7}>
+                <Ionicons name="add" size={40} color={colors.textLight} />
+              </TouchableOpacity>
         </ScrollView>
 
         {/* 标题 */}
@@ -217,7 +232,7 @@ export default function CreatePostScreen({ navigation }) {
           ))}
         </View>
 
-        <Button fullWidth onPress={publish}>发布</Button>
+        <Button fullWidth onPress={publish} disabled={publishing} loading={publishing}>发布</Button>
       </ScrollView>
     </View>
   );
@@ -252,6 +267,9 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
+  mediaTileDisabled: {
+    opacity: 0.5,
+  },
   videoMarker: {
     position: 'absolute',
     bottom: 6,
@@ -282,7 +300,10 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
     color: colors.textMain,
-    paddingVertical: 14,
+    lineHeight: undefined,
+    height: 52,
+    paddingVertical: 0,
+    textAlignVertical: 'center',
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
   },

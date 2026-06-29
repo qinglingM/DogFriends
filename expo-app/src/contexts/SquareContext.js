@@ -101,6 +101,7 @@ function reducer(state, action) {
 export function SquareProvider({ children }) {
   const { user } = useAuth();
   const [state, dispatch] = useReducer(reducer, initialState);
+  const addPostInFlight = useRef(false);
   const likesInFlight = useRef({});
   const commentLikesInFlight = useRef({});
 
@@ -173,6 +174,10 @@ export function SquareProvider({ children }) {
   }
 
   const addPost = useCallback(async (draft) => {
+    if (addPostInFlight.current) {
+      return { data: null, error: new Error('正在发布，请勿重复提交') };
+    }
+    addPostInFlight.current = true;
     const row = {
       profile_id: user.id,
       title: draft.title || '',
@@ -185,18 +190,22 @@ export function SquareProvider({ children }) {
       visibility: draft.visibility || 'public',
     };
 
-    const { data, error } = await supabase
-      .from('posts')
-      .insert(row)
-      .select()
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from('posts')
+        .insert(row)
+        .select()
+        .single();
 
-    if (!error && data) {
-      const nameMap = await buildProfileMap([data.profile_id]);
-      const post = rowToPost(data, {}, {}, nameMap[data.profile_id]?.name || '未知用户', nameMap[data.profile_id]?.avatar);
-      dispatch({ type: 'ADD_POST', post });
+      if (!error && data) {
+        const nameMap = await buildProfileMap([data.profile_id]);
+        const post = rowToPost(data, {}, {}, nameMap[data.profile_id]?.name || '未知用户', nameMap[data.profile_id]?.avatar);
+        dispatch({ type: 'ADD_POST', post });
+      }
+      return { data, error };
+    } finally {
+      addPostInFlight.current = false;
     }
-    return { data, error };
   }, [user]);
 
   const toggleLike = useCallback(async (postId) => {

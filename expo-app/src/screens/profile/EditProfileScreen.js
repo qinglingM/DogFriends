@@ -7,6 +7,7 @@ import { spacing } from '../../theme/spacing';
 import { typography } from '../../theme/typography';
 import { NavBar } from '../../components';
 import { useProfile } from '../../contexts/ProfileContext';
+import { useSquare } from '../../contexts/SquareContext';
 import { useAuth } from '../../contexts/AuthContext';
 import CityPickerModal from '../../components/CityPickerModal';
 import { formatArea } from '../../data/cityData';
@@ -22,6 +23,7 @@ const GENDER_OPTIONS = [
 
 export default function EditProfileScreen({ navigation }) {
   const { profile, updateProfile } = useProfile();
+  const { refresh: refreshSquare } = useSquare();
   const { user } = useAuth();
   const [name, setName] = useState(profile.name);
   const [signature, setSignature] = useState(profile.signature);
@@ -85,6 +87,7 @@ export default function EditProfileScreen({ navigation }) {
       Alert.alert('保存失败', error.message || '请稍后再试');
       return;
     }
+    await refreshSquare();
     navigation.goBack();
   };
 
@@ -208,10 +211,13 @@ const styles = StyleSheet.create({
   label: { ...typography.bodyBold, fontSize: 16, color: colors.secondary, marginBottom: spacing.sm },
   input: {
     backgroundColor: colors.white, borderRadius: spacing.radiusMd,
-    padding: spacing.md, fontSize: 16, color: colors.textMain,
+    minHeight: 52, paddingHorizontal: spacing.md, paddingVertical: 0,
+    fontSize: 16, lineHeight: undefined, textAlignVertical: 'center', color: colors.textMain,
   },
   inputMultiline: {
     minHeight: 80,
+    paddingVertical: spacing.md,
+    lineHeight: 22,
     textAlignVertical: 'top',
   },
   genderRow: {

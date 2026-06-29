@@ -26,7 +26,7 @@ export default function SquareScreen({ navigation }) {
   const { posts, 加载完成, refresh, toggleLike } = useSquare();
   const [activeTag, setActiveTag] = useState('all');
   const openAuthorProfile = (post) => {
-    navigation.navigate('UserProfile', { userName: post.userName });
+    navigation.navigate('UserProfile', { profileId: post.authorId, userName: post.userName });
   };
   const filteredPosts = useMemo(() => {
     return posts.filter(post => {

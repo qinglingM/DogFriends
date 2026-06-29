@@ -51,17 +51,17 @@ export default function LikedPostsScreen({ navigation }) {
     }
 
     const profileIds = [...new Set(rows.map(r => r.profile_id).filter(Boolean))];
-    let nameMap = {};
+    let profileMap = {};
     if (profileIds.length > 0) {
-      const { data: profiles } = await supabase.from('profiles').select('id, name').in('id', profileIds);
-      if (profiles) profiles.forEach(p => { nameMap[p.id] = p.name; });
+      const { data: profiles } = await supabase.from('profiles').select('id, name, avatar').in('id', profileIds);
+      if (profiles) profiles.forEach(p => { profileMap[p.id] = { name: p.name, avatar: p.avatar }; });
     }
 
     const posts = rows.map(row => ({
       id: row.id,
       authorId: row.profile_id,
-      userName: nameMap[row.profile_id] || '未知用户',
-      authorAvatar: (nameMap[row.profile_id] || '未知用户').slice(0, 1),
+      userName: profileMap[row.profile_id]?.name || '未知用户',
+      authorAvatar: profileMap[row.profile_id]?.avatar || (profileMap[row.profile_id]?.name || '未知用户').slice(0, 1),
       title: row.title || '',
       tag: row.tag,
       text: row.text || '',
@@ -87,7 +87,7 @@ export default function LikedPostsScreen({ navigation }) {
   const columns = splitColumns(likedPosts);
 
   const openAuthorProfile = (post) => {
-    navigation.navigate('UserProfile', { userName: post.userName });
+    navigation.navigate('UserProfile', { profileId: post.authorId, userName: post.userName });
   };
 
   return (

@@ -36,7 +36,7 @@ export default function ProfileFeedDetailScreen({ navigation, route }) {
         <TouchableOpacity
           style={styles.authorRow}
           activeOpacity={0.75}
-          onPress={() => navigation.navigate('PersonalProfile', { userName: profile.name })}
+          onPress={() => navigation.navigate('PersonalProfile', { profileId: profile.id, userName: profile.name })}
         >
           <Image source={{ uri: profile.avatar }} style={styles.avatar} />
           <View style={styles.authorMain}>

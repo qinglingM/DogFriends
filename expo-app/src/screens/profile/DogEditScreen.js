@@ -36,8 +36,6 @@ export default function DogEditScreen({ navigation, route }) {
   const [traits, setTraits] = useState([]);
   const [image, setImage] = useState('');
   const [publicProfile, setPublicProfile] = useState(true);
-  const [publicWalkStats, setPublicWalkStats] = useState(true);
-  const [neutered, setNeutered] = useState(false);
   const [showBreedPicker, setShowBreedPicker] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
 
@@ -52,8 +50,6 @@ export default function DogEditScreen({ navigation, route }) {
       setTraits(existingDog.traits || []);
       setImage(existingDog.image || '');
       setPublicProfile(existingDog.publicProfile !== false);
-      setPublicWalkStats(existingDog.publicWalkStats !== false);
-      setNeutered(existingDog.neutered === true);
     }
   }, [existingDog]);
 
@@ -89,10 +85,18 @@ export default function DogEditScreen({ navigation, route }) {
     }
   };
 
+  const MAX_WEIGHT = 99.5;
+
+  const clampWeight = (val) => {
+    const num = parseFloat(val);
+    if (isNaN(num)) return val;
+    return num >= 1000 ? MAX_WEIGHT : num;
+  };
+
   const handleWeightBlur = () => {
     if (weightText) {
-      const num = parseFloat(weightText);
-      if (!isNaN(num)) setWeightText(num.toFixed(1));
+      const num = clampWeight(weightText);
+      if (typeof num === 'number') setWeightText(num.toFixed(1));
     }
   };
 
@@ -124,12 +128,10 @@ export default function DogEditScreen({ navigation, route }) {
       gender,
       size,
       birthday: birthday.trim(),
-      weight: parseFloat(weightText) || 0,
+      weight: Math.min(MAX_WEIGHT, parseFloat(weightText) || 0),
       traits,
       image: imageUrl_,
       publicProfile,
-      publicWalkStats,
-      neutered,
       walkStats: existingDog?.walkStats || { walks: 0, distance: 0, duration: 0 },
     };
 
@@ -316,52 +318,6 @@ export default function DogEditScreen({ navigation, route }) {
         </TouchableOpacity>
 
         {/* ===== Divider ===== */}
-        <View style={styles.divider} />
-
-        {/* ===== Tier 2: 遛狗记录 ===== */}
-        <Text style={styles.sectionTitle}>遛狗记录</Text>
-        <Text style={styles.sectionHint}>仅展示，不可编辑</Text>
-
-        {existingDog && existingDog.walkStats ? (
-          <View style={styles.walkStatsPreview}>
-            <View style={styles.walkStatItem}>
-              <Ionicons name="paw" size={20} color={colors.primary} />
-              <Text style={styles.walkStatValue}>{existingDog.walkStats.walks}</Text>
-              <Text style={styles.walkStatLabel}>次</Text>
-            </View>
-            <View style={styles.walkStatItem}>
-              <Ionicons name="trending-up" size={20} color={colors.primary} />
-              <Text style={styles.walkStatValue}>{existingDog.walkStats.distance}</Text>
-              <Text style={styles.walkStatLabel}>km</Text>
-            </View>
-            <View style={styles.walkStatItem}>
-              <Ionicons name="time-outline" size={20} color={colors.primary} />
-              <Text style={styles.walkStatValue}>{existingDog.walkStats.duration}</Text>
-              <Text style={styles.walkStatLabel}>h</Text>
-            </View>
-          </View>
-        ) : (
-          <Text style={styles.noWalkData}>暂无遛狗记录</Text>
-        )}
-
-        <TouchableOpacity
-          style={styles.toggleRow}
-          onPress={() => setPublicWalkStats(!publicWalkStats)}
-        >
-          <View style={styles.toggleLeft}>
-            <View style={[styles.toggleIcon, { backgroundColor: 'rgba(185, 207, 50, 0.2)' }]}>
-              <Ionicons name={publicWalkStats ? 'eye' : 'eye-off'} size={20} color={colors.secondary} />
-            </View>
-            <View>
-              <Text style={styles.toggleText}>公开遛狗记录</Text>
-              <Text style={styles.toggleSub}>{publicWalkStats ? '其他用户可以看到' : '仅自己可见'}</Text>
-            </View>
-          </View>
-          <View style={[styles.toggle, !publicWalkStats && styles.toggleOff]}>
-            <View style={[styles.toggleKnob, !publicWalkStats && styles.toggleKnobOff]} />
-          </View>
-        </TouchableOpacity>
-
         {/* ===== Divider ===== */}
         <View style={styles.divider} />
 
@@ -385,7 +341,10 @@ export default function DogEditScreen({ navigation, route }) {
             <TextInput
               style={styles.weightInput}
               value={weightText}
-              onChangeText={setWeightText}
+              onChangeText={(val) => {
+                const clamped = clampWeight(val);
+                setWeightText(typeof clamped === 'number' ? clamped.toFixed(1) : val);
+              }}
               onBlur={handleWeightBlur}
               keyboardType="decimal-pad"
               returnKeyType="done"
@@ -396,32 +355,13 @@ export default function DogEditScreen({ navigation, route }) {
               style={styles.weightBtn}
               onPress={() => {
                 const current = parseFloat(weightText) || 0;
-                setWeightText((Math.round((current + 0.5) * 10) / 10).toFixed(1));
+                setWeightText(Math.min(MAX_WEIGHT, Math.round((current + 0.5) * 10) / 10).toFixed(1));
               }}
             >
               <Ionicons name="add" size={24} color={colors.secondary} />
             </TouchableOpacity>
           </View>
         </View>
-
-        {/* Neutered toggle */}
-        <TouchableOpacity
-          style={styles.toggleRow}
-          onPress={() => setNeutered(!neutered)}
-        >
-          <View style={styles.toggleLeft}>
-            <View style={[styles.toggleIcon, { backgroundColor: 'rgba(146, 102, 153, 0.15)' }]}>
-              <Ionicons name="cut-outline" size={20} color={colors.accent} />
-            </View>
-            <View>
-              <Text style={styles.toggleText}>绝育状态</Text>
-              <Text style={styles.toggleSub}>{neutered ? '已绝育' : '未绝育'}</Text>
-            </View>
-          </View>
-          <View style={[styles.toggle, !neutered && styles.toggleOff]}>
-            <View style={[styles.toggleKnob, !neutered && styles.toggleKnobOff]} />
-          </View>
-        </TouchableOpacity>
 
         {isEdit && (
           <TouchableOpacity
@@ -499,7 +439,8 @@ const styles = StyleSheet.create({
   required: { color: colors.danger },
   input: {
     backgroundColor: colors.white, borderRadius: spacing.radiusMd,
-    padding: spacing.md, fontSize: 16, color: colors.textMain,
+    height: 52, paddingHorizontal: spacing.md, paddingVertical: 0,
+    fontSize: 16, lineHeight: undefined, textAlignVertical: 'center', color: colors.textMain,
   },
 
   /* Breed picker */
@@ -544,8 +485,9 @@ const styles = StyleSheet.create({
   },
   weightInput: {
     flex: 1, backgroundColor: colors.white, borderRadius: spacing.radiusMd,
-    padding: spacing.md, fontSize: 24, fontWeight: '800',
-    color: colors.secondary, textAlign: 'center',
+    height: 56, paddingHorizontal: spacing.md, paddingVertical: 0,
+    fontSize: 24, fontWeight: '800', lineHeight: undefined,
+    color: colors.secondary, textAlign: 'center', textAlignVertical: 'center',
   },
   weightUnit: { ...typography.bodyBold, fontSize: 16, color: colors.secondary },
 

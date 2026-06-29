@@ -57,25 +57,3 @@ export async function loginWithSmsCode(phone, code, token) {
   );
   await establishSession(result);
 }
-
-export async function loginWithPassword(phone, password) {
-  const result = requireSuccess(
-    await callSmsOtp({ action: 'password-login', phone, password }),
-    '手机号或密码错误',
-  );
-  await establishSession(result);
-}
-
-export async function resetPasswordWithSmsCode(phone, code, token, password) {
-  const result = requireSuccess(
-    await callSmsOtp({
-      action: 'complete-forgot',
-      phone,
-      code,
-      token,
-      password,
-    }),
-    '密码重置失败',
-  );
-  await establishSession(result);
-}

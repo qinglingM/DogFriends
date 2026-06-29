@@ -103,19 +103,6 @@ export default function DogProfileScreen({ navigation, route }) {
           </View>
         </Card>
 
-        <Text style={styles.sectionTitle}>进阶信息</Text>
-        <Card noPadding>
-          <TouchableOpacity style={[styles.advItem, { borderBottomWidth: 0 }]}>
-            <View style={[styles.advIcon, { backgroundColor: 'rgba(185, 207, 50, 0.2)' }]}>
-              <Ionicons name="cut-outline" size={20} color={colors.secondary} />
-            </View>
-            <View style={styles.advText}>
-              <Text style={styles.advTitle}>绝育状态</Text>
-              <Text style={styles.advSub}>已绝育 · 2024-06-01</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color={colors.textLight} />
-          </TouchableOpacity>
-        </Card>
       </ScrollView>
 
       <TouchableOpacity
