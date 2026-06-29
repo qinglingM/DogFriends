@@ -155,6 +155,7 @@ export default function ExploreHomeScreen({ navigation }) {
             placeholderTextColor={colors.textLight}
             value={searchText}
             onChangeText={setSearchText}
+            maxLength={20}
             returnKeyType="search"
           />
           {searchText.length > 0 && (

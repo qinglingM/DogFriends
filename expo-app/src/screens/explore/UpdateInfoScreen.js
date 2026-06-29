@@ -271,7 +271,9 @@ export default function UpdateInfoScreen({ route, navigation }) {
           placeholder="分享一下你的真实体验，帮助其他狗主人判断～"
           placeholderTextColor={colors.textLight}
           multiline
+          maxLength={200}
         />
+        <Text style={styles.charCounter}>{`${note.length}/200`}</Text>
 
         <View style={styles.publishWrap}>
           <Button fullWidth disabled={!canPublish} onPress={publish}>
@@ -415,5 +417,13 @@ const styles = StyleSheet.create({
 
   publishWrap: {
     marginTop: spacing.lg,
+  },
+  charCounter: {
+    ...typography.caption,
+    fontSize: 11,
+    color: colors.textLight,
+    textAlign: 'right',
+    marginTop: 4,
+    marginBottom: 12,
   },
 });

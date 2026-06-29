@@ -122,6 +122,7 @@ export default function BreedPickerModal({ visible, breed, onConfirm, onCancel }
               onChangeText={setSearch}
               placeholder="搜索品种"
               placeholderTextColor={colors.textLight}
+              maxLength={20}
               returnKeyType="search"
               blurOnSubmit
             />

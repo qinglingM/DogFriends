@@ -116,6 +116,7 @@ export default function EditProfileScreen({ navigation }) {
             onChangeText={setName}
             placeholder="输入你的昵称"
             placeholderTextColor="#A0B3A2"
+            maxLength={10}
             returnKeyType="done"
           />
         </View>
@@ -130,6 +131,7 @@ export default function EditProfileScreen({ navigation }) {
             placeholderTextColor="#A0B3A2"
             multiline
             numberOfLines={3}
+            maxLength={50}
             returnKeyType="done"
             blurOnSubmit
           />

@@ -179,6 +179,7 @@ export default function AddLocationScreen({ route, navigation }) {
                 onChangeText={setName}
                 placeholder="地点名称"
                 placeholderTextColor={colors.textLight}
+                maxLength={20}
                 returnKeyType="done"
                 blurOnSubmit
               />
@@ -304,7 +305,9 @@ export default function AddLocationScreen({ route, navigation }) {
           placeholder="分享一些你对这个地方的真实体验吧～"
           placeholderTextColor={colors.textLight}
           multiline
+          maxLength={200}
         />
+        <Text style={styles.charCounter}>{`${note.length}/200`}</Text>
 
         <View style={styles.publishWrap}>
           <Button fullWidth onPress={() => {
@@ -511,5 +514,13 @@ const styles = StyleSheet.create({
 
   publishWrap: {
     marginTop: spacing.lg,
+  },
+  charCounter: {
+    ...typography.caption,
+    fontSize: 11,
+    color: colors.textLight,
+    textAlign: 'right',
+    marginTop: 4,
+    marginBottom: 12,
   },
 });

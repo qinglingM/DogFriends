@@ -269,6 +269,7 @@ export default function PostDetailScreen({ route, navigation }) {
             placeholder={replyTarget ? `回复 ${replyTarget.userName}...` : '写下你的评论...'}
             placeholderTextColor={colors.textLight}
             style={styles.commentInput}
+            maxLength={200}
             returnKeyType="done"
             onSubmitEditing={submitComment}
             blurOnSubmit
@@ -288,6 +289,9 @@ export default function PostDetailScreen({ route, navigation }) {
             </TouchableOpacity>
           </View>
         </View>
+        {commentText.length > 0 && (
+          <Text style={styles.commentCounter}>{`${commentText.length}/200`}</Text>
+        )}
       </View>
     </KeyboardAvoidingView>
   );
@@ -485,4 +489,11 @@ const styles = StyleSheet.create({
   },
   bottomActionText: { ...typography.captionBold, color: colors.textLight },
   bottomActionActive: { color: colors.secondary },
+  commentCounter: {
+    ...typography.caption,
+    fontSize: 10,
+    color: colors.textLight,
+    textAlign: 'right',
+    marginTop: 2,
+  },
 });

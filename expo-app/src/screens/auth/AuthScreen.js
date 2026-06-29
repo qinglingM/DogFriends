@@ -248,8 +248,9 @@ export default function AuthScreen() {
               icon="lock-closed-outline"
               placeholder={mode === 'forgot' ? '新密码（8–20 位字母和数字）' : '请输入密码'}
               value={password}
-              onChangeText={setPassword}
+              onChangeText={(text) => setPassword(text.replace(/[^a-zA-Z0-9]/g, ''))}
               secureTextEntry
+              maxLength={20}
               autoComplete={mode === 'forgot' ? 'new-password' : 'current-password'}
             />
           )}
@@ -259,8 +260,9 @@ export default function AuthScreen() {
               icon="shield-checkmark-outline"
               placeholder="再次输入新密码"
               value={confirmPassword}
-              onChangeText={setConfirmPassword}
+              onChangeText={(text) => setConfirmPassword(text.replace(/[^a-zA-Z0-9]/g, ''))}
               secureTextEntry
+              maxLength={20}
               autoComplete="new-password"
             />
           )}

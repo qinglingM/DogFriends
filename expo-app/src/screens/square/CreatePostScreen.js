@@ -184,7 +184,7 @@ export default function CreatePostScreen({ navigation }) {
           placeholder="添加标题"
           placeholderTextColor={colors.textLight}
           style={styles.titleInput}
-          maxLength={50}
+          maxLength={25}
           returnKeyType="done"
           blurOnSubmit
         />
@@ -196,8 +196,10 @@ export default function CreatePostScreen({ navigation }) {
           placeholder="添加正文"
           placeholderTextColor={colors.textLight}
           multiline
+          maxLength={400}
           style={styles.bodyInput}
         />
+        <Text style={styles.charCounter}>{`${text.length}/400`}</Text>
 
         {/* 标签 */}
         <Text style={styles.sectionTitle}>标签（可选）</Text>
@@ -315,4 +317,12 @@ const styles = StyleSheet.create({
   },
   tagOptionText: { ...typography.bodyBold, color: colors.textLight },
   tagOptionTextActive: { color: colors.secondary },
+  charCounter: {
+    ...typography.caption,
+    fontSize: 11,
+    color: colors.textLight,
+    textAlign: 'right',
+    marginTop: 4,
+    marginBottom: 12,
+  },
 });

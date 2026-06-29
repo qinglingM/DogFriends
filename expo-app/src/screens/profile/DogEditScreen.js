@@ -195,6 +195,7 @@ export default function DogEditScreen({ navigation, route }) {
             onChangeText={setName}
             placeholder="给狗狗起个名字"
             placeholderTextColor="#A0B3A2"
+            maxLength={8}
             returnKeyType="done"
             blurOnSubmit
           />

@@ -61,6 +61,7 @@ export default function SearchLocationScreen({ route, navigation }) {
               placeholderTextColor={colors.textLight}
               value={searchText}
               onChangeText={setSearchText}
+              maxLength={20}
               returnKeyType="search"
               onSubmitEditing={doSearch}
             />
