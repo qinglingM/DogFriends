@@ -1,31 +1,40 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useMemo } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { typography } from '../../theme/typography';
-import { TipCard, DogAvatar } from '../../components';
+import { TipCard, DogAvatar, WalkMap } from '../../components';
 import { useWalk } from '../../contexts/WalkContext';
 import { useDogs } from '../../contexts/DogContext';
 
-export default function WalkResultScreen({ navigation }) {
+export default function WalkResultScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
-  const { records, currentWalk } = useWalk();
+  const { records } = useWalk();
   const { dogs: allDogs } = useDogs();
-  const last = records[0];
+  const walkId = route?.params?.id;
+  const last = useMemo(() => {
+    if (walkId) return records.find((record) => record.id === walkId) || records[0];
+    return records[0];
+  }, [records, walkId]);
 
   const distance = last?.distance || 0;
   const duration = last?.duration || 0;
   const pace = last?.pace || 0;
-  const dogs = last?.dogs || currentWalk?.dogs || [];
-  const getDogImage = (dog) => {
-    if (dog?.image) return dog.image;
-    const found = allDogs.find(d => d.id === (dog?.id || dog));
-    return found?.image || null;
-  };
+  const dogs = last?.dogs || [];
   const trackPoints = last?.trackPoints || [];
-  const pointCount = trackPoints.length;
+  const normalizedDogs = useMemo(() => {
+    return dogs.map((dog, index) => {
+      const dogId = typeof dog === 'string' ? dog : dog?.id;
+      const found = allDogs.find((item) => item.id === dogId);
+      return {
+        id: dogId || `dog_${index}`,
+        name: (typeof dog === 'object' && dog?.name) || found?.name || `狗狗${index + 1}`,
+        image: (typeof dog === 'object' && dog?.image) || found?.image || null,
+      };
+    });
+  }, [dogs, allDogs]);
 
   const formatDuration = (sec) => {
     if (sec < 60) return `${sec}秒`;
@@ -45,7 +54,8 @@ export default function WalkResultScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + spacing.xl }]}>
+      <View style={[styles.header, { paddingTop: insets.top + 4 }]}> 
         <View style={styles.checkIcon}>
           <Ionicons name="checkmark-circle" size={56} color={colors.primary} />
         </View>
@@ -53,11 +63,11 @@ export default function WalkResultScreen({ navigation }) {
         <Text style={styles.time}>{formatTime(last?.startTime)}</Text>
       </View>
 
-      {dogs.length > 0 && (
+      {normalizedDogs.length > 0 && (
         <View style={styles.dogRow}>
-          {dogs.map(dog => (
+          {normalizedDogs.map(dog => (
             <View key={dog.id} style={styles.dogItem}>
-              <DogAvatar size={48} image={getDogImage(dog)} />
+              <DogAvatar size={48} image={dog.image} />
               <Text style={styles.dogName}>{dog.name}</Text>
             </View>
           ))}
@@ -96,21 +106,14 @@ export default function WalkResultScreen({ navigation }) {
             <Ionicons name="git-network-outline" size={20} color={colors.primary} />
             <Text style={styles.routeTitle}>路线轨迹</Text>
           </View>
-          <View style={styles.routeStats}>
-            <View style={styles.routeStat}>
-              <Text style={styles.routeStatValue}>{pointCount}</Text>
-              <Text style={styles.routeStatLabel}>记录点数</Text>
-            </View>
-            <View style={styles.routeStatDivider} />
-            <View style={styles.routeStat}>
-              <Text style={styles.routeStatValue}>{distance.toFixed(1)}</Text>
-              <Text style={styles.routeStatLabel}>总距离 (km)</Text>
-            </View>
-            <View style={styles.routeStatDivider} />
-            <View style={styles.routeStat}>
-              <Text style={styles.routeStatValue}>{formatDuration(duration)}</Text>
-              <Text style={styles.routeStatLabel}>总时长</Text>
-            </View>
+          <View style={styles.routeMapWrap}>
+            <WalkMap
+              points={trackPoints}
+              interactive={false}
+              autoFitRoute
+              emptyLabel="本次遛狗未记录到轨迹"
+              style={styles.routeMap}
+            />
           </View>
         </View>
       </View>
@@ -119,20 +122,20 @@ export default function WalkResultScreen({ navigation }) {
         <TipCard icon="bulb-outline" title="小贴士" description="连续遛狗超过30分钟，狗狗更容易保持好心情" tone="blue" />
       </View>
 
-      <View style={styles.bottomFill} />
-
       <TouchableOpacity
-        style={[styles.finishBtn, { marginBottom: insets.bottom + 20 }]}
+        style={[styles.finishBtn, { marginBottom: insets.bottom + 8 }]}
         onPress={() => navigation.reset({ index: 0, routes: [{ name: 'WalkHome' }] })}
       >
         <Text style={styles.finishBtnText}>完成</Text>
       </TouchableOpacity>
+      </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
+  content: { paddingBottom: spacing.lg },
   header: { alignItems: 'center', paddingVertical: spacing.md },
   checkIcon: { marginBottom: spacing.sm },
   title: { ...typography.h1, color: colors.secondary },
@@ -167,24 +170,21 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white, borderRadius: spacing.radiusLg,
     padding: spacing.md,
   },
+  routeMapWrap: {
+    borderRadius: spacing.radiusMd,
+    overflow: 'hidden',
+    height: 220,
+    marginBottom: spacing.md,
+  },
+  routeMap: {
+    flex: 1,
+  },
   routeHeader: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
     marginBottom: spacing.md,
   },
   routeTitle: { ...typography.bodyBold, color: colors.secondary },
-  routeStats: {
-    flexDirection: 'row', backgroundColor: colors.bgLight,
-    borderRadius: spacing.radiusMd, padding: spacing.md,
-  },
-  routeStat: { flex: 1, alignItems: 'center', gap: 4 },
-  routeStatDivider: {
-    width: 1, backgroundColor: colors.border,
-    marginVertical: 4,
-  },
-  routeStatValue: { ...typography.h3, color: colors.secondary },
-  routeStatLabel: { ...typography.caption, color: colors.textLight },
   tipsSection: { gap: spacing.sm, paddingHorizontal: spacing.lg, marginTop: spacing.md },
-  bottomFill: { flex: 1 },
   finishBtn: {
     marginHorizontal: spacing.xl, marginTop: spacing.md,
     backgroundColor: colors.primary, borderRadius: spacing.radiusPill,

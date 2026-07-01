@@ -31,6 +31,7 @@ export default function UpdateInfoScreen({ route, navigation }) {
   const [notWentReason, setNotWentReason] = useState(null);
   const [photos, setPhotos] = useState([]);
   const [note, setNote] = useState('');
+  const [publishing, setPublishing] = useState(false);
 
   const toggleFacility = (item) => setFacilities(arr =>
     arr.includes(item) ? arr.filter(x => x !== item) : [...arr, item]
@@ -62,6 +63,7 @@ export default function UpdateInfoScreen({ route, navigation }) {
   const canPublish = went === true ? !!admission : went === false ? !!notWentReason : false;
 
   const publish = async () => {
+    if (publishing) return;
     const existingToday = validations.some(v =>
       v.profileId === user?.id &&
       new Date(v.time).toDateString() === new Date().toDateString()
@@ -71,49 +73,55 @@ export default function UpdateInfoScreen({ route, navigation }) {
       return;
     }
 
-    let outcomeKey, outcomeLabel, tags = [];
+    setPublishing(true);
 
-    if (went) {
-      const opt = WENT_OPTIONS.find(o => o.key === admission);
-      outcomeKey = opt?.key || 'success';
-      outcomeLabel = opt?.label || '全程顺利';
-      tags = [...facilities];
-    } else {
-      const opt = NOT_WENT_OPTIONS.find(o => o.key === notWentReason);
-      outcomeKey = opt?.key || 'other';
-      outcomeLabel = opt?.label || '其他情况';
-    }
+    try {
+      let outcomeKey, outcomeLabel, tags = [];
 
-    let photoUrls = photos;
-    const hasNewPhotos = photos.some(p => !p.startsWith('http'));
-    if (hasNewPhotos) {
-      try {
-        const toUpload = photos.filter(p => !p.startsWith('http'));
-        const uploaded = await uploadImages(toUpload, `${user.id}/validations`, `val_${Date.now()}`);
-        photoUrls = photos.map(p => !p.startsWith('http') ? uploaded.shift() : p);
-      } catch (e) {
-        Alert.alert('上传失败', '照片上传失败，请重试');
+      if (went) {
+        const opt = WENT_OPTIONS.find(o => o.key === admission);
+        outcomeKey = opt?.key || 'success';
+        outcomeLabel = opt?.label || '全程顺利';
+        tags = [...facilities];
+      } else {
+        const opt = NOT_WENT_OPTIONS.find(o => o.key === notWentReason);
+        outcomeKey = opt?.key || 'other';
+        outcomeLabel = opt?.label || '其他情况';
+      }
+
+      let photoUrls = photos;
+      const hasNewPhotos = photos.some(p => !p.startsWith('http'));
+      if (hasNewPhotos) {
+        try {
+          const toUpload = photos.filter(p => !p.startsWith('http'));
+          const uploaded = await uploadImages(toUpload, `${user.id}/validations`, `val_${Date.now()}`);
+          photoUrls = photos.map(p => !p.startsWith('http') ? uploaded.shift() : p);
+        } catch (e) {
+          Alert.alert('上传失败', '照片上传失败，请重试');
+          return;
+        }
+      }
+
+      const validation = {
+        outcomeKey,
+        outcomeLabel,
+        dogSize: '',
+        tags,
+        note,
+        photos: photoUrls,
+      };
+
+      const { error } = await addValidation(id, validation);
+      if (error) {
+        Alert.alert('发布失败', JSON.stringify({ code: error.code, message: error.message, details: error.details, hint: error.hint }, null, 2));
         return;
       }
+      Alert.alert('感谢更新', '你的反馈已经发布到这个地点。', [
+        { text: '好', onPress: () => navigation.goBack() },
+      ]);
+    } finally {
+      setPublishing(false);
     }
-
-    const validation = {
-      outcomeKey,
-      outcomeLabel,
-      dogSize: '',
-      tags,
-      note,
-      photos: photoUrls,
-    };
-
-    const { error } = await addValidation(id, validation);
-    if (error) {
-      Alert.alert('发布失败', JSON.stringify({ code: error.code, message: error.message, details: error.details, hint: error.hint }, null, 2));
-      return;
-    }
-    Alert.alert('感谢更新', '你的反馈已经发布到这个地点。', [
-      { text: '好', onPress: () => navigation.goBack() },
-    ]);
   };
 
   return (
@@ -252,11 +260,11 @@ export default function UpdateInfoScreen({ route, navigation }) {
               </TouchableOpacity>
             </View>
           ))}
-          <TouchableOpacity style={[styles.photoBox, styles.addBox]} onPress={addPhotoFromCamera}>
+          <TouchableOpacity style={[styles.photoBox, styles.addBox]} onPress={addPhotoFromCamera} disabled={publishing}>
             <Ionicons name="camera" size={26} color={colors.secondary} />
             <Text style={styles.addText}>拍照</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.photoBox, styles.addBox]} onPress={addPhoto}>
+          <TouchableOpacity style={[styles.photoBox, styles.addBox]} onPress={addPhoto} disabled={publishing}>
             <Ionicons name="images" size={26} color={colors.secondary} />
             <Text style={styles.addText}>相册</Text>
           </TouchableOpacity>
@@ -278,7 +286,7 @@ export default function UpdateInfoScreen({ route, navigation }) {
         <Text style={styles.charCounter}>{`${note.length}/200`}</Text>
 
         <View style={styles.publishWrap}>
-          <Button fullWidth disabled={!canPublish} onPress={publish}>
+          <Button fullWidth disabled={!canPublish} loading={publishing} onPress={publish}>
             发布反馈
           </Button>
         </View>

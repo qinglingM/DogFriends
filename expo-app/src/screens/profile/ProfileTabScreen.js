@@ -68,21 +68,16 @@ function BirthdayCard({ dogs }) {
   const item = upcoming[0];
   if (!item) return null;
 
-  const isToday = item.info.days === 0;
   return (
     <View style={s.birthdayCard}>
       <View style={s.birthdayHeader}>
         <Ionicons name="gift" size={20} color={colors.accent} />
-        <Text style={s.birthdayTitle}>
-          {isToday ? '生日快乐 🎉' : '即将到来的生日'}
-        </Text>
+        <Text style={s.birthdayTitle}>{'即将到来的生日'}</Text>
       </View>
       <View style={s.birthdayBody}>
-        <Text style={s.birthdayDog}>{item.dog.name}</Text>
+        <Text style={s.birthdayDog}>{item.dog.name} 的 {item.info.turnAge} 岁生日</Text>
         <Text style={s.birthdayInfo}>
-          {isToday
-            ? `今天 ${item.info.turnAge} 岁啦！`
-            : `还有 ${item.info.days} 天 · 即将满 ${item.info.turnAge} 岁 🐾`}
+          {item.info.days === 0 ? '今天' : `还有 ${item.info.days} 天`}
         </Text>
       </View>
     </View>
@@ -90,10 +85,10 @@ function BirthdayCard({ dogs }) {
 }
 
 const MENU_ITEMS = [
-  { label: '我的收藏', icon: 'bookmark-outline', bg: 'rgba(185, 207, 50, 0.2)', route: 'FavoriteLocations' },
-  { label: '我的点赞', icon: 'heart-outline', bg: 'rgba(230, 160, 60, 0.15)', route: 'LikedPosts' },
-  { label: '遛狗记录', icon: 'walk-outline', bg: 'rgba(146, 102, 153, 0.15)', route: 'WalkHistory' },
   { label: '互动消息', icon: 'notifications-outline', bg: 'rgba(185, 207, 50, 0.2)', route: 'Notifications' },
+  { label: '遛狗记录', icon: 'walk-outline', bg: 'rgba(146, 102, 153, 0.15)', route: 'WalkHistory' },
+  { label: '我的点赞', icon: 'heart-outline', bg: 'rgba(230, 160, 60, 0.15)', route: 'LikedPosts' },
+  { label: '我的收藏', icon: 'bookmark-outline', bg: 'rgba(185, 207, 50, 0.2)', route: 'FavoriteLocations' },
 ];
 
 function StatBlock({ value, label, onPress }) {
@@ -261,7 +256,7 @@ export default function ProfileTabScreen({ navigation, route }) {
     ? { id: userProfile?.id, name: userProfile?.name, avatar: userProfile?.avatar, cover: userProfile?.cover, gender: userProfile?.gender, signature: userProfile?.signature, following: userProfile?.following || 0, followers: userProfile?.followers || 0, likes: userProfile?.likes || 0, area: userProfile?.area }
     : remoteProfile
     ? { id: remoteProfile.id, name: remoteProfile.name, avatar: remoteProfile.avatar, cover: remoteProfile.cover, gender: remoteProfile.gender, signature: remoteProfile.signature || '', following: remoteProfile.following || 0, followers: remoteProfile.followers || 0, likes: remoteProfile.likes || 0, area: remoteProfile.area || '' }
-    : { id: profileId || null, name: userName || '用户', avatar: null, cover: null, gender: null, signature: '', following: 0, followers: 0, likes: 0, area: '' };
+    : { id: profileId || null, name: userName || '资料加载中', avatar: null, cover: null, gender: null, signature: '', following: 0, followers: 0, likes: 0, area: '' };
   const dogsList = isSelf ? dogs : remoteDogs;
 
   const [avatarPreviewVisible, setAvatarPreviewVisible] = useState(false);

@@ -124,7 +124,7 @@ export default function DogEditScreen({ navigation, route }) {
 
     const dogData = {
       name: name.trim(),
-      breed: breed || '未知品种',
+      breed,
       gender,
       size,
       birthday: birthday.trim(),

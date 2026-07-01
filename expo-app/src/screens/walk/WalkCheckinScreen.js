@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, KeyboardAvoidingView, StyleSheet, Keyboard, Dimensions } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, KeyboardAvoidingView, StyleSheet, Keyboard, Dimensions, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -81,12 +81,13 @@ function CompactBristol({ value, onChange, disabled }) {
 }
 
 function DogCheckinCard({ dog, data, onChange, sortedBehaviors }) {
-  const update = (field, value) => onChange({ ...data, [field]: value });
-  const poopDisabled = !data.poop || data.poop === 'none';
-  const behaviorCount = data.behaviors?.length || 0;
+  const safeData = data || { pee: null, poop: null, bristol: null, mood: null, behaviors: [] };
+  const update = (field, value) => onChange({ ...safeData, [field]: value });
+  const poopDisabled = !safeData.poop || safeData.poop === 'none';
+  const behaviorCount = safeData.behaviors?.length || 0;
 
   const toggleBehavior = (b) => {
-    const list = data.behaviors || [];
+    const list = safeData.behaviors || [];
     update('behaviors', list.includes(b) ? list.filter(x => x !== b) : [...list, b]);
   };
 
@@ -102,18 +103,18 @@ function DogCheckinCard({ dog, data, onChange, sortedBehaviors }) {
       <View style={styles.divider} />
 
       <Text style={styles.fieldLabel}>精神状态</Text>
-      <EmojiSelector value={data.mood} onChange={(v) => update('mood', v)} />
+      <EmojiSelector value={safeData.mood} onChange={(v) => update('mood', v)} />
 
       <View style={styles.divider} />
 
       <Text style={styles.fieldLabel}>排尿</Text>
-      <InlineOption options={PEE_OPTIONS} value={data.pee} onChange={(v) => update('pee', v)} />
+      <InlineOption options={PEE_OPTIONS} value={safeData.pee} onChange={(v) => update('pee', v)} />
 
       <Text style={[styles.fieldLabel, { marginTop: spacing.md }]}>排便</Text>
-      <InlineOption options={PEE_OPTIONS} value={data.poop} onChange={(v) => update('poop', v)} />
+      <InlineOption options={PEE_OPTIONS} value={safeData.poop} onChange={(v) => update('poop', v)} />
 
       <Text style={[styles.subLabel, { marginTop: spacing.md }]}>粪便形态</Text>
-      <CompactBristol value={data.bristol} onChange={(v) => update('bristol', v)} disabled={poopDisabled} />
+      <CompactBristol value={safeData.bristol} onChange={(v) => update('bristol', v)} disabled={poopDisabled} />
 
       <View style={styles.divider} />
 
@@ -127,7 +128,7 @@ function DogCheckinCard({ dog, data, onChange, sortedBehaviors }) {
       </View>
       <View style={styles.chipGrid}>
         {sortedBehaviors.map(b => (
-          <Chip key={b} active={data.behaviors?.includes(b)} onPress={() => toggleBehavior(b)}>
+          <Chip key={b} active={safeData.behaviors?.includes(b)} onPress={() => toggleBehavior(b)}>
             {b}
           </Chip>
         ))}
@@ -138,22 +139,40 @@ function DogCheckinCard({ dog, data, onChange, sortedBehaviors }) {
 
 const BEHAVIOR_STORAGE_KEY = '@dogfriends_behavior_history';
 
-export default function WalkCheckinScreen({ navigation }) {
+export default function WalkCheckinScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
-  const { saveCheckin, finishWalk, currentWalk } = useWalk();
+  const { records: walkRecords, updateWalkRecord } = useWalk();
   const { dogs: allDogs, updateDog } = useDogs();
-  const dogs = currentWalk?.dogs?.length ? currentWalk.dogs : (allDogs.length > 0 ? allDogs.map(d => ({ id: d.id, name: d.name, image: d.image })) : []);
+  const walkId = route?.params?.walkId;
+  const walkRecord = walkRecords.find((item) => item.id === walkId) || null;
+  const dogs = route?.params?.dogs?.length
+    ? route.params.dogs
+    : walkRecord?.dogs?.length
+      ? walkRecord.dogs.map((dog) => {
+          const dogId = typeof dog === 'string' ? dog : dog?.id;
+          const fullDog = allDogs.find((item) => item.id === dogId);
+          return { id: dogId, name: fullDog?.name || '狗狗', image: fullDog?.image || null };
+        })
+      : [];
+  const walkDistance = route?.params?.distance ?? walkRecord?.distance ?? 0;
+  const walkDuration = route?.params?.duration ?? walkRecord?.duration ?? 0;
 
   const [behaviorHistory, setBehaviorHistory] = useState({});
-  const [records, setRecords] = useState(() => {
-    const init = {};
-    dogs.forEach(dog => {
-      init[dog.id] = { pee: null, poop: null, bristol: null, mood: null, behaviors: [] };
-    });
-    return init;
-  });
+  const [records, setRecords] = useState({});
   const [currentIndex, setCurrentIndex] = useState(0);
   const scrollRef = useRef(null);
+
+  useEffect(() => {
+    setRecords((prev) => {
+      const next = { ...prev };
+      dogs.forEach((dog) => {
+        if (!next[dog.id]) {
+          next[dog.id] = { pee: null, poop: null, bristol: null, mood: null, behaviors: [] };
+        }
+      });
+      return next;
+    });
+  }, [dogs]);
 
   useEffect(() => {
     AsyncStorage.getItem(BEHAVIOR_STORAGE_KEY).then(data => {
@@ -189,7 +208,42 @@ export default function WalkCheckinScreen({ navigation }) {
     AsyncStorage.setItem(BEHAVIOR_STORAGE_KEY, JSON.stringify(updated));
   };
 
-  const handleSave = () => {
+  const persistWalk = async (checkins) => {
+    if (!walkId) {
+      Alert.alert('保存失败', '未找到本次遛狗记录，请返回重试');
+      return false;
+    }
+
+    const updateResult = await updateWalkRecord(walkId, { checkins });
+    if (updateResult?.error) {
+      Alert.alert('保存失败', updateResult.error.message || '健康打卡保存失败，请稍后重试');
+      return false;
+    }
+
+    let statsError = false;
+    for (const dog of dogs) {
+      const fullDog = allDogs.find(d => d.id === dog.id);
+      if (!fullDog) continue;
+      const { error } = await updateDog({
+        ...fullDog,
+        walkStats: {
+          walks: (fullDog.walkStats?.walks || 0) + 1,
+          distance: (fullDog.walkStats?.distance || 0) + walkDistance,
+          duration: (fullDog.walkStats?.duration || 0) + walkDuration,
+        },
+      });
+      if (error) {
+        statsError = true;
+      }
+    }
+    if (statsError) {
+      Alert.alert('部分保存失败', '遛狗记录已保存，但狗狗统计更新失败，请稍后检查');
+    }
+
+    return true;
+  };
+
+  const handleSave = async () => {
     Keyboard.dismiss();
 
     const checkins = {};
@@ -199,51 +253,26 @@ export default function WalkCheckinScreen({ navigation }) {
     });
 
     // 直接构建完整 checkins 传给 finishWalk，避免 React 批处理导致 state 未及时更新
-    const lastDog = dogs[dogs.length - 1];
-    const fullDog = allDogs.find(d => d.id === lastDog.id);
-    if (fullDog) {
-      updateDog({
-        ...fullDog,
-        walkStats: {
-          walks: (fullDog.walkStats?.walks || 0) + 1,
-          distance: (fullDog.walkStats?.distance || 0) + (currentWalk?.distance || 0),
-          duration: (fullDog.walkStats?.duration || 0) + (currentWalk?.duration || 0),
-        },
-      });
-    }
-    finishWalk(checkins);
-    navigation.replace('WalkResult');
+    const ok = await persistWalk(checkins);
+    if (ok) navigation.replace('WalkResult', { id: walkId });
   };
 
-  const handleSkip = () => {
+  const handleSkip = async () => {
     Keyboard.dismiss();
     const checkins = {};
     Object.entries(records).forEach(([dogId, data]) => {
       checkins[dogId] = data;
       saveBehaviorHistory(data.behaviors);
     });
-    finishWalk(checkins);
-    navigation.replace('WalkResult');
+    const ok = await persistWalk(checkins);
+    if (ok) navigation.replace('WalkResult', { id: walkId });
   };
 
 
   const handleNext = () => {
     Keyboard.dismiss();
     const dogId = dogs[currentIndex].id;
-    saveCheckin(dogId, records[dogId]);
     saveBehaviorHistory(records[dogId].behaviors);
-    const dog = dogs[currentIndex];
-    const fullDog = allDogs.find(d => d.id === dog.id);
-    if (fullDog) {
-      updateDog({
-        ...fullDog,
-        walkStats: {
-          walks: (fullDog.walkStats?.walks || 0) + 1,
-          distance: (fullDog.walkStats?.distance || 0) + (currentWalk?.distance || 0),
-          duration: (fullDog.walkStats?.duration || 0) + (currentWalk?.duration || 0),
-        },
-      });
-    }
     const nextIndex = currentIndex + 1;
     scrollRef.current?.scrollTo({ x: nextIndex * (cardWidth + CARD_GAP), animated: true });
     setCurrentIndex(nextIndex);
@@ -284,7 +313,7 @@ export default function WalkCheckinScreen({ navigation }) {
               >
                 <DogCheckinCard
                   dog={dog}
-                  data={records[dog.id]}
+                  data={records[dog.id] || { pee: null, poop: null, bristol: null, mood: null, behaviors: [] }}
                   onChange={(data) => updateRecord(dog.id, data)}
                   sortedBehaviors={sortedBehaviors}
                 />

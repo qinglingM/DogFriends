@@ -231,7 +231,10 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     color: colors.textMain,
+    lineHeight: undefined,
+    height: 40,
     padding: 0,
+    textAlignVertical: 'center',
   },
 
   hotSection: {

@@ -57,24 +57,27 @@ export default function LikedPostsScreen({ navigation }) {
       if (profiles) profiles.forEach(p => { profileMap[p.id] = { name: p.name, avatar: p.avatar }; });
     }
 
-    const posts = rows.map(row => ({
-      id: row.id,
-      authorId: row.profile_id,
-      userName: profileMap[row.profile_id]?.name || '未知用户',
-      authorAvatar: profileMap[row.profile_id]?.avatar || (profileMap[row.profile_id]?.name || '未知用户').slice(0, 1),
-      title: row.title || '',
-      tag: row.tag,
-      text: row.text || '',
-      mediaType: row.media_type || 'image',
-      mediaUrl: row.media_url,
-      images: row.images || [],
-      location: row.location,
-      visibility: row.visibility || 'public',
-      likes: row.likes_count || 0,
-      commentCount: row.comments_count || 0,
-      liked: true,
-      createdAt: row.created_at,
-    }));
+    const posts = rows.map(row => {
+      const displayName = profileMap[row.profile_id]?.name?.trim() || `遛友${String(row.profile_id || '').replace(/-/g, '').slice(0, 4)}`;
+      return {
+        id: row.id,
+        authorId: row.profile_id,
+        userName: displayName,
+        authorAvatar: profileMap[row.profile_id]?.avatar || displayName.slice(0, 1),
+        title: row.title || '',
+        tag: row.tag,
+        text: row.text || '',
+        mediaType: row.media_type || 'image',
+        mediaUrl: row.media_url,
+        images: row.images || [],
+        location: row.location,
+        visibility: row.visibility || 'public',
+        likes: row.likes_count || 0,
+        commentCount: row.comments_count || 0,
+        liked: true,
+        createdAt: row.created_at,
+      };
+    });
 
     setLikedPosts(posts);
     setLoading(false);

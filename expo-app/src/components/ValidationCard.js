@@ -36,6 +36,7 @@ export default function ValidationCard({ validation, helpful, onToggleHelpful, o
   const displayNote = noteIsLong && !noteExpanded ? note.slice(0, MAX_NOTE_LENGTH) + '...' : note;
 
   const photos = Array.isArray(validation.photos) ? validation.photos : [];
+  const hasAvatarImage = typeof validation.userAvatar === 'string' && validation.userAvatar.length > 0;
 
   const displayTags = validation.tags || [];
 
@@ -46,10 +47,14 @@ export default function ValidationCard({ validation, helpful, onToggleHelpful, o
           style={styles.userTouchable}
           activeOpacity={0.7}
           disabled={!onPressUser}
-          onPress={() => onPressUser?.(validation.userName)}
+          onPress={() => onPressUser?.(validation)}
         >
           <View style={styles.avatarCircle}>
-            <Text style={styles.avatarEmoji}>{validation.userAvatar || '🐶'}</Text>
+            {hasAvatarImage ? (
+              <Image source={{ uri: imageUrl(validation.userAvatar) }} style={styles.avatarImage} />
+            ) : (
+              <Text style={styles.avatarEmoji}>{validation.userAvatarText || '🐶'}</Text>
+            )}
             {validation.dogSize && (
               <View style={[styles.dogSizeIcon, { backgroundColor: getDogSizeColor(validation.dogSize) }]}>
                 <Text style={styles.dogSizeText}>{getDogSizeLabel(validation.dogSize)}</Text>
@@ -184,6 +189,11 @@ const styles = StyleSheet.create({
   },
   headerLeft: {
     flex: 1,
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 22,
   },
   avatarEmoji: { fontSize: 20 },
   userName: { ...typography.bodyBold, color: colors.textMain },

@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { typography } from '../../theme/typography';
-import { NavBar, Card, DogAvatar, MapPlaceholder } from '../../components';
+import { NavBar, Card, DogAvatar, WalkMap } from '../../components';
 import { useWalk } from '../../contexts/WalkContext';
 import { useDogs } from '../../contexts/DogContext';
 
@@ -201,10 +201,16 @@ export default function WalkDetailScreen({ navigation, route }) {
             </View>
           )}
 
-          <View style={[styles.routeCard, { marginHorizontal: 16, marginTop: 16 }]}>
+          <View style={[styles.routeCard, { marginHorizontal: 16, marginTop: 16 }]}> 
             <Text style={styles.sectionTitle}>路线轨迹</Text>
             <View style={{ height: 220, borderRadius: spacing.radiusMd, overflow: 'hidden' }}>
-              <MapPlaceholder label="路线轨迹图" height={220} />
+              <WalkMap
+                points={record.trackPoints || []}
+                interactive={false}
+                autoFitRoute
+                emptyLabel="这次遛狗没有记录到轨迹"
+                style={{ flex: 1 }}
+              />
             </View>
           </View>
 

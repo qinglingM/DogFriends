@@ -11,7 +11,6 @@ module.exports = {
       infoPlist: {
         NSLocationWhenInUseUsageDescription: "需要使用您的位置来查找附近的宠物友好地点",
         NSLocationAlwaysAndWhenInUseUsageDescription: "需要使用您的位置来查找附近的宠物友好地点",
-        "io.expo.AMapAPIKey": process.env.EXPO_PUBLIC_AMAP_API_KEY,
       },
     },
     android: {
@@ -25,9 +24,6 @@ module.exports = {
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
       ],
-      config: {
-        amapApiKey: process.env.EXPO_PUBLIC_AMAP_API_KEY,
-      },
     },
     web: {
       favicon: "./assets/favicon.png",

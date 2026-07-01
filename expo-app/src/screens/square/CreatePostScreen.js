@@ -94,12 +94,17 @@ export default function CreatePostScreen({ navigation }) {
 
   const publish = async () => {
     if (publishingRef.current) return;
+    const profileName = profile?.name?.trim();
     if (!title.trim() && !text.trim()) {
       Alert.alert('发布失败', '请填写标题或正文');
       return;
     }
     if (media.length === 0) {
       Alert.alert('发布失败', '请至少选择一张图片');
+      return;
+    }
+    if (!profileName) {
+      Alert.alert('发布失败', '请先完善昵称后再发布');
       return;
     }
     const body = text.trim();
@@ -127,8 +132,6 @@ export default function CreatePostScreen({ navigation }) {
       }
 
       const { error } = await addPost({
-        userName: profile.name || '小明',
-        authorAvatar: (profile.avatar?.charAt(0)?.toUpperCase()) || 'M',
         title: title.trim(),
         text: body,
         tag,

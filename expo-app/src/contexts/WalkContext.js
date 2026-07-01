@@ -76,21 +76,19 @@ function reducer(state, action) {
           : null,
       };
 
-    case 'FINISH_WALK': {
-      if (!state.currentWalk) return state;
-      const record = {
-        ...state.currentWalk,
-        checkins: action.checkinsOverride || state.currentWalk.checkins || {},
-        endTime: new Date().toISOString(),
-        date: new Date().toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' }),
-        dateLabel: new Date().toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric', weekday: 'short' }),
-      };
+    case 'FINISH_WALK':
+      if (!state.currentWalk || !action.record) return state;
       return {
         ...state,
-        records: [record, ...state.records],
+        records: [action.record, ...state.records],
         currentWalk: null,
       };
-    }
+
+    case 'UPDATE_RECORD':
+      return {
+        ...state,
+        records: state.records.map((record) => record.id === action.record.id ? action.record : record),
+      };
 
     case 'ADD_PHOTO':
       if (!state.currentWalk) return state;
@@ -133,32 +131,67 @@ export function WalkProvider({ children }) {
 
   const saveCheckin = useCallback((dogId, checkin) => dispatch({ type: 'SAVE_CHECKIN', dogId, checkin }), []);
 
-  const finishWalk = useCallback(async (checkinsOverride) => {
+  const finishWalk = useCallback(async ({ updates = {}, checkinsOverride } = {}) => {
     const current = state.currentWalk;
-    if (!current) return;
+    if (!current) return { error: new Error('当前没有进行中的遛狗记录') };
 
-    const finalCheckins = checkinsOverride || current.checkins || {};
+    const finalWalk = { ...current, ...updates };
 
-    dispatch({ type: 'FINISH_WALK', checkinsOverride: finalCheckins });
+    const finalCheckins = checkinsOverride || finalWalk.checkins || {};
+    const endTime = new Date().toISOString();
 
-    const photoUris = (current.photos || []).map(p => typeof p === 'string' ? p : p.uri);
+    const photoUris = (finalWalk.photos || []).map(p => typeof p === 'string' ? p : p.uri);
 
-    const { error } = await supabase.from('walk_records').insert({
+    const { data, error } = await supabase.from('walk_records').insert({
       profile_id: user.id,
-      dog_ids: (current.dogs || []).map(d => typeof d === 'string' ? d : d.id),
-      start_time: current.startTime,
-      end_time: new Date().toISOString(),
-      distance: current.distance || 0,
-      duration: current.duration || 0,
-      pace: current.pace || null,
-      track_points: current.trackPoints || null,
+      dog_ids: (finalWalk.dogs || []).map(d => typeof d === 'string' ? d : d.id),
+      start_time: finalWalk.startTime,
+      end_time: endTime,
+      distance: finalWalk.distance || 0,
+      duration: finalWalk.duration || 0,
+      pace: finalWalk.pace || null,
+      track_points: finalWalk.trackPoints || null,
       photos: photoUris,
       checkins: finalCheckins,
-    });
+    }).select().single();
     if (error) {
       console.error('[WalkContext] finishWalk insert failed', error);
+      return { error };
     }
+
+    const savedRow = data || {
+      id: finalWalk.id,
+      dog_ids: (finalWalk.dogs || []).map(d => typeof d === 'string' ? d : d.id),
+      start_time: finalWalk.startTime,
+      end_time: endTime,
+      distance: finalWalk.distance || 0,
+      duration: finalWalk.duration || 0,
+      pace: finalWalk.pace || null,
+      track_points: finalWalk.trackPoints || [],
+      photos: photoUris,
+      checkins: finalCheckins,
+    };
+    const record = rowToRecord(savedRow);
+    dispatch({ type: 'FINISH_WALK', record });
+    return { data: record, error: null };
   }, [state.currentWalk, user]);
+
+  const updateWalkRecord = useCallback(async (walkId, updates) => {
+    const { data, error } = await supabase
+      .from('walk_records')
+      .update(updates)
+      .eq('id', walkId)
+      .eq('profile_id', user.id)
+      .select()
+      .single();
+    if (error) {
+      console.error('[WalkContext] updateWalkRecord failed', error);
+      return { error };
+    }
+    const record = rowToRecord(data);
+    dispatch({ type: 'UPDATE_RECORD', record });
+    return { data: record, error: null };
+  }, [user]);
 
   const addPhoto = useCallback((photo) => dispatch({ type: 'ADD_PHOTO', photo }), []);
 
@@ -184,6 +217,7 @@ export function WalkProvider({ children }) {
     updateWalk,
     saveCheckin,
     finishWalk,
+    updateWalkRecord,
     addPhoto,
     refresh,
     getRecords: () => state.records,
@@ -202,7 +236,7 @@ export function WalkProvider({ children }) {
         duration: weekRecords.reduce((sum, r) => sum + (r.duration || 0), 0),
       };
     },
-  }), [state, startWalk, updateWalk, saveCheckin, finishWalk, addPhoto, refresh]);
+  }), [state, startWalk, updateWalk, saveCheckin, finishWalk, updateWalkRecord, addPhoto, refresh]);
 
   return <WalkContext.Provider value={value}>{children}</WalkContext.Provider>;
 }

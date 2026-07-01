@@ -47,6 +47,7 @@ export default function AddLocationScreen({ route, navigation }) {
   const [facilities, setFacilities] = useState(editLocation?.facilities || []);
   const [photos, setPhotos] = useState(editLocation?.photos || []);
   const [note, setNote] = useState(editLocation?.description || '');
+  const [publishing, setPublishing] = useState(false);
 
   useEffect(() => {
     if (route.params?.selectedName) {
@@ -98,57 +99,64 @@ export default function AddLocationScreen({ route, navigation }) {
   const removePhoto = (i) => setPhotos(p => p.filter((_, idx) => idx !== i));
 
   const publish = async () => {
+    if (publishing) return;
     const entryLabel = ENTRY_AREAS.find(e => e.key === entryArea)?.label;
     const tags = [entryLabel, facilities[0]].filter(Boolean).slice(0, 3);
 
-    let photoUrls = photos;
-    const hasNewPhotos = photos.some(p => !p.startsWith('http'));
-    if (hasNewPhotos) {
-      try {
-        const toUpload = photos.filter(p => !p.startsWith('http'));
-        const uploaded = await uploadImages(toUpload, `${user.id}/locations`, `loc_${Date.now()}`);
-        photoUrls = photos.map(p => !p.startsWith('http') ? uploaded.shift() : p);
-      } catch (e) {
-        Alert.alert('上传失败', '照片上传失败，请重试');
+    setPublishing(true);
+
+    try {
+      let photoUrls = photos;
+      const hasNewPhotos = photos.some(p => !p.startsWith('http'));
+      if (hasNewPhotos) {
+        try {
+          const toUpload = photos.filter(p => !p.startsWith('http'));
+          const uploaded = await uploadImages(toUpload, `${user.id}/locations`, `loc_${Date.now()}`);
+          photoUrls = photos.map(p => !p.startsWith('http') ? uploaded.shift() : p);
+        } catch (e) {
+          Alert.alert('上传失败', '照片上传失败，请重试');
+          return;
+        }
+      }
+
+      const payload = {
+        name: name.trim(),
+        category,
+        categoryLabel: CATEGORIES.find(c => c.key === category)?.label || '其他',
+        city,
+        distanceKm: 1.0,
+        phone: '',
+        hours: '',
+        entryArea,
+        dogSize: [],
+        behaviors: [],
+        facilities,
+        tags,
+        status: LOCATION_STATUS.USER_SUBMITTED,
+        verifierCount: 0,
+        lastUpdatedLabel: '刚刚发布',
+        description: note,
+        photos: photoUrls,
+      };
+
+      let result;
+      if (isEdit) {
+        result = await updateLocation({ ...payload, id: editLocation.id });
+      } else {
+        result = await addLocation(payload);
+      }
+
+      if (result.error) {
+        Alert.alert(isEdit ? '编辑失败' : '添加失败', JSON.stringify({ code: result.error.code, message: result.error.message, details: result.error.details, hint: result.error.hint }, null, 2));
         return;
       }
-    }
-
-    const payload = {
-      name: name.trim(),
-      category,
-      categoryLabel: CATEGORIES.find(c => c.key === category)?.label || '其他',
-      city: city || '上海',
-      distanceKm: 1.0,
-      phone: '',
-      hours: '',
-      entryArea,
-      dogSize: [],
-      behaviors: [],
-      facilities,
-      tags,
-      status: LOCATION_STATUS.USER_SUBMITTED,
-      verifierCount: 0,
-      lastUpdatedLabel: '刚刚发布',
-      description: note,
-      photos: photoUrls,
-    };
-
-    let result;
-    if (isEdit) {
-      result = await updateLocation({ ...payload, id: editLocation.id });
-    } else {
-      result = await addLocation(payload);
-    }
-
-    if (result.error) {
-      Alert.alert(isEdit ? '编辑失败' : '添加失败', JSON.stringify({ code: result.error.code, message: result.error.message, details: result.error.details, hint: result.error.hint }, null, 2));
-      return;
-    }
-    if (isEdit) {
-      navigation.goBack();
-    } else {
-      navigation.replace('AddLocationSuccess', { locationId: result.data.id });
+      if (isEdit) {
+        navigation.goBack();
+      } else {
+        navigation.replace('AddLocationSuccess', { locationId: result.data.id });
+      }
+    } finally {
+      setPublishing(false);
     }
   };
 
@@ -286,11 +294,11 @@ export default function AddLocationScreen({ route, navigation }) {
               </TouchableOpacity>
             </View>
           ))}
-          <TouchableOpacity style={[styles.photoBox, styles.addBox]} onPress={addPhotoFromCamera}>
+          <TouchableOpacity style={[styles.photoBox, styles.addBox]} onPress={addPhotoFromCamera} disabled={publishing}>
             <Ionicons name="camera" size={26} color={colors.secondary} />
             <Text style={styles.addText}>拍照</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.photoBox, styles.addBox]} onPress={addPhoto}>
+          <TouchableOpacity style={[styles.photoBox, styles.addBox]} onPress={addPhoto} disabled={publishing}>
             <Ionicons name="images" size={26} color={colors.secondary} />
             <Text style={styles.addText}>相册</Text>
           </TouchableOpacity>
@@ -312,7 +320,7 @@ export default function AddLocationScreen({ route, navigation }) {
         <Text style={styles.charCounter}>{`${note.length}/200`}</Text>
 
         <View style={styles.publishWrap}>
-          <Button fullWidth onPress={() => {
+          <Button fullWidth loading={publishing} onPress={() => {
             const checks = [
               ['地点', !!name.trim()],
               ['城市', !!city],

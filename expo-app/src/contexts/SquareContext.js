@@ -13,6 +13,19 @@ async function buildProfileMap(profileIds) {
   return map;
 }
 
+function fallbackUserName(profileId) {
+  if (!profileId || typeof profileId !== 'string') return '遛友';
+  return `遛友${profileId.replace(/-/g, '').slice(0, 4)}`;
+}
+
+function resolveProfileDisplay(profileId, profile) {
+  const name = profile?.name?.trim() || fallbackUserName(profileId);
+  return {
+    name,
+    avatar: profile?.avatar || name.slice(0, 1),
+  };
+}
+
 function countCommentNodes(comments = []) {
   return comments.reduce((sum, c) => sum + 1 + countCommentNodes(c.replies || []), 0);
 }
@@ -22,9 +35,10 @@ function flatToTree(flatComments, likedMap) {
   const roots = [];
 
   flatComments.forEach(c => {
+    const displayName = c._userName?.trim() || fallbackUserName(c.profile_id);
     map[c.id] = {
       id: c.id,
-      userName: c._userName || '未知用户',
+      userName: displayName,
       text: c.text,
       likes: c.likes_count || 0,
       liked: !!likedMap[c.id],
@@ -136,7 +150,10 @@ export function SquareProvider({ children }) {
       if (favsRes.data) favsRes.data.forEach(f => { favMap[f.post_id] = true; });
     }
 
-    const posts = rows.map(r => rowToPost(r, likedMap, favMap,     nameMap[r.profile_id]?.name || '未知用户', nameMap[r.profile_id]?.avatar));
+    const posts = rows.map(r => {
+      const display = resolveProfileDisplay(r.profile_id, nameMap[r.profile_id]);
+      return rowToPost(r, likedMap, favMap, display.name, display.avatar);
+    });
     dispatch({ type: 'SET_POSTS', posts });
 
     const allRows = rows;
@@ -148,7 +165,7 @@ export function SquareProvider({ children }) {
 
     if (commentRows && user) {
       const commentNameMap = await buildProfileMap(commentRows.map(r => r.profile_id));
-      commentRows.forEach(c => { c._userName = commentNameMap[c.profile_id]?.name || '未知用户'; });
+      commentRows.forEach(c => { c._userName = resolveProfileDisplay(c.profile_id, commentNameMap[c.profile_id]).name; });
 
       const { data: clRows } = await supabase
         .from('comment_likes')
@@ -199,7 +216,8 @@ export function SquareProvider({ children }) {
 
       if (!error && data) {
         const nameMap = await buildProfileMap([data.profile_id]);
-        const post = rowToPost(data, {}, {}, nameMap[data.profile_id]?.name || '未知用户', nameMap[data.profile_id]?.avatar);
+        const display = resolveProfileDisplay(data.profile_id, nameMap[data.profile_id]);
+        const post = rowToPost(data, {}, {}, display.name, display.avatar);
         dispatch({ type: 'ADD_POST', post });
       }
       return { data, error };
@@ -225,18 +243,26 @@ export function SquareProvider({ children }) {
       updates: { liked: !wasLiked, likes: existing.likes + (wasLiked ? -1 : 1) },
     });
 
+    let error = null;
     if (wasLiked) {
-      await supabase.from('post_likes').delete().match({ post_id: postId, profile_id: user.id });
-      await supabase.rpc('decrement_post_likes', { row_id: postId });
-      if (existing.authorId) {
-        await supabase.rpc('decrement_profile_likes', { profile_id: existing.authorId });
-      }
+      const { error: relationError } = await supabase.from('post_likes').delete().match({ post_id: postId, profile_id: user.id });
+      const { error: postCountError } = relationError ? { error: null } : await supabase.rpc('decrement_post_likes', { row_id: postId });
+      const { error: profileCountError } = relationError || !existing.authorId ? { error: null } : await supabase.rpc('decrement_profile_likes', { profile_id: existing.authorId });
+      error = relationError || postCountError || profileCountError;
     } else {
-      await supabase.from('post_likes').insert({ post_id: postId, profile_id: user.id });
-      await supabase.rpc('increment_post_likes', { row_id: postId });
-      if (existing.authorId) {
-        await supabase.rpc('increment_profile_likes', { profile_id: existing.authorId });
-      }
+      const { error: relationError } = await supabase.from('post_likes').insert({ post_id: postId, profile_id: user.id });
+      const { error: postCountError } = relationError ? { error: null } : await supabase.rpc('increment_post_likes', { row_id: postId });
+      const { error: profileCountError } = relationError || !existing.authorId ? { error: null } : await supabase.rpc('increment_profile_likes', { profile_id: existing.authorId });
+      error = relationError || postCountError || profileCountError;
+    }
+
+    if (error) {
+      console.error('toggleLike error', error);
+      dispatch({
+        type: 'UPDATE_POST',
+        postId,
+        updates: { liked: wasLiked, likes: existing.likes },
+      });
     }
 
     likesInFlight.current[postId] = false;
@@ -259,12 +285,24 @@ export function SquareProvider({ children }) {
       updates: { favorited: !wasFav, favorites: existing.favorites + (wasFav ? -1 : 1) },
     });
 
+    let error = null;
     if (wasFav) {
-      await supabase.from('post_favorites').delete().match({ post_id: postId, profile_id: user.id });
-      await supabase.rpc('decrement_post_favorites', { row_id: postId });
+      const { error: relationError } = await supabase.from('post_favorites').delete().match({ post_id: postId, profile_id: user.id });
+      const { error: countError } = relationError ? { error: null } : await supabase.rpc('decrement_post_favorites', { row_id: postId });
+      error = relationError || countError;
     } else {
-      await supabase.from('post_favorites').insert({ post_id: postId, profile_id: user.id });
-      await supabase.rpc('increment_post_favorites', { row_id: postId });
+      const { error: relationError } = await supabase.from('post_favorites').insert({ post_id: postId, profile_id: user.id });
+      const { error: countError } = relationError ? { error: null } : await supabase.rpc('increment_post_favorites', { row_id: postId });
+      error = relationError || countError;
+    }
+
+    if (error) {
+      console.error('toggleFavorite error', error);
+      dispatch({
+        type: 'UPDATE_POST',
+        postId,
+        updates: { favorited: wasFav, favorites: existing.favorites },
+      });
     }
 
     likesInFlight.current[`fav_${postId}`] = false;
@@ -280,9 +318,10 @@ export function SquareProvider({ children }) {
     if (!error && data) {
       const nameMap = await buildProfileMap([data.profile_id]);
       const existing = state.posts.find(p => p.id === postId);
+      const display = resolveProfileDisplay(data.profile_id, nameMap[data.profile_id]);
       const comment = {
         id: data.id,
-        userName: nameMap[data.profile_id]?.name || '未知用户',
+        userName: display.name,
         text: data.text,
         likes: 0,
         liked: false,
@@ -290,13 +329,18 @@ export function SquareProvider({ children }) {
         createdAt: data.created_at,
       };
       const newCount = (existing?.commentCount || 0) + 1;
+      const { error: countError } = await supabase.rpc('increment_post_comments', { row_id: postId });
+      if (countError) {
+        await supabase.from('post_comments').delete().eq('id', data.id);
+        return { error: countError };
+      }
       dispatch({
         type: 'UPDATE_POST',
         postId,
         updates: { comments: [...(existing?.comments || []), comment], commentCount: newCount },
       });
-      await supabase.rpc('increment_post_comments', { row_id: postId });
     }
+    return { data, error };
   }, [state.posts, user]);
 
   const addCommentReply = useCallback(async (postId, targetId, replyTo, text) => {
@@ -310,10 +354,11 @@ export function SquareProvider({ children }) {
       const nameMap = await buildProfileMap([data.profile_id]);
       const existing = state.posts.find(p => p.id === postId);
       if (!existing) return;
+      const display = resolveProfileDisplay(data.profile_id, nameMap[data.profile_id]);
 
       const reply = {
         id: data.id,
-        userName: nameMap[data.profile_id]?.name || '未知用户',
+        userName: display.name,
         replyTo,
         text: data.text,
         likes: 0,
@@ -323,12 +368,17 @@ export function SquareProvider({ children }) {
       };
 
       const newComments = appendReplyToThread(existing.comments, targetId, reply);
+      const { error: countError } = await supabase.rpc('increment_post_comments', { row_id: postId });
+      if (countError) {
+        await supabase.from('post_comments').delete().eq('id', data.id);
+        return { error: countError };
+      }
       dispatch({
         type: 'UPDATE_POST', postId,
         updates: { comments: newComments, commentCount: (existing.commentCount || 0) + 1 },
       });
-      await supabase.rpc('increment_post_comments', { row_id: postId });
     }
+    return { data, error };
   }, [state.posts, user]);
 
   const toggleCommentLike = useCallback(async (postId, commentId) => {
@@ -351,12 +401,20 @@ export function SquareProvider({ children }) {
     const newComments = toggleThreadLike(existing.comments, commentId);
     dispatch({ type: 'UPDATE_POST', postId, updates: { comments: newComments } });
 
+    let error = null;
     if (wasLiked) {
-      await supabase.from('comment_likes').delete().match({ comment_id: commentId, profile_id: user.id });
-      await supabase.rpc('decrement_comment_likes', { row_id: commentId });
+      const { error: relationError } = await supabase.from('comment_likes').delete().match({ comment_id: commentId, profile_id: user.id });
+      const { error: countError } = relationError ? { error: null } : await supabase.rpc('decrement_comment_likes', { row_id: commentId });
+      error = relationError || countError;
     } else {
-      await supabase.from('comment_likes').insert({ comment_id: commentId, profile_id: user.id });
-      await supabase.rpc('increment_comment_likes', { row_id: commentId });
+      const { error: relationError } = await supabase.from('comment_likes').insert({ comment_id: commentId, profile_id: user.id });
+      const { error: countError } = relationError ? { error: null } : await supabase.rpc('increment_comment_likes', { row_id: commentId });
+      error = relationError || countError;
+    }
+
+    if (error) {
+      console.error('toggleCommentLike error', error);
+      dispatch({ type: 'UPDATE_POST', postId, updates: { comments: existing.comments } });
     }
 
     commentLikesInFlight.current[commentId] = false;

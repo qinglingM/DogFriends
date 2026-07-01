@@ -250,7 +250,7 @@ export default function LocationDetailScreen({ route, navigation }) {
                     setTargetValidationId(v.id);
                     setSheetVisible(true);
                   }}
-                  onPressUser={(userName) => navigation.navigate('Profile', { screen: 'PersonalProfile', params: { userName } })}
+                  onPressUser={(validation) => navigation.navigate('Profile', { screen: 'PersonalProfile', params: { profileId: validation.profileId, userName: validation.userName } })}
                 />
               ))}
               {hasMore && !showAllValidations && (

@@ -20,6 +20,11 @@ function categoryLabelFromKey(key) {
   return CATEGORY_LABEL_MAP[key] || '其他';
 }
 
+function fallbackUserName(profileId) {
+  if (!profileId || typeof profileId !== 'string') return '遛友';
+  return `遛友${profileId.replace(/-/g, '').slice(0, 4)}`;
+}
+
 function rowToLocation(row) {
   return {
     id: row.id,
@@ -55,11 +60,13 @@ const OLD_OUTCOME_TO_NEW_LABEL = {
 };
 
 function rowToValidation(row) {
+  const displayName = row._userName?.trim() || fallbackUserName(row.profile_id);
   return {
     id: row.id,
     profileId: row.profile_id,
-    userName: row._userName || '未知用户',
-    userAvatar: (row._userName || '?').slice(0, 1),
+    userName: displayName,
+    userAvatar: row._userAvatar || null,
+    userAvatarText: displayName.slice(0, 1),
     time: row.created_at,
     outcomeKey: row.outcome_key,
     outcomeLabel: OLD_OUTCOME_TO_NEW_LABEL[row.outcome_key] || row.outcome_label,
@@ -279,12 +286,15 @@ export function ExploreProvider({ children }) {
     // Look up profile names for validations
     const valRows = valRes.data || [];
     const validationProfileIds = [...new Set(valRows.map(v => v.profile_id).filter(Boolean))];
-    const valNameMap = {};
+    const valProfileMap = {};
     if (validationProfileIds.length > 0) {
-      const { data: profiles } = await supabase.from('profiles').select('id, name').in('id', validationProfileIds);
-      if (profiles) profiles.forEach(p => { valNameMap[p.id] = p.name; });
+      const { data: profiles } = await supabase.from('profiles').select('id, name, avatar').in('id', validationProfileIds);
+      if (profiles) profiles.forEach(p => { valProfileMap[p.id] = { name: p.name, avatar: p.avatar || null }; });
     }
-    valRows.forEach(v => { v._userName = valNameMap[v.profile_id] || '未知用户'; });
+    valRows.forEach(v => {
+      v._userName = valProfileMap[v.profile_id]?.name || fallbackUserName(v.profile_id);
+      v._userAvatar = valProfileMap[v.profile_id]?.avatar || null;
+    });
 
     const validations = {};
     valRows.forEach(v => {
@@ -344,17 +354,23 @@ export function ExploreProvider({ children }) {
     const location = state.locations.find(l => l.id === id);
     const submittedBy = location?.submittedBy;
 
+    let error = null;
     if (wasFav) {
-      await supabase.from('location_favorites').delete().match({ location_id: id, profile_id: user.id });
-      if (submittedBy) {
-        await supabase.rpc('decrement_profile_likes', { profile_id: submittedBy });
-      }
+      const { error: relationError } = await supabase.from('location_favorites').delete().match({ location_id: id, profile_id: user.id });
+      const { error: countError } = relationError || !submittedBy ? { error: null } : await supabase.rpc('decrement_profile_likes', { profile_id: submittedBy });
+      error = relationError || countError;
     } else {
-      await supabase.from('location_favorites').insert({ location_id: id, profile_id: user.id });
-      if (submittedBy) {
-        await supabase.rpc('increment_profile_likes', { profile_id: submittedBy });
-      }
+      const { error: relationError } = await supabase.from('location_favorites').insert({ location_id: id, profile_id: user.id });
+      const { error: countError } = relationError || !submittedBy ? { error: null } : await supabase.rpc('increment_profile_likes', { profile_id: submittedBy });
+      error = relationError || countError;
     }
+
+    if (error) {
+      console.error('toggleFavorite location error', error);
+      dispatch({ type: 'TOGGLE_FAVORITE', id });
+      return { error };
+    }
+    return { error: null };
   }, [state.favorites, state.locations, user]);
 
   const addLocation = useCallback(async (location) => {
@@ -362,8 +378,10 @@ export function ExploreProvider({ children }) {
     const validCategories = ['cafe', 'park', 'restaurant', 'mall', 'scenic', 'hotel', 'other'];
     const safeEntryArea = DB_ENTRY_AREA[location.entryArea?.toLowerCase()] || 'unknown';
     const safeCategory = validCategories.includes(location.category?.toLowerCase()) ? location.category.toLowerCase() : 'other';
-    const safeCity = typeof location.city === 'string' ? location.city : '上海';
-    console.log('[addLocation] safeEntryArea:', safeEntryArea, 'safeCategory:', safeCategory, 'safeCity:', safeCity);
+    const safeCity = typeof location.city === 'string' ? location.city.trim() : '';
+    if (!safeCity) {
+      return { data: null, error: { message: '城市不能为空', code: 'CITY_REQUIRED', details: null, hint: null } };
+    }
     const row = {
       name: location.name,
       category: safeCategory,
@@ -384,12 +402,6 @@ export function ExploreProvider({ children }) {
       submitted_by: user.id,
     };
 
-    console.log('[addLocation] insert row:', JSON.stringify(row));
-
-    if (__DEV__) {
-      Alert.alert('插前行', JSON.stringify({ entry_area: safeEntryArea, category: safeCategory, city: safeCity }));
-    }
-
     let data, error;
     try {
       const res = await supabase.from('locations').insert(row).select().single();
@@ -400,17 +412,20 @@ export function ExploreProvider({ children }) {
       return { data: null, error: { message: e.message || String(e), code: null, details: null, hint: null } };
     }
     if (!error && data) {
-      const newLoc = rowToLocation(data);
-      dispatch({ type: 'ADD_LOCATION', location: newLoc });
-
       const contribRow = {
         profile_id: user.id,
         location_id: data.id,
         type: '新增地点',
         status: LOCATION_STATUS.USER_SUBMITTED,
       };
-      console.warn('[addLocation] contributions insert:', JSON.stringify(contribRow));
-      await supabase.from('contributions').insert(contribRow);
+      const { error: contribError } = await supabase.from('contributions').insert(contribRow);
+      if (contribError) {
+        await supabase.from('locations').delete().eq('id', data.id);
+        return { data: null, error: contribError };
+      }
+
+      const newLoc = rowToLocation(data);
+      dispatch({ type: 'ADD_LOCATION', location: newLoc });
     }
     return { data, error };
   }, [user]);
@@ -420,7 +435,10 @@ export function ExploreProvider({ children }) {
     const validCategories = ['cafe', 'park', 'restaurant', 'mall', 'scenic', 'hotel', 'other'];
     const safeEntryArea = DB_ENTRY_AREA[location.entryArea?.toLowerCase()] || 'unknown';
     const safeCategory = validCategories.includes(location.category?.toLowerCase()) ? location.category.toLowerCase() : 'other';
-    const safeCity = typeof location.city === 'string' ? location.city : '上海';
+    const safeCity = typeof location.city === 'string' ? location.city.trim() : '';
+    if (!safeCity) {
+      return { data: null, error: { message: '城市不能为空', code: 'CITY_REQUIRED', details: null, hint: null } };
+    }
     const row = {
       name: location.name,
       category: safeCategory,
@@ -438,8 +456,6 @@ export function ExploreProvider({ children }) {
       photos: location.photos || [],
       description: location.description || '',
     };
-    console.warn('[updateLocation] row:', JSON.stringify(row));
-
     const { data, error } = await supabase.from('locations').update(row).eq('id', location.id).select().single();
     if (!error && data) {
       const updated = rowToLocation(data);
@@ -459,14 +475,12 @@ export function ExploreProvider({ children }) {
       note: validation.note || '',
       photos: validation.photos || [],
     };
-    console.warn('[addValidation] row:', JSON.stringify(row));
-
     const { data, error } = await supabase.from('location_validations').insert(row).select().single();
     if (!error && data) {
-      const { data: profile } = await supabase.from('profiles').select('name').eq('id', data.profile_id).single();
-      data._userName = profile?.name || '未知用户';
+      const { data: profile } = await supabase.from('profiles').select('name, avatar').eq('id', data.profile_id).single();
+      data._userName = profile?.name || fallbackUserName(data.profile_id);
+      data._userAvatar = profile?.avatar || null;
       const vRow = rowToValidation(data);
-      dispatch({ type: 'ADD_VALIDATION', locationId, validation: vRow });
 
       // 重新计算时间窗口计数
       const updatedValidations = {
@@ -478,11 +492,34 @@ export function ExploreProvider({ children }) {
       const status = deriveStatusFromCounts(counts);
       const newVerifierCount = counts.verifierCountTotal;
 
-      await supabase.from('locations').update({
+      const { error: locUpdateError } = await supabase.from('locations').update({
         verifier_count: newVerifierCount,
         status,
         last_updated_label: '刚刚更新',
       }).eq('id', locationId);
+      if (locUpdateError) {
+        await supabase.from('location_validations').delete().eq('id', data.id);
+        return { data: null, error: locUpdateError };
+      }
+
+      const contribRow = {
+        profile_id: user.id,
+        location_id: locationId,
+        type: '更新信息',
+        status,
+      };
+      const { error: contribError } = await supabase.from('contributions').insert(contribRow);
+      if (contribError) {
+        await supabase.from('location_validations').delete().eq('id', data.id);
+        await supabase.from('locations').update({
+          verifier_count: state.locations.find(l => l.id === locationId)?.verifierCount || 0,
+          status: state.locations.find(l => l.id === locationId)?.status || null,
+          last_updated_label: state.locations.find(l => l.id === locationId)?.lastUpdatedLabel || '',
+        }).eq('id', locationId);
+        return { data: null, error: contribError };
+      }
+
+      dispatch({ type: 'ADD_VALIDATION', locationId, validation: vRow });
 
       dispatch({
         type: 'UPDATE_LOCATION_STATUS',
@@ -491,15 +528,6 @@ export function ExploreProvider({ children }) {
         verifierCount: newVerifierCount,
         lastUpdatedLabel: '刚刚更新',
       });
-
-      const contribRow = {
-        profile_id: user.id,
-        location_id: locationId,
-        type: '更新信息',
-        status,
-      };
-      console.warn('[addValidation] contributions insert:', JSON.stringify(contribRow));
-      await supabase.from('contributions').insert(contribRow);
 
       const loc = state.locations.find(l => l.id === locationId);
       dispatch({
@@ -523,13 +551,23 @@ export function ExploreProvider({ children }) {
     const wasHelpful = !!state.helpful[validationId];
     dispatch({ type: 'TOGGLE_HELPFUL', locationId, validationId });
 
+    let error = null;
     if (wasHelpful) {
-      await supabase.from('validation_helpful').delete().match({ validation_id: validationId, profile_id: user.id });
-      await supabase.rpc('decrement_validation_helpful', { row_id: validationId });
+      const { error: relationError } = await supabase.from('validation_helpful').delete().match({ validation_id: validationId, profile_id: user.id });
+      const { error: countError } = relationError ? { error: null } : await supabase.rpc('decrement_validation_helpful', { row_id: validationId });
+      error = relationError || countError;
     } else {
-      await supabase.from('validation_helpful').insert({ validation_id: validationId, profile_id: user.id });
-      await supabase.rpc('increment_validation_helpful', { row_id: validationId });
+      const { error: relationError } = await supabase.from('validation_helpful').insert({ validation_id: validationId, profile_id: user.id });
+      const { error: countError } = relationError ? { error: null } : await supabase.rpc('increment_validation_helpful', { row_id: validationId });
+      error = relationError || countError;
     }
+
+    if (error) {
+      console.error('toggleHelpful error', error);
+      dispatch({ type: 'TOGGLE_HELPFUL', locationId, validationId });
+      return { error };
+    }
+    return { error: null };
   }, [state.helpful, user]);
 
   const reportInaccuracy = useCallback(async (locationId, validationId, reason) => {

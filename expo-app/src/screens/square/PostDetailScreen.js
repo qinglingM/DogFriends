@@ -1,5 +1,6 @@
 import React, { useMemo, useRef, useState, useCallback, useEffect } from 'react';
 import {
+  Alert,
   Image,
   Keyboard,
   KeyboardAvoidingView,
@@ -140,15 +141,24 @@ export default function PostDetailScreen({ route, navigation }) {
     showToast(`评论最多 ${COMMENT_LIMIT} 个字`);
   };
 
-  const submitComment = () => {
+  const submitComment = async () => {
     const text = commentText.trim();
     if (!text) return;
 
+    let result;
     if (replyTarget) {
-      addCommentReply(post.id, replyTarget.id, replyTarget.userName, text);
+      result = await addCommentReply(post.id, replyTarget.id, replyTarget.userName, text);
+      if (result?.error) {
+        Alert.alert('发送失败', result.error.message || '回复发送失败，请稍后再试');
+        return;
+      }
       setReplyTarget(null);
     } else {
-      addComment(post.id, text);
+      result = await addComment(post.id, text);
+      if (result?.error) {
+        Alert.alert('发送失败', result.error.message || '评论发送失败，请稍后再试');
+        return;
+      }
     }
     setCommentText('');
   };

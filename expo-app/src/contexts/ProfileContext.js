@@ -109,10 +109,16 @@ export function ProfileProvider({ children }) {
       return { error };
     }
 
-    await Promise.all([
+    const [followingRes, followersRes] = await Promise.all([
       supabase.rpc('increment_profile_following', { profile_id: user.id }),
       supabase.rpc('increment_profile_followers', { profile_id: targetId }),
     ]);
+    const countError = followingRes.error || followersRes.error;
+    if (countError) {
+      await supabase.from('follows').delete().match({ follower_id: user.id, following_id: targetId });
+      console.error('followUser count sync error', countError);
+      return { error: countError };
+    }
     setProfile(prev => prev ? { ...prev, following: (prev.following || 0) + 1 } : prev);
     return {};
   }, [user]);
@@ -125,10 +131,16 @@ export function ProfileProvider({ children }) {
       return { error };
     }
 
-    await Promise.all([
+    const [followingRes, followersRes] = await Promise.all([
       supabase.rpc('decrement_profile_following', { profile_id: user.id }),
       supabase.rpc('decrement_profile_followers', { profile_id: targetId }),
     ]);
+    const countError = followingRes.error || followersRes.error;
+    if (countError) {
+      await supabase.from('follows').insert({ follower_id: user.id, following_id: targetId });
+      console.error('unfollowUser count sync error', countError);
+      return { error: countError };
+    }
     setProfile(prev => prev ? { ...prev, following: Math.max(0, (prev.following || 0) - 1) } : prev);
     return {};
   }, [user]);

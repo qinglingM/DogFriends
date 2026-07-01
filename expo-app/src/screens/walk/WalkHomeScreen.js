@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { View, Text, TouchableOpacity, StyleSheet, Animated, Dimensions, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,7 +9,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { typography } from '../../theme/typography';
-import { MapPlaceholder, DogAvatar } from '../../components';
+import { WalkMap, DogAvatar } from '../../components';
 import { useWalk } from '../../contexts/WalkContext';
 import { useDogs } from '../../contexts/DogContext';
 import { haversineDistance } from '../../utils/location';
@@ -15,10 +17,11 @@ import { takePhoto } from '../../utils/imagePicker';
 
 const MAIN_BTN_SIZE = 72;
 const SIDE_BTN_SIZE = 72;
+const WALK_GO_HINT_KEY = '@dogfriends_walk_go_hint_seen';
 
 export default function WalkHomeScreen({ navigation }) {
   const insets = useSafeAreaInsets();
-  const { getWeekStats, 加载完成, startWalk, updateWalk, addPhoto, currentWalk } = useWalk();
+  const { getWeekStats, 加载完成, startWalk, finishWalk, addPhoto, currentWalk } = useWalk();
   const weekStats = getWeekStats();
   const { dogs: allDogs, 加载完成: 狗加载完成 } = useDogs();
 
@@ -28,8 +31,11 @@ export default function WalkHomeScreen({ navigation }) {
   const [isPaused, setIsPaused] = useState(false);
   const [gpsDistance, setGpsDistance] = useState(0);
   const [photos, setPhotos] = useState([]);
-  const gpsSub = useRef(null);
+  const [recenterKey, setRecenterKey] = useState(0);
+  const [currentPoint, setCurrentPoint] = useState(null);
+  const [showGoHint, setShowGoHint] = useState(false);
   const lastPosRef = useRef(null);
+  const walkFinishedRef = useRef(false);
   const cumDistRef = useRef(0);
   const trackPointsRef = useRef([]);
 
@@ -39,7 +45,7 @@ export default function WalkHomeScreen({ navigation }) {
         const merged = allDogs.map(d => {
           const existing = prev.find(p => p.id === d.id);
           return existing
-            ? { ...existing, image: d.image }
+            ? { ...existing, name: d.name, image: d.image }
             : { id: d.id, name: d.name, image: d.image, selected: true };
         });
         return merged;
@@ -60,8 +66,36 @@ export default function WalkHomeScreen({ navigation }) {
   }, [isWalking, isPaused]);
 
   useEffect(() => {
-    return () => { if (gpsSub.current) { gpsSub.current.remove(); } };
+    let cancelled = false;
+
+    const loadHintState = async () => {
+      try {
+        const seen = await AsyncStorage.getItem(WALK_GO_HINT_KEY);
+        if (!cancelled) setShowGoHint(seen !== '1');
+      } catch {
+        if (!cancelled) setShowGoHint(true);
+      }
+    };
+
+    loadHintState();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
+
+  useFocusEffect(useCallback(() => {
+    setIsWalking(false);
+    setSeconds(0);
+    setGpsDistance(0);
+    setPhotos([]);
+    lastPosRef.current = null;
+    walkFinishedRef.current = false;
+    cumDistRef.current = 0;
+    trackPointsRef.current = [];
+    setCurrentPoint(null);
+    setRecenterKey(0);
+  }, []));
 
   const formatTime = (s) => {
     const h = Math.floor(s / 3600);
@@ -113,9 +147,27 @@ export default function WalkHomeScreen({ navigation }) {
       return;
     }
 
-    lastPosRef.current = null;
+    if (showGoHint) {
+      setShowGoHint(false);
+      AsyncStorage.setItem(WALK_GO_HINT_KEY, '1').catch(() => {});
+    }
+
+    let startPoint = currentPoint;
+    if (!startPoint) {
+      try {
+        const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Highest });
+        startPoint = {
+          latitude: loc.coords.latitude,
+          longitude: loc.coords.longitude,
+          timestamp: loc.timestamp,
+        };
+      } catch {}
+    }
+
+    lastPosRef.current = startPoint;
     cumDistRef.current = 0;
-    trackPointsRef.current = [];
+    trackPointsRef.current = startPoint ? [startPoint] : [];
+    if (startPoint) setCurrentPoint(startPoint);
     setGpsDistance(0);
 
     startWalk(selectedDogs);
@@ -123,50 +175,67 @@ export default function WalkHomeScreen({ navigation }) {
     setSeconds(0);
     setPhotos([]);
     animateGoToStop();
-
-    gpsSub.current = await Location.watchPositionAsync(
-      { accuracy: Location.Accuracy.High, distanceInterval: 3, timeInterval: 5000 },
-      (loc) => {
-        const { latitude, longitude } = loc.coords;
-        const point = { latitude, longitude, timestamp: loc.timestamp };
-        trackPointsRef.current = [...trackPointsRef.current, point];
-
-        if (lastPosRef.current) {
-          const dist = haversineDistance(
-            lastPosRef.current.latitude, lastPosRef.current.longitude,
-            latitude, longitude,
-          );
-          // 过滤 GPS 漂移：低于 5m 不累计距离
-          if (dist >= 0.005) {
-            cumDistRef.current += dist;
-          }
-        }
-        lastPosRef.current = point;
-        setGpsDistance(cumDistRef.current);
-      },
-    );
   };
 
-  const handleStop = () => {
-    if (gpsSub.current) { gpsSub.current.remove(); gpsSub.current = null; }
+  const handleStop = async () => {
+    const distance = Math.round(cumDistRef.current * 100) / 100;
+    const pace = seconds > 0 ? Math.round((distance / (seconds / 3600)) * 10) / 10 : 0;
+    const walkDogs = currentWalk?.dogs || dogs.filter((dog) => dog.selected).map((dog) => ({ id: dog.id, name: dog.name, image: dog.image }));
 
     Animated.parallel([
       Animated.timing(pauseSlide, { toValue: 0, duration: 200, useNativeDriver: true }),
       Animated.timing(cameraSlide, { toValue: 0, duration: 200, useNativeDriver: true }),
-    ]).start(() => {
-      const distance = cumDistRef.current;
-      const pace = seconds > 0 ? (distance / (seconds / 3600)) : 0;
-      updateWalk({
-        duration: seconds,
-        distance: Math.round(distance * 100) / 100,
-        pace: Math.round(pace * 10) / 10,
-        trackPoints: trackPointsRef.current,
+    ]).start(async () => {
+      const finishResult = await finishWalk({
+        updates: {
+          dogs: walkDogs,
+          duration: seconds,
+          distance,
+          pace,
+          photos,
+          checkins: {},
+          trackPoints: trackPointsRef.current,
+        },
       });
-      navigation.navigate('WalkCheckin');
+      if (finishResult?.error) {
+        Alert.alert('保存失败', finishResult.error.message || '遛狗记录保存失败，请稍后重试');
+        return;
+      }
+      walkFinishedRef.current = true;
+      navigation.navigate('WalkCheckin', {
+        walkId: finishResult.data.id,
+        dogs: walkDogs,
+        distance,
+        duration: seconds,
+      });
     });
   };
 
   const handlePause = () => setIsPaused(!isPaused);
+
+  const handleRecenter = async () => {
+    if (lastPosRef.current || currentPoint) {
+      setRecenterKey((value) => value + 1);
+      return;
+    }
+
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('权限提示', '需要位置权限才能定位到你当前位置');
+        return;
+      }
+      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      setCurrentPoint({
+        latitude: loc.coords.latitude,
+        longitude: loc.coords.longitude,
+        timestamp: loc.timestamp,
+      });
+      setRecenterKey((value) => value + 1);
+    } catch {
+      Alert.alert('定位失败', '暂时无法获取当前位置，请稍后重试');
+    }
+  };
 
   const handleCamera = async () => {
     const uri = await takePhoto();
@@ -195,14 +264,51 @@ export default function WalkHomeScreen({ navigation }) {
   return (
     <View style={styles.container}>
       <View style={styles.mapArea}>
-        <MapPlaceholder
-          height="100%"
-          label={isWalking ? '实时轨迹绘制区域' : '高德地图 · 全屏区域'}
-          sublabel={isWalking ? 'GPS 坐标连续打点 → 折线绘制' : '集成 react-native-amap3d 后替换'}
-          style={{ borderRadius: 0 }}
-        />
+        <WalkMap
+          points={walkFinishedRef.current ? [] : trackPointsRef.current}
+          currentPoint={lastPosRef.current || currentPoint}
+          showsUserLocation
+          onUserLocationChange={(event) => {
+            const coordinate = event?.nativeEvent?.coordinate;
+            if (!coordinate) return;
+            const point = {
+              latitude: coordinate.latitude,
+              longitude: coordinate.longitude,
+              timestamp: Date.now(),
+            };
+            setCurrentPoint(point);
 
-        <View style={[styles.locationDot, { top: '50%', left: '50%' }]} />
+            if (!isWalking) return;
+
+            if (lastPosRef.current) {
+              const dist = haversineDistance(
+                lastPosRef.current.latitude, lastPosRef.current.longitude,
+                point.latitude, point.longitude,
+              );
+              if (dist >= 0.005) cumDistRef.current += dist;
+            }
+            lastPosRef.current = point;
+            setGpsDistance(cumDistRef.current);
+
+            const lastTrack = trackPointsRef.current[trackPointsRef.current.length - 1];
+            if (lastTrack) {
+              const dist = haversineDistance(
+                lastTrack.latitude, lastTrack.longitude,
+                point.latitude, point.longitude,
+              );
+              if (dist < 0.003) return;
+            }
+            trackPointsRef.current = [...trackPointsRef.current, point];
+          }}
+          interactive
+          recenterKey={recenterKey}
+          recenterMode="current"
+          autoFitRoute={false}
+          zoomDelta={isWalking ? 0.002 : 0.02}
+          showEmptyOverlay={false}
+          emptyLabel={isWalking ? '正在等待定位轨迹' : '点击 GO 开始记录轨迹'}
+          style={{ flex: 1 }}
+        />
 
         <View style={[styles.floatTop, { paddingTop: insets.top + 8 }]}>
           <View style={styles.statsBar}>
@@ -240,20 +346,21 @@ export default function WalkHomeScreen({ navigation }) {
           </View>
         </View>
 
-        <View style={[styles.recenterWrap, { bottom: 102 + insets.bottom }]}>
-          <TouchableOpacity style={styles.recenterBtn} activeOpacity={0.7} onPress={() => {}}>
+        <View style={[styles.recenterWrap, { bottom: 44 }]}> 
+          <TouchableOpacity style={styles.recenterBtn} activeOpacity={0.7} onPress={handleRecenter}>
             <Ionicons name="locate" size={22} color={colors.secondary} />
           </TouchableOpacity>
         </View>
       </View>
 
-      <View style={[styles.dogAvatarsRow, { bottom: 140 + insets.bottom }]}>
+      <View style={[styles.dogAvatarsRow, { bottom: 140 + insets.bottom }]} pointerEvents="box-none">
           {(isWalking ? dogs.filter(d => d.selected) : dogs).map(dog => (
             <TouchableOpacity
               key={dog.id}
               style={styles.dogItem}
               onPress={() => !isWalking && toggleDog(dog.id)}
               activeOpacity={isWalking ? 1 : 0.7}
+              pointerEvents={isWalking ? 'none' : 'auto'}
             >
               <View style={[
                 styles.avatarRing,
@@ -273,7 +380,7 @@ export default function WalkHomeScreen({ navigation }) {
           ))}
         </View>
 
-        <View style={[styles.controlsRow, { bottom: 0 }]}>
+        <View style={[styles.controlsRow, { bottom: 0 }]} pointerEvents="box-none">
           {isWalking && (
             <Animated.View style={{ transform: [{ translateY: pauseSlide }], alignItems: 'center' }}>
               <TouchableOpacity style={styles.sideBtn} onPress={handlePause} activeOpacity={0.7}>
@@ -296,6 +403,7 @@ export default function WalkHomeScreen({ navigation }) {
               )}
             </TouchableOpacity>
             {isWalking && <Text style={styles.mainBtnLabel}>结束</Text>}
+            {!isWalking && showGoHint && <Text style={styles.goHint}>点击 GO 开始记录轨迹</Text>}
           </Animated.View>
 
           {isWalking && (
@@ -319,14 +427,7 @@ export default function WalkHomeScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#E8EDE4' },
   mapArea: { flex: 1, position: 'relative' },
-  locationDot: {
-    position: 'absolute',
-    width: 24, height: 24, marginTop: -12, marginLeft: -12,
-    backgroundColor: colors.primary, borderRadius: 12,
-    borderWidth: 3, borderColor: colors.white,
-    shadowColor: colors.secondary, shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3, shadowRadius: 8,
-  },
+
   floatTop: {
     position: 'absolute', top: 0, left: 0, right: 0,
     paddingHorizontal: 16, zIndex: 5,
@@ -481,6 +582,17 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: 18,
     letterSpacing: 2,
+  },
+  goHint: {
+    ...typography.captionBold,
+    fontSize: 11,
+    color: colors.white,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: spacing.radiusPill,
+    marginTop: 8,
+    overflow: 'hidden',
   },
   mainBtnLabel: {
     ...typography.captionBold,
