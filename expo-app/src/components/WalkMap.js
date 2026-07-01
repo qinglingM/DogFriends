@@ -62,6 +62,7 @@ export default function WalkMap({
   autoFitRoute = true,
   showEmptyOverlay = true,
   emptyLabel = '正在等待定位轨迹',
+  showEndMarker = true,
   zoomDelta = 0.01,
 }) {
   const mapRef = useRef(null);
@@ -117,7 +118,7 @@ export default function WalkMap({
             </View>
           </Marker>
         )}
-        {showEndPoint && (
+        {showEndMarker && showEndPoint && (
           <Marker coordinate={endPoint} anchor={{ x: 0.5, y: 1 }} tracksViewChanges={false}>
             <View style={styles.teardropContainer}>
               <View style={[styles.teardropCircle, styles.endMarker]}>

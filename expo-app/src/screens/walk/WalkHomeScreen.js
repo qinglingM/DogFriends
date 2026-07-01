@@ -34,8 +34,10 @@ export default function WalkHomeScreen({ navigation }) {
   const [recenterKey, setRecenterKey] = useState(0);
   const [currentPoint, setCurrentPoint] = useState(null);
   const [showGoHint, setShowGoHint] = useState(false);
+  const [isWaitingGps, setIsWaitingGps] = useState(false);
   const lastPosRef = useRef(null);
   const walkFinishedRef = useRef(false);
+  const isStoppingRef = useRef(false);
   const cumDistRef = useRef(0);
   const trackPointsRef = useRef([]);
 
@@ -86,11 +88,13 @@ export default function WalkHomeScreen({ navigation }) {
 
   useFocusEffect(useCallback(() => {
     setIsWalking(false);
+    setIsWaitingGps(false);
     setSeconds(0);
     setGpsDistance(0);
     setPhotos([]);
     lastPosRef.current = null;
     walkFinishedRef.current = false;
+    isStoppingRef.current = false;
     cumDistRef.current = 0;
     trackPointsRef.current = [];
     setCurrentPoint(null);
@@ -128,6 +132,8 @@ export default function WalkHomeScreen({ navigation }) {
   }, [mainBtnScale, pauseSlide, cameraSlide]);
 
   const handleGo = async () => {
+    if (isStoppingRef.current) return;
+
     const selectedDogs = dogs.filter(d => d.selected).map(d => ({ id: d.id, name: d.name, image: d.image }));
     if (selectedDogs.length === 0) {
       if (allDogs.length === 0) {
@@ -152,32 +158,22 @@ export default function WalkHomeScreen({ navigation }) {
       AsyncStorage.setItem(WALK_GO_HINT_KEY, '1').catch(() => {});
     }
 
-    let startPoint = currentPoint;
-    if (!startPoint) {
-      try {
-        const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Highest });
-        startPoint = {
-          latitude: loc.coords.latitude,
-          longitude: loc.coords.longitude,
-          timestamp: loc.timestamp,
-        };
-      } catch {}
-    }
-
-    lastPosRef.current = startPoint;
+    lastPosRef.current = null;
     cumDistRef.current = 0;
-    trackPointsRef.current = startPoint ? [startPoint] : [];
-    if (startPoint) setCurrentPoint(startPoint);
+    trackPointsRef.current = [];
+    setCurrentPoint(null);
     setGpsDistance(0);
 
     startWalk(selectedDogs);
-    setIsWalking(true);
+    setIsWaitingGps(true);
     setSeconds(0);
     setPhotos([]);
-    animateGoToStop();
   };
 
   const handleStop = async () => {
+    if (isStoppingRef.current) return;
+    isStoppingRef.current = true;
+
     const distance = Math.round(cumDistRef.current * 100) / 100;
     const pace = seconds > 0 ? Math.round((distance / (seconds / 3600)) * 10) / 10 : 0;
     const walkDogs = currentWalk?.dogs || dogs.filter((dog) => dog.selected).map((dog) => ({ id: dog.id, name: dog.name, image: dog.image }));
@@ -199,6 +195,7 @@ export default function WalkHomeScreen({ navigation }) {
       });
       if (finishResult?.error) {
         Alert.alert('保存失败', finishResult.error.message || '遛狗记录保存失败，请稍后重试');
+        isStoppingRef.current = false;
         return;
       }
       walkFinishedRef.current = true;
@@ -278,6 +275,15 @@ export default function WalkHomeScreen({ navigation }) {
             };
             setCurrentPoint(point);
 
+            if (isWaitingGps) {
+              lastPosRef.current = point;
+              trackPointsRef.current = [point];
+              setIsWaitingGps(false);
+              setIsWalking(true);
+              animateGoToStop();
+              return;
+            }
+
             if (!isWalking) return;
 
             if (lastPosRef.current) {
@@ -307,6 +313,7 @@ export default function WalkHomeScreen({ navigation }) {
           zoomDelta={isWalking ? 0.002 : 0.02}
           showEmptyOverlay={false}
           emptyLabel={isWalking ? '正在等待定位轨迹' : '点击 GO 开始记录轨迹'}
+          showEndMarker={!isWalking}
           style={{ flex: 1 }}
         />
 
@@ -394,14 +401,17 @@ export default function WalkHomeScreen({ navigation }) {
             <TouchableOpacity
               style={[styles.mainBtn, isWalking && styles.mainBtnDanger]}
               activeOpacity={0.8}
-              onPress={isWalking ? handleStop : handleGo}
+              onPress={isWaitingGps ? undefined : (isWalking ? handleStop : handleGo)}
             >
-              {isWalking ? (
+              {isWaitingGps ? (
+                <Text style={styles.goText}>定位中</Text>
+              ) : isWalking ? (
                 <Ionicons name="stop" size={28} color={colors.white} />
               ) : (
                 <Text style={styles.goText}>GO</Text>
               )}
             </TouchableOpacity>
+            {isWaitingGps && <Text style={styles.mainBtnLabel}>等待 GPS</Text>}
             {isWalking && <Text style={styles.mainBtnLabel}>结束</Text>}
             {!isWalking && showGoHint && <Text style={styles.goHint}>点击 GO 开始记录轨迹</Text>}
           </Animated.View>
