@@ -315,6 +315,7 @@ export default function WalkHomeScreen({ navigation }) {
           interactive
           recenterKey={recenterKey}
           recenterMode="current"
+          autoFollow={isWalking}
           autoFitRoute={false}
           zoomDelta={isWalking ? 0.002 : 0.02}
           showEmptyOverlay={false}

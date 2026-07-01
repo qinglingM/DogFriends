@@ -63,6 +63,7 @@ export default function WalkMap({
   showEmptyOverlay = true,
   emptyLabel = '正在等待定位轨迹',
   showEndMarker = true,
+  autoFollow = false,
   zoomDelta = 0.01,
 }) {
   const mapRef = useRef(null);
@@ -80,11 +81,13 @@ export default function WalkMap({
     });
   }, [autoFitRoute, normalizedPoints.length]);
 
+  const followDep = autoFollow ? currentPoint : null;
+
   useEffect(() => {
     if (!mapRef.current) return;
     if (recenterMode !== 'current' || !currentPoint || !Number.isFinite(currentPoint.latitude)) return;
     mapRef.current.animateToRegion(buildRegion([], currentPoint, zoomDelta), 400);
-  }, [recenterKey]);
+  }, [recenterKey, followDep]);
 
   if (Platform.OS === 'web') {
     return (
