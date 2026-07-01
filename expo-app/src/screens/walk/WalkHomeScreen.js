@@ -97,7 +97,6 @@ export default function WalkHomeScreen({ navigation }) {
     isStoppingRef.current = false;
     cumDistRef.current = 0;
     trackPointsRef.current = [];
-    setCurrentPoint(null);
     setRecenterKey(0);
   }, []));
 
@@ -161,13 +160,20 @@ export default function WalkHomeScreen({ navigation }) {
     lastPosRef.current = null;
     cumDistRef.current = 0;
     trackPointsRef.current = [];
-    setCurrentPoint(null);
     setGpsDistance(0);
-
-    startWalk(selectedDogs);
-    setIsWaitingGps(true);
     setSeconds(0);
     setPhotos([]);
+
+    if (currentPoint) {
+      lastPosRef.current = currentPoint;
+      trackPointsRef.current = [currentPoint];
+      startWalk(selectedDogs);
+      setIsWalking(true);
+      animateGoToStop();
+    } else {
+      startWalk(selectedDogs);
+      setIsWaitingGps(true);
+    }
   };
 
   const handleStop = async () => {
